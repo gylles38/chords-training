@@ -83,6 +83,7 @@ accords = {
     "Fa Diminué": {65, 68, 71}, # Pour Sol bémol Majeur
     "Sol Diminué": {67, 70, 73}, # Pour La bémol Majeur
     "Do Diminué": {60, 63, 66}, # Pour Ré bémol Majeur
+    "Si bémol Diminué": {70, 73, 76}, # Pour Do bémol Majeur
 }
 
 # Gammes majeures pour le mode degrés
