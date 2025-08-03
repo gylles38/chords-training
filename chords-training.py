@@ -73,17 +73,19 @@ accords = {
     "Si bémol Mineur": {70, 73, 77},
     "Mi bémol Mineur": {63, 66, 70},
     
-    # Nouveaux accords manquants
-    "Sol dièse Majeur": {68, 72, 75}, # Pour Do dièse Majeur
-    "Si dièse Diminué": {60, 63, 66}, # Pour Do dièse Majeur (enharmonique de Do Diminué)
+    # Nouveaux accords manquants pour compléter toutes les tonalités majeures
+    "Sol dièse Majeur": {68, 72, 75},
+    "Si dièse Diminué": {60, 63, 66}, # enharmonique de Do Diminué
     "Ré bémol Mineur": {61, 64, 68}, # enharmonique de Do dièse Mineur
     "La bémol Mineur": {68, 71, 75}, # enharmonique de Sol dièse Mineur
-    "Fa Mineur": {65, 68, 72}, # Pour Mi bémol Majeur
-    "Mi Diminué": {64, 67, 70}, # Pour Fa Majeur
-    "Fa Diminué": {65, 68, 71}, # Pour Sol bémol Majeur
-    "Sol Diminué": {67, 70, 73}, # Pour La bémol Majeur
-    "Do Diminué": {60, 63, 66}, # Pour Ré bémol Majeur
-    "Si bémol Diminué": {70, 73, 76}, # Pour Do bémol Majeur
+    "Fa Mineur": {65, 68, 72},
+    "Mi Diminué": {64, 67, 70},
+    "Fa Diminué": {65, 68, 71},
+    "Sol Diminué": {67, 70, 73},
+    "Do Diminué": {60, 63, 66},
+    "Si bémol Diminué": {70, 73, 76},
+    "Ré Diminué": {62, 65, 68},
+    "La Diminué": {69, 72, 75},
 }
 
 # Gammes majeures pour le mode degrés
@@ -336,17 +338,22 @@ def single_chord_mode(inport, outport):
 
 def get_progression_choice(progression_selection_mode, inport, last_progression=None):
     """Permet de choisir une progression, soit aléatoirement, soit via MIDI."""
+    # Liste des progressions Pop/Rock
     progressions_pop_rock = {
         "I-V-vi-IV": ["Do Majeur", "Sol Majeur", "La Mineur", "Fa Majeur"],
         "ii-V-I": ["Ré Mineur", "Sol Majeur", "Do Majeur"],
         "I-vi-ii-V": ["Do Majeur", "La Mineur", "Ré Mineur", "Sol Majeur"],
         "IV-I-V-vi": ["Fa Majeur", "Do Majeur", "Sol Majeur", "La Mineur"],
+        "I-IV-V": ["Do Majeur", "Fa Majeur", "Sol Majeur"],
+        "I-vi-IV-V": ["Do Majeur", "La Mineur", "Fa Majeur", "Sol Majeur"],
+        "vi-IV-I-V": ["La Mineur", "Fa Majeur", "Do Majeur", "Sol Majeur"],
+        "I-bVII-IV": ["Do Majeur", "Si bémol Majeur", "Fa Majeur"],
     }
-    
+
     if progression_selection_mode == 'midi':
-        print(f"Appuyez sur une note de la 4ème octave pour choisir une progression ({Color.CYAN}Do4 à Fa4{Color.END}) ou 'q' pour revenir au menu.")
+        print(f"Appuyez sur une note de la 4ème octave pour choisir une progression ({Color.CYAN}Do4 à Sol4{Color.END}) ou 'q' pour revenir au menu.")
         note_map = {
-            60: "I-V-vi-IV", 62: "ii-V-I", 64: "I-vi-ii-V", 65: "IV-I-V-vi"
+            60: "I-V-vi-IV", 62: "ii-V-I", 64: "I-vi-ii-V", 65: "IV-I-V-vi", 66: "I-IV-V", 67: "I-vi-IV-V", 69: "vi-IV-I-V", 70: "I-bVII-IV"
         }
         
         while True:
@@ -376,6 +383,18 @@ def pop_rock_mode(inport, outport, progression_timer, progression_selection_mode
     print("\n--- Mode Progressions Pop/Rock ---")
     print("Appuyez sur 'q' pour quitter.")
 
+    # Exemples de chansons pour chaque progression
+    progression_examples = {
+        "I-V-vi-IV": ["Don't Stop Believin' (Journey)", "Let It Be (The Beatles)"],
+        "ii-V-I": ["Sunday Morning (Maroon 5)", "Isn't She Lovely (Stevie Wonder)"],
+        "I-vi-ii-V": ["Blue Moon (The Marcels)", "Heart and Soul"],
+        "IV-I-V-vi": ["Hey Soul Sister (Train)", "No Woman, No Cry (Bob Marley)"],
+        "I-IV-V": ["La Bamba (Ritchie Valens)", "Twist and Shout (The Beatles)"],
+        "I-vi-IV-V": ["Stand By Me (Ben E. King)", "Unchained Melody (The Righteous Brothers)"],
+        "vi-IV-I-V": ["Africa (Toto)", "With or Without You (U2)"],
+        "I-bVII-IV": ["Lust for Life (Iggy Pop)", "Sweet Home Alabama (Lynyrd Skynyrd)"],
+    }
+
     correct_count = 0
     total_count = 0
     last_progression = None
@@ -393,8 +412,16 @@ def pop_rock_mode(inport, outport, progression_timer, progression_selection_mode
             break
         
         last_progression = progression
-
+        
+        clear_screen()
+        print("\n--- Mode Progressions Pop/Rock ---")
+        print("Appuyez sur 'q' pour quitter.")
+        
         print(f"\nProgression à jouer : {Color.YELLOW}{' -> '.join(progression)}{Color.END}")
+        # Afficher les exemples de chansons
+        if prog_name in progression_examples:
+            exemples = progression_examples[prog_name]
+            print(f"Exemples : {Color.BLUE}{exemples[0]}{Color.END} et {Color.BLUE}{exemples[1]}{Color.END}")
         
         if play_progression_before_start:
             print("Lecture de la progression...")
