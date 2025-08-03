@@ -33,6 +33,7 @@ def clear_screen():
 # Un dictionnaire où la clé est le nom de l'accord et la valeur est un ensemble
 # des numéros de notes MIDI pour cet accord. Les notes sont définies pour l'octave 4.
 accords = {
+    # Accords de trois sons (triades)
     "Do Majeur": {60, 64, 67},
     "Ré Mineur": {62, 65, 69},
     "Mi Mineur": {64, 67, 71},
@@ -51,7 +52,7 @@ accords = {
     "Si bémol Majeur": {70, 74, 77},
     "Ré bémol Majeur": {61, 65, 68},
     
-    # Ajout des accords manquants pour le mode "Degrés"
+    # Autres triades
     "Ré Majeur": {62, 66, 69},
     "Si Mineur": {71, 74, 78},
     "Fa dièse Mineur": {66, 69, 73},
@@ -72,8 +73,6 @@ accords = {
     "Fa bémol Majeur": {64, 67, 71}, # enharmonique de Mi Majeur
     "Si bémol Mineur": {70, 73, 77},
     "Mi bémol Mineur": {63, 66, 70},
-    
-    # Nouveaux accords manquants pour compléter toutes les tonalités majeures
     "Sol dièse Majeur": {68, 72, 75},
     "Si dièse Diminué": {60, 63, 66}, # enharmonique de Do Diminué
     "Ré bémol Mineur": {61, 64, 68}, # enharmonique de Do dièse Mineur
@@ -86,6 +85,59 @@ accords = {
     "Si bémol Diminué": {70, 73, 76},
     "Ré Diminué": {62, 65, 68},
     "La Diminué": {69, 72, 75},
+
+    # --- Accords de 7ème ---
+    # Accords de Do
+    "Do Majeur 7ème": {60, 64, 67, 71},
+    "Do 7ème": {60, 64, 67, 70},
+    "Do Mineur 7ème": {60, 63, 67, 70},
+    # Accords de Sol
+    "Sol Majeur 7ème": {67, 71, 74, 78},
+    "Sol 7ème": {67, 71, 74, 77},
+    "Sol Mineur 7ème": {67, 70, 74, 77},
+    # Accords de Fa
+    "Fa Majeur 7ème": {65, 69, 72, 76},
+    "Fa 7ème": {65, 69, 72, 75},
+    "Fa Mineur 7ème": {65, 68, 72, 75},
+    # Accords de La
+    "La Majeur 7ème": {69, 73, 76, 80},
+    "La 7ème": {69, 73, 76, 79},
+    "La Mineur 7ème": {69, 72, 76, 79},
+    # Accords de Ré
+    "Ré Majeur 7ème": {62, 66, 69, 73},
+    "Ré 7ème": {62, 66, 69, 72},
+    "Ré Mineur 7ème": {62, 65, 69, 72},
+    # Accords de Mi
+    "Mi Majeur 7ème": {64, 68, 71, 76},
+    "Mi 7ème": {64, 68, 71, 74},
+    "Mi Mineur 7ème": {64, 67, 71, 74},
+    # Accords de Si
+    "Si Majeur 7ème": {71, 75, 78, 82},
+    "Si 7ème": {71, 75, 78, 81},
+    "Si Mineur 7ème": {71, 74, 78, 81},
+    # Accords de Ré#
+    "Ré dièse Mineur 7ème": {63, 66, 70, 73},
+    # Accords de Mi bémol
+    "Mi bémol Majeur 7ème": {63, 67, 70, 74},
+    "Mi bémol 7ème": {63, 67, 70, 73},
+    "Mi bémol Mineur 7ème": {63, 66, 70, 73},
+
+    # --- Nouveaux accords de 4ème (sus4) et 6ème (add6) ---
+    "Do 4ème": {60, 65, 67}, # Do-Fa-Sol
+    "Ré 4ème": {62, 67, 69},
+    "Mi 4ème": {64, 69, 71},
+    "Fa 4ème": {65, 70, 72},
+    "Sol 4ème": {67, 72, 74},
+    "La 4ème": {69, 74, 76},
+    "Si 4ème": {71, 76, 78},
+    
+    "Do 6ème": {60, 64, 67, 69}, # Do-Mi-Sol-La
+    "Ré 6ème": {62, 66, 69, 71},
+    "Mi 6ème": {64, 68, 71, 73},
+    "Fa 6ème": {65, 69, 72, 74},
+    "Sol 6ème": {67, 71, 74, 76},
+    "La 6ème": {69, 73, 76, 78},
+    "Si 6ème": {71, 75, 78, 80},
 }
 
 # Gammes majeures pour le mode degrés
