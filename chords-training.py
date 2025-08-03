@@ -199,34 +199,43 @@ def reverse_chord_mode(inport, outport):
     print("Jouez un accord sur votre clavier MIDI.")
     print("Appuyez sur 'q' pour quitter.")
 
+    # Ensemble pour suivre les notes actuellement enfoncées
+    notes_currently_on = set()
+    # Ensemble pour collecter les notes de l'accord en cours
+    attempt_notes = set()
+
     while True:
-        # Vider le tampon d'entrée MIDI
-        for _ in inport.iter_pending():
-            pass
-        
-        char = wait_for_input(timeout=0.1)
+        char = wait_for_input(timeout=0.01)
         if char and char.lower() == 'q':
             break
 
+        # Lire tous les messages MIDI en attente
         for msg in inport.iter_pending():
             if msg.type == 'note_on' and msg.velocity > 0:
-                pressed_notes = set()
-                time.sleep(0.1)
-                for pending_msg in inport.iter_pending():
-                    if pending_msg.type == 'note_on' and pending_msg.velocity > 0:
-                        pressed_notes.add(pending_msg.note)
-                
-                found_chord = None
-                for chord_name, chord_notes in accords.items():
-                    if all(note in pressed_notes for note in chord_notes):
-                        found_chord = chord_name
-                        break
+                notes_currently_on.add(msg.note)
+                attempt_notes.add(msg.note)
+            elif msg.type == 'note_off':
+                # Retirer la note des notes actuellement enfoncées
+                notes_currently_on.discard(msg.note)
 
-                if found_chord:
-                    print(f"Accord reconnu : {Color.GREEN}{found_chord}{Color.END}")
-                else:
-                    print(f"Accord non reconnu. Notes jouées : {[get_note_name(n) for n in pressed_notes]}")
+        # Vérifier si un accord a été joué et relâché
+        if not notes_currently_on and attempt_notes:
+            found_chord = None
+            for chord_name, chord_notes in accords.items():
+                if attempt_notes == chord_notes:
+                    found_chord = chord_name
+                    break
+
+            if found_chord:
+                print(f"Accord reconnu : {Color.GREEN}{found_chord}{Color.END}")
+            else:
+                colored_string = get_colored_notes_string(attempt_notes, set()) # Aucun accord cible, donc les notes sont toutes "incorrectes" en rouge
+                print(f"Accord non reconnu. Notes jouées : [{colored_string}]")
+
+            # Réinitialiser pour le prochain accord
+            attempt_notes.clear()
         
+        time.sleep(0.01)
 
 def display_stats(correct_count, total_count, elapsed_time=None):
     """Affiche les statistiques de performance."""
