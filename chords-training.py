@@ -50,6 +50,38 @@ accords = {
     "La bémol Majeur": {68, 72, 75},
     "Si bémol Majeur": {70, 74, 77},
     "Ré bémol Majeur": {61, 65, 68},
+    
+    # Ajout des accords manquants pour le mode "Degrés"
+    "Ré Majeur": {62, 66, 69},
+    "Si Mineur": {71, 74, 78},
+    "Fa dièse Mineur": {66, 69, 73},
+    "Do dièse Mineur": {61, 64, 68},
+    "Mi dièse Mineur": {65, 68, 72}, # enharmonique de Fa Mineur
+    "La Majeur": {69, 73, 76},
+    "Mi Majeur": {64, 68, 71},
+    "Si Majeur": {71, 75, 78},
+    "Sol Mineur": {67, 70, 74},
+    "Do Mineur": {60, 63, 67},
+    "Fa dièse Diminué": {66, 69, 72},
+    "Do dièse Diminué": {61, 64, 67},
+    "Sol dièse Diminué": {68, 71, 74},
+    "Ré dièse Diminué": {63, 66, 69},
+    "Mi dièse Diminué": {65, 68, 71},
+    "La dièse Diminué": {70, 73, 76},
+    "Do bémol Majeur": {71, 74, 77}, # enharmonique de Si Majeur
+    "Fa bémol Majeur": {64, 67, 71}, # enharmonique de Mi Majeur
+    "Si bémol Mineur": {70, 73, 77},
+    
+    # Nouveaux accords manquants
+    "Sol dièse Majeur": {68, 72, 75}, # Pour Do dièse Majeur
+    "Si dièse Diminué": {60, 63, 66}, # Pour Do dièse Majeur (enharmonique de Do Diminué)
+    "Ré bémol Mineur": {61, 64, 68}, # enharmonique de Do dièse Mineur
+    "La bémol Mineur": {68, 71, 75}, # enharmonique de Sol dièse Mineur
+    "Fa Mineur": {65, 68, 72}, # Pour Mi bémol Majeur
+    "Mi Diminué": {64, 67, 70}, # Pour Fa Majeur
+    "Fa Diminué": {65, 68, 71}, # Pour Sol bémol Majeur
+    "Sol Diminué": {67, 70, 73}, # Pour La bémol Majeur
+    "Do Diminué": {60, 63, 66}, # Pour Ré bémol Majeur
 }
 
 # Gammes majeures pour le mode degrés
@@ -276,8 +308,9 @@ def single_chord_mode(inport, outport):
             # Un accord a été joué et toutes les notes ont été relâchées
             if not notes_currently_on and attempt_notes:
                 if attempt_notes == chord_notes:
-                    colored_notes = ", ".join([get_note_name(n) for n in sorted(attempt_notes)])
-                    print(f"{Color.GREEN}Correct ! ({colored_notes}){Color.END}")
+                    colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
+                    print(f"Notes jouées : [{colored_notes}]")
+                    print(f"{Color.GREEN}Correct !{Color.END}")
                     correct_count += 1
                     total_count += 1
                     time.sleep(1) # Pause avant le prochain accord
@@ -395,6 +428,8 @@ def pop_rock_mode(inport, outport, progression_timer, progression_selection_mode
                 if not notes_currently_on and attempt_notes:
                     total_count += 1
                     if attempt_notes == target_notes:
+                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                        print(f"Notes jouées : [{colored_notes}]")
                         print(f"{Color.GREEN}Correct !{Color.END}")
                         correct_count += 1
                         break
@@ -480,6 +515,8 @@ def progression_mode(inport, outport, progression_timer, progression_selection_m
                 if not notes_currently_on and attempt_notes:
                     total_count += 1
                     if attempt_notes == target_notes:
+                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                        print(f"Notes jouées : [{colored_notes}]")
                         print(f"{Color.GREEN}Correct !{Color.END}")
                         correct_count += 1
                         break
@@ -521,6 +558,11 @@ def degrees_mode(inport, outport, progression_timer, progression_selection_mode,
         # Vider les tampons d'entrée avant chaque progression pour éviter les entrées fantômes
         for _ in inport.iter_pending():
             pass
+
+        # Effacer l'écran pour la nouvelle progression
+        clear_screen()
+        print("\n--- Mode Degrés ---")
+        print("Appuyez sur 'q' pour quitter.")
         
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         prog_len = random.randint(3, 5)
@@ -568,6 +610,8 @@ def degrees_mode(inport, outport, progression_timer, progression_selection_mode,
                 if not notes_currently_on and attempt_notes:
                     total_count += 1
                     if attempt_notes == target_notes:
+                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                        print(f"Notes jouées : [{colored_notes}]")
                         print(f"{Color.GREEN}Correct !{Color.END}")
                         correct_count += 1
                         break
