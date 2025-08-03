@@ -8,7 +8,7 @@ Pour installer et utiliser ce programme sous Linux, suivez ces étapes simples.
 
 #### 1. Prérequis
 
-Assurez-vous que Python 3 est installé sur votre système.
+Assurez-vous que Python 3 est installé sur votre système.  
 Si Python n'est pas installé, vous pouvez le faire via votre gestionnaire de paquets (par exemple, `sudo apt install python3` sur Debian/Ubuntu ou `sudo dnf install python3` sur Fedora).
 
 #### 2. Cloner le dépôt et installer les dépendances
@@ -52,4 +52,16 @@ Le programme vous demandera de choisir les ports d'entrée et de sortie MIDI que
 
 * **Mode Pop/Rock** : Pratiquez des progressions spécifiques et populaires, idéales pour les guitaristes ou les pianistes.
 
-* **Mode Inverse** : Jouez un accord sur votre clavier MIDI,
+* **Mode Inverse** : Jouez un accord sur votre clavier MIDI, et le programme l'identifiera pour vous, parfait pour l'apprentissage par l'oreille.
+
+### Statistiques et Options
+
+Le programme ne conserve pas de statistiques de performance pour le moment, mais il offre un **menu d'options** pour personnaliser l'expérience d'entraînement. Vous pouvez notamment :
+
+* **Activer un chronomètre** pour les modes de progression afin de vous challenger à jouer plus rapidement.
+
+* **Choisir le mode de sélection des progressions**, soit de manière aléatoire, soit en utilisant une touche MIDI pour choisir la progression que vous souhaitez travailler.
+
+* **Activer/désactiver la lecture de la progression** avant de commencer l'exercice, ce qui est utile pour l'apprentissage auditif.  
+
+Le programme affiche également un bilan de vos performances (nombre d'accords corrects/incorrects, temps) lorsque vous quittez un mode d'entraînement, ce qui vous permet de suivre vos progrès.
