@@ -71,6 +71,7 @@ accords = {
     "Do bémol Majeur": {71, 74, 77}, # enharmonique de Si Majeur
     "Fa bémol Majeur": {64, 67, 71}, # enharmonique de Mi Majeur
     "Si bémol Mineur": {70, 73, 77},
+    "Mi bémol Mineur": {63, 66, 70},
     
     # Nouveaux accords manquants
     "Sol dièse Majeur": {68, 72, 75}, # Pour Do dièse Majeur
