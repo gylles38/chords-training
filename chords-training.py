@@ -20,22 +20,14 @@ class Color:
     GREEN = '\033[92m'
     RED = '\033[91m'
     YELLOW = '\033[93m'
+    ORANGE = '\033[38;5;208m'
     END = '\033[0m'
     CYAN = '\033[96m'
-    BOLD = '\033[1m'
+    BLUE = '\033[94m'
 
-# Noms des notes pour la conversion MIDI en nom
-NOTE_NAMES = ['Do', 'Do#', 'Ré', 'Ré#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si']
-
-def midi_to_note_name(midi_note):
-    """
-    Convertit un numéro de note MIDI en son nom (ex: 60 -> Do4).
-    """
-    if not 0 <= midi_note <= 127:
-        return "Note inconnue"
-    note_name = NOTE_NAMES[midi_note % 12]
-    octave = (midi_note // 12) - 1
-    return f"{note_name}{octave}"
+def clear_screen():
+    """Efface l'écran du terminal."""
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 # --- Définition des accords, des cadences et des gammes ---
 # Un dictionnaire où la clé est le nom de l'accord et la valeur est un ensemble
@@ -48,1007 +40,655 @@ accords = {
     "Sol Majeur": {67, 71, 74},
     "La Mineur": {69, 72, 76},
     "Si Diminué": {71, 74, 77},
-    "Ré Majeur": {62, 66, 69},
-    "La Majeur": {69, 73, 76},
-    "Si Mineur": {71, 74, 78},
-    "Do# Diminué": {61, 64, 67},
-    "Fa# Diminué": {66, 69, 72},
-    "Mi bémol Majeur": {63, 67, 70}
+    "Do dièse Majeur": {61, 65, 68},
+    "Ré dièse Mineur": {63, 66, 70},
+    "Fa dièse Majeur": {66, 70, 73},
+    "Sol dièse Mineur": {68, 71, 75},
+    "La dièse Mineur": {70, 73, 77},
+    "Mi bémol Majeur": {63, 67, 70},
+    "Sol bémol Majeur": {66, 70, 73},
+    "La bémol Majeur": {68, 72, 75},
+    "Si bémol Majeur": {70, 74, 77},
+    "Ré bémol Majeur": {61, 65, 68},
 }
 
-# Définition de suites d'accords (cadences)
-cadences = {
-    "Cadence Parfaite en Do Majeur": ["Sol Majeur", "Do Majeur"],
-    "Cadence Parfaite en Fa Majeur": ["Do Majeur", "Fa Majeur"],
-    "Cadence Parfaite en Sol Majeur": ["Ré Mineur", "Sol Majeur"],
-    "Cadence Plagale en Do Majeur": ["Fa Majeur", "Do Majeur"],
-    "Cadence Parfaite en La Mineur": ["Mi Mineur", "La Mineur"]
+# Gammes majeures pour le mode degrés
+gammes_majeures = {
+    "Do Majeur": ["Do Majeur", "Ré Mineur", "Mi Mineur", "Fa Majeur", "Sol Majeur", "La Mineur", "Si Diminué"],
+    "Sol Majeur": ["Sol Majeur", "La Mineur", "Si Mineur", "Do Majeur", "Ré Majeur", "Mi Mineur", "Fa dièse Diminué"],
+    "Ré Majeur": ["Ré Majeur", "Mi Mineur", "Fa dièse Mineur", "Sol Majeur", "La Majeur", "Si Mineur", "Do dièse Diminué"],
+    "La Majeur": ["La Majeur", "Si Mineur", "Do dièse Mineur", "Ré Majeur", "Mi Majeur", "Fa dièse Mineur", "Sol dièse Diminué"],
+    "Mi Majeur": ["Mi Majeur", "Fa dièse Mineur", "Sol dièse Mineur", "La Majeur", "Si Majeur", "Do dièse Mineur", "Ré dièse Diminué"],
+    "Si Majeur": ["Si Majeur", "Do dièse Mineur", "Ré dièse Mineur", "Mi Majeur", "Fa dièse Majeur", "Sol dièse Mineur", "La dièse Diminué"],
+    "Fa dièse Majeur": ["Fa dièse Majeur", "Sol dièse Mineur", "La dièse Mineur", "Si Majeur", "Do dièse Majeur", "Ré dièse Mineur", "Mi dièse Diminué"],
+    "Do dièse Majeur": ["Do dièse Majeur", "Ré dièse Mineur", "Mi dièse Mineur", "Fa dièse Majeur", "Sol dièse Majeur", "La dièse Mineur", "Si dièse Diminué"],
+    "Fa Majeur": ["Fa Majeur", "Sol Mineur", "La Mineur", "Si bémol Majeur", "Do Majeur", "Ré Mineur", "Mi Diminué"],
+    "Si bémol Majeur": ["Si bémol Majeur", "Do Mineur", "Ré Mineur", "Mi bémol Majeur", "Fa Majeur", "Sol Mineur", "La Diminué"],
+    "Mi bémol Majeur": ["Mi bémol Majeur", "Fa Mineur", "Sol Mineur", "La bémol Majeur", "Si bémol Majeur", "Do Mineur", "Ré Diminué"],
+    "La bémol Majeur": ["La bémol Majeur", "Si bémol Mineur", "Do Mineur", "Ré bémol Majeur", "Mi bémol Majeur", "Fa Mineur", "Sol Diminué"],
+    "Ré bémol Majeur": ["Ré bémol Majeur", "Mi bémol Mineur", "Fa Mineur", "Sol bémol Majeur", "La bémol Majeur", "Si bémol Mineur", "Do Diminué"],
+    "Sol bémol Majeur": ["Sol bémol Majeur", "La bémol Mineur", "Si bémol Mineur", "Do bémol Majeur", "Ré bémol Majeur", "Mi bémol Mineur", "Fa Diminué"],
+    "Do bémol Majeur": ["Do bémol Majeur", "Ré bémol Mineur", "Mi bémol Mineur", "Fa bémol Majeur", "Sol bémol Majeur", "La bémol Mineur", "Si bémol Diminué"],
 }
 
-# Définition de suites d'accords pop/rock
-pop_rock_progressions = {
-    "I-V-vi-IV en Do Majeur": ["Do Majeur", "Sol Majeur", "La Mineur", "Fa Majeur"],
-    "vi-IV-I-V en Do Majeur": ["La Mineur", "Fa Majeur", "Do Majeur", "Sol Majeur"],
-    "I-IV-V en Sol Majeur": ["Sol Majeur", "Do Majeur", "Ré Majeur"],
-    "I-vi-ii-V en Ré Majeur": ["Ré Majeur", "Si Mineur", "Mi Mineur", "La Majeur"],
-    "II-V-I en Do Majeur": ["Ré Mineur", "Sol Majeur", "Do Majeur"]
+# Traduction des degrés pour le mode degrés
+traductions_degres = {
+    0: "I", 1: "ii", 2: "iii", 3: "IV", 4: "V", 5: "vi", 6: "vii°"
 }
 
-# Définition des degrés d'accords pour différentes gammes
-gammes = {
-    "Do Majeur": {
-        "I": "Do Majeur", "ii": "Ré Mineur", "iii": "Mi Mineur", "IV": "Fa Majeur",
-        "V": "Sol Majeur", "vi": "La Mineur", "vii°": "Si Diminué"
-    },
-    "Sol Majeur": {
-        "I": "Sol Majeur", "ii": "La Mineur", "iii": "Si Mineur", "IV": "Do Majeur",
-        "V": "Ré Majeur", "vi": "Mi Mineur", "vii°": "Fa# Diminué"
-    },
-    "Ré Majeur": {
-        "I": "Ré Majeur", "ii": "Mi Mineur", "iii": "Fa# Diminué", "IV": "Sol Majeur",
-        "V": "La Majeur", "vi": "Si Mineur", "vii°": "Do# Diminué"
-    },
-    "La Mineur": {
-        "i": "La Mineur", "ii°": "Si Diminué", "III": "Do Majeur", "iv": "Ré Mineur",
-        "v": "Mi Mineur", "VI": "Fa Majeur", "VII": "Sol Majeur"
-    },
-    "Mi Mineur": {
-        "i": "Mi Mineur", "ii°": "Fa# Diminué", "III": "Sol Majeur", "iv": "La Mineur",
-        "v": "Si Mineur", "VI": "Do Majeur", "VII": "Ré Majeur"
-    }
-}
+# --- Fonctions utilitaires ---
+def get_note_name(midi_note):
+    """Convertit un numéro de note MIDI en son nom."""
+    notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
+    return notes[midi_note % 12]
 
-# --- Fonctions de retour MIDI ---
-def play_midi_notes(outport, notes, duration=0.2, velocity=100):
-    """
-    Joue une ou plusieurs notes via MIDI.
-    """
-    if not outport: return
-    for note in notes:
-        outport.send(mido.Message('note_on', note=note, velocity=velocity))
+def play_chord(outport, chord_notes, velocity=100, duration=0.5):
+    """Joue un accord via MIDI."""
+    for note in chord_notes:
+        msg = mido.Message('note_on', note=note, velocity=velocity)
+        outport.send(msg)
     time.sleep(duration)
-    for note in notes:
-        outport.send(mido.Message('note_off', note=note))
+    for note in chord_notes:
+        msg = mido.Message('note_off', note=note, velocity=0)
+        outport.send(msg)
 
-def play_midi_sequence(outport, notes, note_duration=0.1, velocity=100):
-    """
-    Joue une séquence de notes une par une.
-    """
-    if not outport: return
-    for note in notes:
-        outport.send(mido.Message('note_on', note=note, velocity=velocity))
-        time.sleep(note_duration)
-        outport.send(mido.Message('note_off', note=note))
-
-def play_success_feedback(outport):
-    """
-    Joue un retour MIDI pour un succès (séquence de notes).
-    """
-    play_midi_sequence(outport, [79, 83, 86], note_duration=0.1, velocity=127)
-
-def play_failure_feedback(outport):
-    """
-    Joue un retour MIDI pour un échec (accord de Do# diminué).
-    """
-    play_midi_notes(outport, [61, 64, 67, 70], duration=0.5, velocity=127)
-
-def play_waiting_feedback(outport):
-    """
-    Joue un retour MIDI pour indiquer l'attente (note unique).
-    """
-    play_midi_notes(outport, [72], duration=0.1, velocity=50)
-
-def play_progression_chords(outport, progression_chords, delay=1.5):
-    """
-    Joue la suite d'accords via MIDI avec un délai entre chaque accord.
-    """
-    print(f"{Color.CYAN}🎧 Lecture de la progression...{Color.END}")
-    for accord_nom in progression_chords:
-        notes = accords.get(accord_nom)
-        if notes:
-            play_midi_notes(outport, notes, duration=1.0) # Joue l'accord pendant 1 seconde
-            time.sleep(delay) # Délai avant l'accord suivant
-        else:
-            print(f"L'accord '{accord_nom}' n'a pas été trouvé. Passage au suivant.")
-    print(f"{Color.CYAN}Progression jouée. A votre tour !{Color.END}")
-    time.sleep(1)
-
-
-class NonBlockingInput:
-    """
-    Gestionnaire de contexte pour la saisie non-bloquante sous Unix.
-    Assure que les paramètres du terminal sont restaurés.
-    """
-    def __init__(self):
-        self.old_settings = None
-        self.fd = sys.stdin.fileno()
-
-    def __enter__(self):
-        if os.name != 'nt':
-            self.old_settings = termios.tcgetattr(self.fd)
-            tty.setraw(self.fd)
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if os.name != 'nt' and self.old_settings:
-            termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
-
-    def get_key(self, timeout=0):
-        if os.name == 'nt':
-            if msvcrt.kbhit():
-                return msvcrt.getch().decode('utf-8')
-            return None
-        else:
-            if select.select([sys.stdin], [], [], timeout) == ([sys.stdin], [], []):
+def wait_for_input(timeout=1.0):
+    """Saisie de caractère non-bloquante pour la progression_selection_mode."""
+    if 'msvcrt' in sys.modules:
+        if msvcrt.kbhit():
+            return msvcrt.getch().decode('utf-8')
+    else:
+        # Pour les systèmes Unix
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            if select.select([sys.stdin], [], [], timeout)[0]:
                 return sys.stdin.read(1)
-            return None
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return None
 
-def display_colored_notes(played_notes, expected_notes):
-    """
-    Affiche les notes jouées en vert si elles sont correctes et bien placées,
-    en jaune si elles sont correctes mais mal placées, et en rouge sinon.
-    """
-    played_notes_list = sorted(list(played_notes))
-    expected_notes_list = sorted(list(expected_notes))
-    
-    played_notes_str = []
-    
-    # On convertit les notes attendues en un set pour des recherches rapides
-    expected_notes_set = set(expected_notes)
-    
-    for i, played_note in enumerate(played_notes_list):
-        note_name = midi_to_note_name(played_note)
-        
-        # 1. Vérifier si la note est correcte et bien placée (position et note)
-        is_correct_position = (i < len(expected_notes_list) and played_note == expected_notes_list[i])
-        
-        # 2. Vérifier si la note est correcte, mais mal placée
-        is_correct_note = (played_note in expected_notes_set)
-        
-        if is_correct_position:
-            played_notes_str.append(f"{Color.GREEN}{note_name}{Color.END}")
-        elif is_correct_note:
-            played_notes_str.append(f"{Color.YELLOW}{note_name}{Color.END}")
-        else:
-            played_notes_str.append(f"{Color.RED}{note_name}{Color.END}")
-    
-    return ", ".join(played_notes_str)
-
-def clear_screen():
-    """
-    Efface le terminal pour une meilleure lisibilité.
-    """
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-def display_mode_header(mode_name):
-    """
-    Efface l'écran et affiche le nom du mode en haut.
-    """
-    clear_screen()
-    print(f"{Color.CYAN}--- Mode : {mode_name} ---{Color.END}\n")
+def wait_for_key_press():
+    """Fonction bloquante pour attendre une touche du clavier."""
+    if 'msvcrt' in sys.modules:
+        msvcrt.getch()
+    else:
+        # Pour les systèmes Unix
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 def get_single_char_choice(prompt, valid_choices):
-    """
-    Lit une seule touche du clavier de manière non-bloquante et sans écho.
-    """
-    print(prompt, end='', flush=True)
-    with NonBlockingInput() as nbi:
-        while True:
-            key = nbi.get_key()
-            if key and key in valid_choices:
-                # Efface la ligne du prompt pour éviter l'écho et la confusion
-                print("\r" + " " * len(prompt), end='\r', flush=True)
-                return key
-            time.sleep(0.01)
-
-def get_number_choice(prompt, default_value, unit):
-    """
-    Lit une entrée numérique, autorise 'q' pour quitter, et nécessite 'Entrée' pour valider.
-    """
-    prompt_message = f"Entrez une nouvelle valeur ({unit}) (par défaut: {default_value}) : "
-    print(prompt, end='', flush=True)
-    new_value_str = ""
-    with NonBlockingInput() as nbi:
-        while True:
-            print(f"\r{prompt_message}{new_value_str} (validez avec 'Entrée' ou 'q' pour annuler)", end='', flush=True)
-            key = nbi.get_key(0.1) # Utilise un petit timeout pour ne pas bloquer
-            if key:
-                if key.isdigit():
-                    new_value_str += key
-                elif key.lower() == 'q':
-                    print("\nAnnulé. La valeur par défaut est conservée.")
-                    time.sleep(1)
-                    return default_value
-                elif key in ('\r', '\n'):
-                    print("\n")
-                    if new_value_str:
-                        try:
-                            new_value = int(new_value_str)
-                            if new_value > 0:
-                                return new_value
-                            else:
-                                print(f"La valeur doit être un nombre positif. La valeur par défaut est conservée.")
-                                time.sleep(2)
-                                return default_value
-                        except ValueError:
-                            print("Entrée invalide. La valeur par défaut est conservée.")
-                            time.sleep(2)
-                            return default_value
-                    else:
-                        return default_value
-
-def _wait_for_notes_release_silent(port, previous_notes):
-    """
-    Attend que l'utilisateur relâche toutes les touches de l'accord précédent, sans rien afficher.
-    """
-    if previous_notes:
-        notes_a_relacher = set(previous_notes)
-        while notes_a_relacher:
-            msg = port.receive(block=False)
-            if msg and (msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0)):
-                if msg.note in notes_a_relacher:
-                    notes_a_relacher.remove(msg.note)
-            time.sleep(0.01)
-
-
-def wait_for_progression_action(inport):
-    """
-    Demande à l'utilisateur ce qu'il veut faire après avoir terminé une progression.
-    Retourne 'continue', 'back' ou 'quit'.
-    """
-    print("\n" + "-" * 40)
-    print("Appuyez sur :")
-    print(" - une touche MIDI pour rejouer cette progression")
-    print(" - 'm' pour le menu de sélection des progressions")
-    print(" - 'q' pour le menu principal")
-    
-    with NonBlockingInput() as nbi:
-        while True:
-            key = nbi.get_key()
-            if key:
-                if key.lower() == 'm':
-                    return "back"
-                if key.lower() == 'q':
-                    return "quit"
-
-            msg = inport.receive(block=False)
-            if msg and msg.type == 'note_on' and msg.velocity > 0:
-                return "continue"
-            
-            time.sleep(0.01)
-
-def print_progression_context(progression_name, progression_chords, current_index, progression_type):
-    """
-    Affiche la suite d'accords avec l'accord actuel en surbrillance.
-    """
-    print(f"Suite d'accords choisie ({progression_type}) : {progression_name}\n")
-    display_str = []
-    for i, chord in enumerate(progression_chords):
-        if i == current_index:
-            display_str.append(f"{Color.BOLD}{Color.GREEN}➜ {chord}{Color.END}")
-        else:
-            display_str.append(chord)
-    print(" -> ".join(display_str))
-    print("-" * 40)
-
-def wait_for_any_key(prompt="Appuyez sur n'importe quelle touche pour continuer..."):
-    """
-    Bloque l'exécution et attend que l'utilisateur appuie sur une touche.
-    """
-    print(prompt, end='', flush=True)
-    with NonBlockingInput() as nbi:
-        while True:
-            key = nbi.get_key()
-            if key:
-                print("\n")
-                return
-            time.sleep(0.01)
-
-def check_single_chord_with_retry(inport, outport, accord_a_deviner_nom, notes_attendues, degre_a_deviner_nom=None, progression_timer=None):
-    """
-    Gère la vérification d'un accord, y compris les retours et les tentatives.
-    Cette fonction efface l'écran à chaque tentative pour éviter le défilement.
-    Retourne le statut (succès/échec/quitter/timeout) et le nombre de tentatives incorrectes.
-    """
-    incorrect_attempts = 0
+    """Demande un choix à un caractère unique avec validation, sans spammer le terminal."""
     while True:
-        clear_screen()
-        
-        notes_jouees = set()
-        
-        # Affiche l'en-tête et le contexte si nécessaire
-        instruction = f"Jouez l'accord : {accord_a_deviner_nom} (Octave 4)"
-        if degre_a_deviner_nom:
-            instruction = f"Jouez l'accord du degré {degre_a_deviner_nom} : {accord_a_deviner_nom} (Octave 4)"
-        
-        print(f"{instruction} (q pour quitter)")
-        
-        # On attend l'accord de l'utilisateur
-        with NonBlockingInput() as nbi:
-            while True:
-                # Vérifie et affiche le temps de la progression en continu
-                prog_time_str = ""
-                if progression_timer and progression_timer['enabled']:
-                    prog_remaining = int(progression_timer['end_time'] - time.time())
-                    if prog_remaining <= 0:
-                        clear_screen()
-                        print(f"\r{Color.RED}TEMPS ÉCOULÉ !{Color.END}")
-                        time.sleep(0.5) 
-                        play_failure_feedback(outport)
-                        return "timeout_progression", incorrect_attempts
-                    prog_time_str = f" [Temps restant: {Color.CYAN}{prog_remaining}{Color.END}s]"
-                
-                print(f"\r{prog_time_str}", end='', flush=True)
-
-                msg = inport.receive(block=False)
-                if msg:
-                    if msg.type == 'note_on' and msg.velocity > 0:
-                        notes_jouees.add(msg.note)
-                    elif msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0):
-                        if msg.note in notes_jouees:
-                            notes_jouees.remove(msg.note)
-                
-                key = nbi.get_key()
-                if key and key.lower() == 'q':
-                    return "quit", incorrect_attempts
-
-                if len(notes_jouees) == len(notes_attendues) and notes_jouees and not any(inport.receive(block=False) for _ in range(5)):
-                    break
-                
-                time.sleep(0.01)
-
-        if notes_jouees == notes_attendues:
-            # Succès
-            _wait_for_notes_release_silent(inport, notes_jouees)
-            time.sleep(0.5)
-            play_success_feedback(outport)
-            return "success", incorrect_attempts
+        print(prompt, end="", flush=True)
+        choice = wait_for_input(timeout=1000)
+        if choice and choice in valid_choices:
+            print(choice)
+            return choice
         else:
-            # Échec
-            incorrect_attempts += 1
-            time.sleep(0.5)
-            play_failure_feedback(outport)
-            
-            # Affiche l'erreur en dessous de l'instruction
-            print("\n" + "-"*40)
-            print(f"{Color.RED}❌ Incorrect. Mauvais accord.{Color.END}")
-            print(f"Les notes jouées sont : {display_colored_notes(notes_jouees, notes_attendues)}")
-            
-            notes_attendues_noms = [midi_to_note_name(note) for note in sorted(list(notes_attendues))]
-            print(f"Les notes attendues étaient : {', '.join(notes_attendues_noms)}")
-            
-            print("\nRelâchez les touches pour réessayer...")
-            _wait_for_notes_release_silent(inport, notes_jouees)
-            
-            # La boucle continue, effacera l'écran et réaffichera le tout pour une nouvelle tentative.
-            continue
+            pass
 
-def run_progression_mode(inport, outport, progression_name, progression_chords, progression_type, progression_timer, play_progression_before_start, mode_name):
-    """
-    Fonction générique pour exécuter n'importe quel mode de progression.
-    Gère le chronomètre de progression si activé.
-    Retourne un dictionnaire avec le résultat et les stats.
-    """
-    session_stats = {'correct': 0, 'incorrect': 0}
+def select_midi_port(port_type):
+    """Permet à l'utilisateur de choisir un port MIDI parmi la liste disponible."""
+    ports = mido.get_input_names() if port_type == "input" else mido.get_output_names()
     
-    # Boucle principale pour permettre le redémarrage de la progression
+    if not ports:
+        print(f"{Color.RED}Aucun port {port_type} MIDI trouvé. Assurez-vous que votre périphérique est connecté.{Color.END}")
+        return None
+    
+    print(f"\nPorts {port_type} MIDI disponibles:")
+    for i, port_name in enumerate(ports):
+        print(f"[{i+1}] {port_name}")
+    print("[q] Quitter")
+    
     while True:
-        # Si l'option est activée, joue la progression avant de commencer
-        if play_progression_before_start:
-            display_mode_header(mode_name)
-            print(f"\n{Color.CYAN}La progression va être jouée dans 2 secondes...{Color.END}")
-            time.sleep(2) # Ajout d'un délai pour se préparer
-            play_progression_chords(outport, progression_chords)
-
-        progression_start_time = time.time()
-        if progression_timer['enabled']:
-            progression_timer['end_time'] = progression_start_time + progression_timer['timeout']
-
-        for i, accord_nom in enumerate(progression_chords):
-            notes_attendues = accords.get(accord_nom)
-            if not notes_attendues:
-                print(f"Erreur : L'accord '{accord_nom}' n'est pas défini. Passage au suivant.")
-                continue
-
-            # On affiche le contexte une seule fois au début de chaque accord
-            display_mode_header(mode_name)
-            print_progression_context(progression_name, progression_chords, i, progression_type)
-            
-            result, num_incorrect = check_single_chord_with_retry(
-                inport, outport, accord_nom, notes_attendues, 
-                progression_timer=progression_timer
-            )
-            
-            if result == "quit":
-                session_stats['incorrect'] += num_incorrect
-                return "quit", session_stats
-            elif result == "timeout_progression":
-                display_mode_header(mode_name)
-                print(f"\n{Color.RED}Délai de progression écoulé. Recommençons !{Color.END}")
-                session_stats['incorrect'] += 1 + num_incorrect # +1 pour le timeout
-                time.sleep(3)
-                break  # Recommence la boucle "while True"
-            
-            if result == "success":
-                session_stats['correct'] += 1
-                session_stats['incorrect'] += num_incorrect
+        choice = input(f"Veuillez choisir un port {port_type} (1-{len(ports)}) ou 'q' pour quitter: ")
+        if choice.lower() == 'q':
+            return None
+        try:
+            choice_index = int(choice) - 1
+            if 0 <= choice_index < len(ports):
+                return ports[choice_index]
             else:
-                session_stats['incorrect'] += 1 + num_incorrect
-        else:
-            # Cette partie est exécutée si la boucle "for" s'est terminée sans 'break'
-            display_mode_header(mode_name)
-            print(f"\n{Color.GREEN}🎉 Félicitations ! Vous avez terminé la suite d'accords : {progression_name}{Color.END}")
-            action = wait_for_progression_action(inport)
-            return action, session_stats
-        
-def single_chord_mode(inport, outport):
-    """
-    Mode de jeu pour un seul accord aléatoire.
-    """
-    mode_name = "Accord unique (aléatoire)"
-    session_stats = {'correct': 0, 'incorrect': 0}
-    
-    while True:
-        accord_a_deviner_nom, notes_attendues = random.choice(list(accords.items()))
-        
-        display_mode_header(mode_name)
-        result, num_incorrect = check_single_chord_with_retry(inport, outport, accord_a_deviner_nom, notes_attendues)
-        
-        if result == "quit":
-            session_stats['incorrect'] += num_incorrect
-            break
-        elif result == "success":
-            session_stats['correct'] += 1
-            session_stats['incorrect'] += num_incorrect
-        
-        time.sleep(0.5)
-    
-    return "quit", session_stats
+                print(f"{Color.RED}Choix invalide. Veuillez entrer un numéro entre 1 et {len(ports)}.{Color.END}")
+        except ValueError:
+            print(f"{Color.RED}Saisie invalide. Veuillez entrer un numéro.{Color.END}")
 
 def reverse_chord_mode(inport, outport):
-    """
-    Le système joue un accord, l'utilisateur doit le reproduire.
-    """
-    mode_name = "Accord à retrouver (le système joue)"
-    session_stats = {'correct': 0, 'incorrect': 0}
-    
+    """Mode de reconnaissance d'accords joués par l'utilisateur."""
+    clear_screen()
+    print("\n--- Mode Reconnaissance d'accords ---")
+    print("Jouez un accord sur votre clavier MIDI.")
+    print("Appuyez sur 'q' pour quitter.")
+
     while True:
-        # Choisit un accord aléatoire
-        accord_a_jouer_nom, notes_attendues = random.choice(list(accords.items()))
-        
-        # Initialise un compteur d'essais pour ce nouvel accord
-        incorrect_attempts = 0
+        # Vider le tampon d'entrée MIDI
+        for _ in inport.iter_pending():
+            pass
 
-        while True: # Boucle pour le re-jeu
-            display_mode_header(mode_name)
-            # Affiche les indices si disponibles
-            if incorrect_attempts >= 5:
-                tonic_note = midi_to_note_name(min(notes_attendues))
-                print(f"{Color.YELLOW}💡 Indice : La tonique est la note '{tonic_note.split(' ')[0]}'.{Color.END}\n")
-            elif incorrect_attempts >= 3:
-                chord_type = accord_a_jouer_nom.split()[-1]
-                print(f"{Color.YELLOW}💡 Indice : C'est un accord de type {chord_type}.{Color.END}\n")
-
-            print("🎧 Écoutez attentivement l'accord...")
-            time.sleep(1)
-            play_midi_notes(outport, notes_attendues, duration=1.0)
-            
-            # Attendre que les notes MIDI de l'accord joué par le programme soient relâchées
-            time.sleep(0.1) # Petite pause pour laisser les messages note_off être envoyés
-            
-            # Vider le buffer d'entrée MIDI pour ignorer les notes jouées par l'utilisateur
-            # pendant la lecture de l'accord par le programme
-            while inport.poll():
-                pass
-            
-            time.sleep(1) # Délai pour que l'utilisateur ait le temps de réfléchir
-
-            notes_jouees = set()
-            
-            with NonBlockingInput() as nbi:
-                while True:
-                    print(f"\rJouez l'accord que vous venez d'entendre (q pour quitter, r pour réécouter)...", end='', flush=True)
-                    
-                    msg = inport.receive(block=False)
-                    if msg:
-                        if msg.type == 'note_on' and msg.velocity > 0:
-                            notes_jouees.add(msg.note)
-                        elif msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0):
-                            if msg.note in notes_jouees:
-                                notes_jouees.remove(msg.note)
-                    
-                    key = nbi.get_key()
-                    if key:
-                        if key.lower() == 'q':
-                            return "quit", session_stats
-                        if key.lower() == 'r':
-                            # Rejoue l'accord et attend une nouvelle tentative
-                            _wait_for_notes_release_silent(inport, notes_jouees)
-                            print(f"{Color.CYAN}Relecture de l'accord...{Color.END}")
-                            time.sleep(1)
-                            play_midi_notes(outport, notes_attendues, duration=1.0)
-                            time.sleep(1)
-                            # Réinitialise la boucle de saisie
-                            notes_jouees = set()
-                            continue 
-                    
-                    # On ne vérifie l'accord que si l'utilisateur a relâché les touches
-                    if len(notes_jouees) == len(notes_attendues) and notes_jouees:
-                        break
-                    
-                    time.sleep(0.01)
-            
-            if notes_jouees == notes_attendues:
-                _wait_for_notes_release_silent(inport, notes_jouees)
-                time.sleep(0.5)
-                play_success_feedback(outport)
-                display_mode_header(mode_name)
-                print(f"\n{Color.GREEN}🎉 Correct ! C'était bien un {accord_a_jouer_nom}.{Color.END}")
-                session_stats['correct'] += 1
-                session_stats['incorrect'] += incorrect_attempts
-                break # Sort de la boucle de re-jeu pour passer au prochain accord
-            else:
-                incorrect_attempts += 1
-                time.sleep(0.5)
-                play_failure_feedback(outport)
-                notes_jouees_noms = [midi_to_note_name(note) for note in sorted(list(notes_jouees))]
-                notes_attendues_noms = [midi_to_note_name(note) for note in sorted(list(notes_attendues))]
-                display_mode_header(mode_name)
-                print(f"\n{Color.RED}❌ Incorrect. Mauvais accord.{Color.END}")
-                print(f"Les notes jouées sont : {display_colored_notes(notes_jouees, notes_attendues)}")
+        for msg in inport.iter_pending():
+            if msg.type == 'note_on' and msg.velocity > 0:
+                pressed_notes = set()
+                time.sleep(0.1)
+                for pending_msg in inport.iter_pending():
+                    if pending_msg.type == 'note_on' and pending_msg.velocity > 0:
+                        pressed_notes.add(pending_msg.note)
                 
-                if incorrect_attempts < 3:
-                    print("\nAppuyez sur une touche MIDI pour continuer, 'r' pour réécouter ou 'q' pour quitter.")
+                found_chord = None
+                for chord_name, chord_notes in accords.items():
+                    if all(note in pressed_notes for note in chord_notes):
+                        found_chord = chord_name
+                        break
+
+                if found_chord:
+                    print(f"Accord reconnu : {Color.GREEN}{found_chord}{Color.END}")
                 else:
-                    # L'indice sera affiché en haut de l'écran à la prochaine tentative
-                    pass
-    
-    return "quit", session_stats
-
-
-def progression_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start):
-    """
-    Mode de jeu pour une suite d'accords classique (cadences).
-    """
-    mode_name = "Progressions d'accords (cadences classiques)"
-    while True:
-        display_mode_header(mode_name)
-        cadence_nom_choisie = None
-        if progression_selection_mode == 'midi_key':
-            print("Pour choisir une suite d'accords, jouez la note fondamentale correspondante sur votre clavier MIDI.")
-            print("Ou appuyez sur 'q' pour revenir au menu.")
-
-            cadence_map_for_menu = {
-                60: "Cadence Parfaite en Do Majeur",
-                65: "Cadence Parfaite en Fa Majeur",
-                67: "Cadence Parfaite en Sol Majeur",
-                69: "Cadence Parfaite en La Mineur"
-            }
-            
-            for midi_note, name in cadence_map_for_menu.items():
-                print(f"Note {midi_to_note_name(midi_note)} -> {name}")
-            
-            with NonBlockingInput() as nbi:
-                while cadence_nom_choisie is None:
-                    key = nbi.get_key()
-                    if key and key.lower() == 'q':
-                        return "quit", {'correct': 0, 'incorrect': 0}
-
-                    msg = inport.receive(block=False)
-                    if msg and msg.type == 'note_on' and msg.velocity > 0:
-                        if msg.note in cadence_map_for_menu:
-                            cadence_nom_choisie = cadence_map_for_menu[msg.note]
-                    time.sleep(0.01)
-        else: # random
-            cadence_nom_choisie = random.choice(list(cadences.keys()))
-            print(f"Progression aléatoire sélectionnée : {cadence_nom_choisie}")
-            time.sleep(2)
+                    print(f"Accord non reconnu. Notes jouées : {[get_note_name(n) for n in pressed_notes]}")
         
-        accords_progression = cadences[cadence_nom_choisie]
-        action, session_stats = run_progression_mode(inport, outport, cadence_nom_choisie, accords_progression, "Cadence", progression_timer, play_progression_before_start, mode_name)
-        if action == "quit":
-            return "quit", session_stats
-        elif action == "back":
-            continue
-        elif action == "continue":
-            run_progression_mode(inport, outport, cadence_nom_choisie, accords_progression, "Cadence", progression_timer, play_progression_before_start, mode_name)
-        return "quit", session_stats
+        char = wait_for_input(timeout=0.1)
+        if char == 'q':
+            break
 
+def display_stats(correct_count, total_count, elapsed_time=None):
+    """Affiche les statistiques de performance."""
+    print(f"\n--- Bilan de la session ---")
+    if total_count > 0:
+        pourcentage = (correct_count / total_count) * 100
+        print(f"Accords corrects : {Color.GREEN}{correct_count}{Color.END}")
+        print(f"Accords incorrects : {Color.RED}{total_count - correct_count}{Color.END}")
+        print(f"Taux de réussite : {Color.CYAN}{pourcentage:.2f}%{Color.END}")
+    else:
+        print("Aucun accord n'a été joué.")
+    if elapsed_time is not None:
+        print(f"Temps écoulé : {Color.CYAN}{elapsed_time:.2f} secondes{Color.END}")
+    print("-------------------------")
+
+def get_colored_notes_string(played_notes, correct_notes):
+    """Retourne une chaîne de caractères avec les notes jouées, colorées en fonction de leur justesse."""
+    output_parts = []
+    
+    # Créer un dictionnaire pour vérifier les notes correctes dans n'importe quelle octave
+    correct_note_names = {get_note_name(n) for n in correct_notes}
+    
+    for note in sorted(played_notes):
+        note_name = get_note_name(note)
+        
+        if note in correct_notes:
+            output_parts.append(f"{Color.GREEN}{note_name}{Color.END}")
+        elif note_name in correct_note_names:
+            output_parts.append(f"{Color.ORANGE}{note_name}{Color.END}")
+        else:
+            output_parts.append(f"{Color.RED}{note_name}{Color.END}")
+            
+    return ", ".join(output_parts)
+
+
+# --- Modes de jeu ---
+def single_chord_mode(inport, outport):
+    """Mode d'entraînement sur les accords simples. L'utilisateur doit jouer le bon accord pour passer au suivant."""
+    clear_screen()
+    print("\n--- Mode Accords Simples ---")
+    print("Jouez l'accord affiché. Appuyez sur 'q' pour quitter.")
+    
+    correct_count = 0
+    total_count = 0
+    last_chord_name = None
+    quit_mode = False
+    
+    while not quit_mode:
+        # Vider le tampon MIDI
+        for _ in inport.iter_pending():
+            pass
+
+        # Choisir un nouvel accord
+        chord_name, chord_notes = random.choice(list(accords.items()))
+        while chord_name == last_chord_name:
+            chord_name, chord_notes = random.choice(list(accords.items()))
+        
+        last_chord_name = chord_name
+        
+        # Effacer l'écran pour le nouvel accord
+        clear_screen()
+        print("\n--- Mode Accords Simples ---")
+        print("Jouez l'accord affiché. Appuyez sur 'q' pour quitter.")
+        print(f"\nJouez : {Color.YELLOW}{chord_name}{Color.END}")
+
+        notes_currently_on = set()
+        attempt_notes = set()
+        
+        while True:
+            char = wait_for_input(timeout=0.01)
+            if char == 'q':
+                quit_mode = True
+                break
+            
+            for msg in inport.iter_pending():
+                if msg.type == 'note_on' and msg.velocity > 0:
+                    notes_currently_on.add(msg.note)
+                    attempt_notes.add(msg.note)
+                elif msg.type == 'note_off':
+                    notes_currently_on.discard(msg.note)
+            
+            # Un accord a été joué et toutes les notes ont été relâchées
+            if not notes_currently_on and attempt_notes:
+                if attempt_notes == chord_notes:
+                    colored_notes = ", ".join([get_note_name(n) for n in sorted(attempt_notes)])
+                    print(f"{Color.GREEN}Correct ! ({colored_notes}){Color.END}")
+                    correct_count += 1
+                    total_count += 1
+                    time.sleep(1) # Pause avant le prochain accord
+                    break # Passer à l'accord suivant
+                else:
+                    colored_string = get_colored_notes_string(attempt_notes, chord_notes)
+                    print(f"{Color.RED}Incorrect. Réessayez. Notes jouées : [{colored_string}]{Color.END}")
+                    total_count += 1
+                    attempt_notes.clear() # Réinitialiser pour le prochain essai
+                    
+            time.sleep(0.01)
+        
+    # Cette partie est exécutée si on quitte le mode (quit_mode est True)
+    display_stats(correct_count, total_count)
+    print("\nAppuyez sur une touche pour retourner au menu principal.")
+    # Vider le tampon MIDI avant d'attendre la touche
+    for _ in inport.iter_pending():
+        pass
+    wait_for_key_press()
+
+
+def get_progression_choice(progression_selection_mode, inport, last_progression=None):
+    """Permet de choisir une progression, soit aléatoirement, soit via MIDI."""
+    progressions_pop_rock = {
+        "I-V-vi-IV": ["Do Majeur", "Sol Majeur", "La Mineur", "Fa Majeur"],
+        "ii-V-I": ["Ré Mineur", "Sol Majeur", "Do Majeur"],
+        "I-vi-ii-V": ["Do Majeur", "La Mineur", "Ré Mineur", "Sol Majeur"],
+        "IV-I-V-vi": ["Fa Majeur", "Do Majeur", "Sol Majeur", "La Mineur"],
+    }
+    
+    if progression_selection_mode == 'midi':
+        print(f"Appuyez sur une note de la 4ème octave pour choisir une progression ({Color.CYAN}Do4 à Fa4{Color.END}) ou 'q' pour revenir au menu.")
+        note_map = {
+            60: "I-V-vi-IV", 62: "ii-V-I", 64: "I-vi-ii-V", 65: "IV-I-V-vi"
+        }
+        
+        while True:
+            # Vider le tampon d'entrée MIDI au début de chaque boucle
+            for _ in inport.iter_pending():
+                pass
+                
+            for msg in inport.iter_pending():
+                if msg.type == 'note_on' and msg.velocity > 0:
+                    note = msg.note
+                    if note in note_map:
+                        prog_name = note_map[note]
+                        if not last_progression or prog_name != last_progression:
+                            print(f"Progression sélectionnée : {Color.CYAN}{prog_name}{Color.END}")
+                            return prog_name, progressions_pop_rock[prog_name]
+                        else:
+                            print(f"{Color.RED}Progression déjà jouée. Veuillez en choisir une autre.{Color.END}")
+            char = wait_for_input(timeout=0.1)
+            if char == 'q':
+                return None, None
+    else: # Mode aléatoire par défaut
+        prog_name, progression = random.choice(list(progressions_pop_rock.items()))
+        while progression == last_progression:
+            prog_name, progression = random.choice(list(progressions_pop_rock.items()))
+        return prog_name, progression
 
 def pop_rock_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start):
-    """
-    Mode de jeu pour les suites d'accords pop/rock.
-    """
-    mode_name = "Suites d'accords pop/rock"
+    """Mode d'entraînement sur des progressions Pop/Rock."""
+    clear_screen()
+    print("\n--- Mode Progressions Pop/Rock ---")
+    print("Appuyez sur 'q' pour quitter.")
+    
+    correct_count = 0
+    total_count = 0
+    last_progression = None
+
     while True:
-        display_mode_header(mode_name)
-        progression_nom_choisie = None
-        if progression_selection_mode == 'midi_key':
-            print("Pour choisir une suite d'accords pop/rock, jouez la note fondamentale du premier accord sur votre clavier MIDI.")
-            print("Ou appuyez sur 'q' pour revenir au menu.")
-
-            pop_rock_map_for_menu = {
-                60: "I-V-vi-IV en Do Majeur",
-                69: "vi-IV-I-V en Do Majeur",
-                67: "I-IV-V en Sol Majeur",
-                62: "I-vi-ii-V en Ré Majeur",
-                64: "II-V-I en Do Majeur"
-            }
-
-            for midi_note, name in pop_rock_map_for_menu.items():
-                print(f"Note {midi_to_note_name(midi_note)} -> {name}")
-
-            with NonBlockingInput() as nbi:
-                while progression_nom_choisie is None:
-                    key = nbi.get_key()
-                    if key and key.lower() == 'q':
-                        return "quit", {'correct': 0, 'incorrect': 0}
-
-                    msg = inport.receive(block=False)
-                    if msg and msg.type == 'note_on' and msg.velocity > 0:
-                        if msg.note in pop_rock_map_for_menu:
-                            progression_nom_choisie = pop_rock_map_for_menu[msg.note]
-                    time.sleep(0.01)
-        else: # random
-            progression_nom_choisie = random.choice(list(pop_rock_progressions.keys()))
-            print(f"Progression aléatoire sélectionnée : {progression_nom_choisie}")
-            time.sleep(2)
+        prog_name, progression = get_progression_choice(progression_selection_mode, inport, last_progression)
+        if prog_name is None:
+            break
         
-        accords_progression = pop_rock_progressions[progression_nom_choisie]
-        
-        action, session_stats = run_progression_mode(inport, outport, progression_nom_choisie, accords_progression, "Pop/Rock", progression_timer, play_progression_before_start, mode_name)
-        if action == "quit":
-            return "quit", session_stats
-        elif action == "back":
-            continue
-        elif action == "continue":
-            run_progression_mode(inport, outport, progression_nom_choisie, accords_progression, "Pop/Rock", progression_timer, play_progression_before_start, mode_name)
-        return "quit", session_stats
+        last_progression = progression
 
+        print(f"\nProgression à jouer : {Color.YELLOW}{' -> '.join(progression)}{Color.END}")
+        
+        if play_progression_before_start:
+            print("Lecture de la progression...")
+            for chord_name in progression:
+                play_chord(outport, accords[chord_name], duration=0.8)
+                time.sleep(0.5)
+
+        start_time = None
+        if progression_timer:
+            print(f"{Color.CYAN}Minuteur activé. Commencez à jouer !{Color.END}")
+            start_time = time.time()
+
+        correct_progression = True
+        
+        for chord_name in progression:
+            target_notes = accords[chord_name]
+            print(f"Jouez l'accord {Color.YELLOW}{chord_name}{Color.END}")
+            
+            notes_currently_on = set()
+            attempt_notes = set()
+
+            while True:
+                char = wait_for_input(timeout=0.01)
+                if char == 'q':
+                    correct_progression = False
+                    break
+                
+                for msg in inport.iter_pending():
+                    if msg.type == 'note_on' and msg.velocity > 0:
+                        notes_currently_on.add(msg.note)
+                        attempt_notes.add(msg.note)
+                    elif msg.type == 'note_off':
+                        notes_currently_on.discard(msg.note)
+
+                if not notes_currently_on and attempt_notes:
+                    if attempt_notes == target_notes:
+                        print(f"{Color.GREEN}Correct !{Color.END}")
+                        break
+                    else:
+                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                        print(f"{Color.RED}Incorrect. Réessayez. Notes jouées : [{colored_string}]{Color.END}")
+                        attempt_notes.clear()
+                
+                time.sleep(0.01)
+            
+            if not correct_progression:
+                break
+        
+        if not correct_progression:
+            break
+
+        total_count += 1
+        if correct_progression:
+            correct_count += 1
+        
+        if start_time:
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"Temps pour la progression : {Color.CYAN}{elapsed_time:.2f} secondes{Color.END}")
+        
+        print("\nProgression terminée. Appuyez sur une touche pour continuer ou 'q' pour quitter.")
+        # Vider le tampon MIDI avant d'attendre la touche
+        for _ in inport.iter_pending():
+            pass
+        wait_for_key_press()
+            
+    display_stats(correct_count, total_count)
+
+def progression_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start):
+    """Mode d'entraînement sur les progressions d'accords."""
+    clear_screen()
+    print("\n--- Mode Progressions d'Accords ---")
+    print("Appuyez sur 'q' pour quitter.")
+    
+    correct_count = 0
+    total_count = 0
+    last_progression = []
+
+    while True:
+        prog_len = random.randint(3, 5)
+        progression = random.sample(list(accords.keys()), prog_len)
+        while progression == last_progression:
+            progression = random.sample(list(accords.keys()), prog_len)
+        
+        last_progression = progression
+        
+        print(f"\nProgression à jouer : {Color.YELLOW}{' -> '.join(progression)}{Color.END}")
+        
+        if play_progression_before_start:
+            print("Lecture de la progression...")
+            for chord_name in progression:
+                play_chord(outport, accords[chord_name], duration=0.8)
+                time.sleep(0.5)
+
+        start_time = None
+        if progression_timer:
+            print(f"{Color.CYAN}Minuteur activé. Commencez à jouer !{Color.END}")
+            start_time = time.time()
+
+        correct_progression = True
+        
+        for chord_name in progression:
+            target_notes = accords[chord_name]
+            print(f"Jouez l'accord {Color.YELLOW}{chord_name}{Color.END}")
+            
+            notes_currently_on = set()
+            attempt_notes = set()
+
+            while True:
+                char = wait_for_input(timeout=0.01)
+                if char == 'q':
+                    correct_progression = False
+                    break
+                
+                for msg in inport.iter_pending():
+                    if msg.type == 'note_on' and msg.velocity > 0:
+                        notes_currently_on.add(msg.note)
+                        attempt_notes.add(msg.note)
+                    elif msg.type == 'note_off':
+                        notes_currently_on.discard(msg.note)
+
+                if not notes_currently_on and attempt_notes:
+                    if attempt_notes == target_notes:
+                        print(f"{Color.GREEN}Correct !{Color.END}")
+                        break
+                    else:
+                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                        print(f"{Color.RED}Incorrect. Réessayez. Notes jouées : [{colored_string}]{Color.END}")
+                        attempt_notes.clear()
+                
+                time.sleep(0.01)
+            
+            if not correct_progression:
+                break
+        
+        if not correct_progression:
+            break
+
+        total_count += 1
+        if correct_progression:
+            correct_count += 1
+        
+        if start_time:
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"Temps pour la progression : {Color.CYAN}{elapsed_time:.2f} secondes{Color.END}")
+        
+        print("\nProgression terminée. Appuyez sur une touche pour continuer ou 'q' pour quitter.")
+        # Vider le tampon MIDI avant d'attendre la touche
+        for _ in inport.iter_pending():
+            pass
+        wait_for_key_press()
+            
+    display_stats(correct_count, total_count)
 
 def degrees_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start):
-    """
-    Mode de jeu pour les degrés d'accords d'une gamme.
-    """
-    mode_name = "Degrés d'accords"
-    session_stats = {'correct': 0, 'incorrect': 0}
+    """Mode d'entraînement sur les accords par degrés."""
+    clear_screen()
+    print("\n--- Mode Degrés ---")
+    print("Appuyez sur 'q' pour quitter.")
     
+    correct_count = 0
+    total_count = 0
+    last_progression_accords = []
+
     while True:
-        display_mode_header(mode_name)
-        gamme_choisie_nom = None
-        if progression_selection_mode == 'midi_key':
-            print("Pour choisir une gamme, jouez sa note fondamentale sur votre clavier MIDI.")
-            print("Ou appuyez sur 'q' pour revenir au menu.")
-
-            gamme_midi_map = {
-                60: "Do Majeur",
-                67: "Sol Majeur",
-                62: "Ré Majeur",
-                69: "La Mineur",
-                64: "Mi Mineur"
-            }
-            
-            for midi_note, gamme_name in gamme_midi_map.items():
-                print(f"Note {midi_to_note_name(midi_note)} -> Gamme de {gamme_name}")
-
-            with NonBlockingInput() as nbi:
-                while gamme_choisie_nom is None:
-                    key = nbi.get_key()
-                    if key and key.lower() == 'q':
-                        return "quit", session_stats
-                    
-                    msg = inport.receive(block=False)
-                    if msg and msg.type == 'note_on' and msg.velocity > 0:
-                        if msg.note in gamme_midi_map:
-                            gamme_choisie_nom = gamme_midi_map[msg.note]
-                            print(f"\nVous avez choisi la gamme de {gamme_choisie_nom}.")
-                            
-                    time.sleep(0.01)
-        else: # random
-            gamme_choisie_nom = random.choice(list(gammes.keys()))
-            print(f"Gamme aléatoire sélectionnée : {gamme_choisie_nom}")
-            time.sleep(2)
-
-
-        def print_degrees_table(current_degre_nom=None):
-            print(f"Gamme choisie : {gamme_choisie_nom}")
-            print("-" * 40)
-            print(f"| {'Degré':<10} | {'Accord':<25} |")
-            print("-" * 40)
-            for degre, accord in gammes[gamme_choisie_nom].items():
-                if degre == current_degre_nom:
-                    print(f"| {Color.BOLD}{Color.GREEN}{degre:<10}{Color.END} | {Color.BOLD}{accord:<25}{Color.END} |")
-                else:
-                    print(f"| {degre:<10} | {accord:<25} |")
-            print("-" * 40)
-
-        last_degre_nom = None
+        tonalite, gammes = random.choice(list(gammes_majeures.items()))
+        prog_len = random.randint(3, 5)
         
-        # Boucle principale pour permettre le redémarrage de la progression
-        while True:
-            progression_start_time = time.time()
-            if progression_timer['enabled']:
-                progression_timer['end_time'] = progression_start_time + progression_timer['timeout']
+        progression_accords = []
+        while not progression_accords or progression_accords == last_progression_accords:
+            degres_progression = random.sample(range(len(gammes)), prog_len)
+            progression_accords = [gammes[d] for d in degres_progression]
             
-            accords_progression_tuples = list(gammes[gamme_choisie_nom].items())
-            accords_progression_chords = [accord for degre, accord in accords_progression_tuples]
+        last_progression_accords = progression_accords
 
-            # Si l'option est activée, joue la progression avant de commencer
-            if play_progression_before_start:
-                display_mode_header(mode_name)
-                print(f"\n{Color.CYAN}La progression va être jouée dans 2 secondes...{Color.END}")
-                time.sleep(2) # Ajout d'un délai pour se préparer
-                play_progression_chords(outport, accords_progression_chords)
+        print(f"\nDans la tonalité de {Color.YELLOW}{tonalite}{Color.END}, jouez la progression : {Color.YELLOW}{' -> '.join([traductions_degres[d] for d in degres_progression])}{Color.END}")
+        
+        if play_progression_before_start:
+            print("Lecture de la progression...")
+            for chord_name in progression_accords:
+                play_chord(outport, accords[chord_name], duration=0.8)
+                time.sleep(0.5)
 
-            for i in range(len(accords_progression_tuples)):
-                degre_nom, accord_nom = last_degre_nom, None
-                while degre_nom == last_degre_nom:
-                    degre_nom, accord_nom = random.choice(accords_progression_tuples)
-                
-                notes_attendues = accords.get(accord_nom)
-                if not notes_attendues:
-                    print(f"Erreur : L'accord '{accord_nom}' n'est pas défini. Passage au suivant.")
-                    continue
-                
-                display_mode_header(mode_name)
-                print_degrees_table(degre_nom)
-                
-                result, num_incorrect = check_single_chord_with_retry(
-                    inport, outport, accord_nom, notes_attendues, degre_nom, 
-                    progression_timer=progression_timer
-                )
-                
-                if result == "quit":
-                    session_stats['incorrect'] += num_incorrect
-                    return "quit", session_stats
-                elif result == "timeout_progression":
-                    display_mode_header(mode_name)
-                    print(f"\n{Color.RED}Délai de progression écoulé. Recommençons !{Color.END}")
-                    session_stats['incorrect'] += 1 + num_incorrect # +1 pour le timeout
-                    time.sleep(3)
-                    break # Recommence la boucle "while True"
-                
-                if result == "success":
-                    last_degre_nom = degre_nom
-                    session_stats['correct'] += 1
-                    session_stats['incorrect'] += num_incorrect
-                else:
-                    session_stats['incorrect'] += 1 + num_incorrect
-            else:
-                # Exécuté si la boucle "for" s'est terminée sans 'break'
-                display_mode_header(mode_name)
-                print(f"\n{Color.GREEN}🎉 Félicitations ! Vous avez terminé la suite d'accords.{Color.END}")
-                action = wait_for_progression_action(inport)
-                if action == "quit":
-                    return "quit", session_stats
-                elif action == "back":
-                    break # Revenir au menu de sélection des gammes
-                elif action == "continue":
-                    continue # Recommence la même progression
-    
-    return "quit", session_stats
+        start_time = None
+        if progression_timer:
+            print(f"{Color.CYAN}Minuteur activé. Commencez à jouer !{Color.END}")
+            start_time = time.time()
 
-def options_menu(current_progression_timer, current_progression_selection_mode, current_play_progression_before_start):
-    """
-    Affiche le menu des options et permet à l'utilisateur de modifier les paramètres.
-    """
-    mode_name = "Options"
+        correct_progression = True
+        
+        for chord_name in progression_accords:
+            target_notes = accords[chord_name]
+            print(f"Jouez l'accord {Color.YELLOW}{chord_name}{Color.END}")
+            
+            notes_currently_on = set()
+            attempt_notes = set()
+            
+            while True:
+                char = wait_for_input(timeout=0.01)
+                if char == 'q':
+                    correct_progression = False
+                    break
+                
+                for msg in inport.iter_pending():
+                    if msg.type == 'note_on' and msg.velocity > 0:
+                        notes_currently_on.add(msg.note)
+                        attempt_notes.add(msg.note)
+                    elif msg.type == 'note_off':
+                        notes_currently_on.discard(msg.note)
+
+                if not notes_currently_on and attempt_notes:
+                    if attempt_notes == target_notes:
+                        print(f"{Color.GREEN}Correct !{Color.END}")
+                        break
+                    else:
+                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                        print(f"{Color.RED}Incorrect. Réessayez. Notes jouées : [{colored_string}]{Color.END}")
+                        attempt_notes.clear()
+                
+                time.sleep(0.01)
+            
+            if not correct_progression:
+                break
+        
+        if not correct_progression:
+            break
+
+        total_count += 1
+        if correct_progression:
+            correct_count += 1
+        
+        if start_time:
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"Temps pour la progression : {Color.CYAN}{elapsed_time:.2f} secondes{Color.END}")
+        
+        print("\nProgression terminée. Appuyez sur une touche pour continuer ou 'q' pour quitter.")
+        # Vider le tampon MIDI avant d'attendre la touche
+        for _ in inport.iter_pending():
+            pass
+        wait_for_key_press()
+            
+    display_stats(correct_count, total_count)
+
+def options_menu(progression_timer, progression_selection_mode, play_progression_before_start):
+    """Menu d'options pour configurer le programme."""
+    clear_screen()
+    print("\n--- Menu Options ---")
     while True:
-        clear_screen()
-        print(f"{Color.CYAN}--- Menu : Options ---{Color.END}\n")
-        
-        prog_status = "Activé" if current_progression_timer['enabled'] else "Désactivé"
-        print(f"[1] Chronomètre de progression : {prog_status}")
-        if current_progression_timer['enabled']:
-             print(f"    - Durée du chronomètre : {current_progression_timer['timeout']} secondes")
-        
-        selection_mode_display = "Touche MIDI" if current_progression_selection_mode == 'midi_key' else "Aléatoire"
-        print(f"[2] Mode de sélection des progressions : {selection_mode_display}")
-
-        play_before_display = "Activé" if current_play_progression_before_start else "Désactivé"
-        print(f"[3] Jouer la progression avant de demander : {play_before_display}")
-
+        print(f"\n[1] Minuteur progression: {Color.GREEN}Activé{Color.END}" if progression_timer else f"[1] Minuteur progression: {Color.RED}Désactivé{Color.END}")
+        print(f"[2] Sélection progression: {Color.GREEN}MIDI (touche){Color.END}" if progression_selection_mode == 'midi' else f"[2] Sélection progression: {Color.RED}Aléatoire{Color.END}")
+        print(f"[3] Lecture progression: {Color.GREEN}Avant de commencer{Color.END}" if play_progression_before_start else f"[3] Lecture progression: {Color.RED}Non{Color.END}")
         print("[4] Retour au menu principal")
         
         choice = get_single_char_choice("Votre choix : ", ['1', '2', '3', '4'])
         
         if choice == '1':
-            current_progression_timer['enabled'] = not current_progression_timer['enabled']
-            if current_progression_timer['enabled']:
-                print("\nChronomètre de progression activé.")
-                new_prog_timeout = get_number_choice("Définir la durée du chronomètre de progression", current_progression_timer['timeout'], "secondes")
-                if new_prog_timeout is not None:
-                    current_progression_timer['timeout'] = new_prog_timeout
-            else:
-                print("\nChronomètre de progression désactivé.")
-            time.sleep(2)
+            progression_timer = not progression_timer
         elif choice == '2':
-            if current_progression_selection_mode == 'midi_key':
-                current_progression_selection_mode = 'random'
-                print("\nMode de sélection des progressions mis en aléatoire.")
-            else:
-                current_progression_selection_mode = 'midi_key'
-                print("\nMode de sélection des progressions mis en touche MIDI.")
-            time.sleep(2)
+            progression_selection_mode = 'midi' if progression_selection_mode == 'random' else 'random'
         elif choice == '3':
-            current_play_progression_before_start = not current_play_progression_before_start
-            if current_play_progression_before_start:
-                print("\nL'option 'Jouer la progression avant de demander' est maintenant activée.")
-            else:
-                print("\nL'option 'Jouer la progression avant de demander' est maintenant désactivée.")
-            time.sleep(2)
+            play_progression_before_start = not play_progression_before_start
         elif choice == '4':
-            return current_progression_timer, current_progression_selection_mode, current_play_progression_before_start
-    
-def display_statistics(stats):
-    """
-    Affiche les statistiques de la dernière session avant de revenir au menu principal.
-    """
-    if stats['correct'] == 0 and stats['incorrect'] == 0:
-        return
+            return progression_timer, progression_selection_mode, play_progression_before_start
+    return progression_timer, progression_selection_mode, play_progression_before_start
+
+def main():
+    """Fonction principale du programme."""
+    progression_timer = False
+    progression_selection_mode = 'random'
+    play_progression_before_start = True
     
     clear_screen()
-    print("=" * 40)
-    print(f"{'Résultats de votre dernière session':^40}")
-    print("=" * 40)
-    
-    total = stats['correct'] + stats['incorrect']
-    if total > 0:
-        rate = (stats['correct'] / total) * 100
-    else:
-        rate = 0
-    
-    print(f"Réponses correctes   : {Color.GREEN}{stats['correct']}{Color.END}")
-    print(f"Réponses incorrectes : {Color.RED}{stats['incorrect']}{Color.END}")
-    print("-" * 40)
-    print(f"Total des tentatives : {total}")
-    print(f"Taux de réussite     : {Color.YELLOW}{rate:.2f}%{Color.END}")
-    print("=" * 40)
-    wait_for_any_key("Appuyez sur n'importe quelle touche pour continuer au menu principal...")
-    
-# --- Logique de l'application ---
-def main():
-    """
-    Fonction principale pour l'application de vérification d'accords MIDI.
-    """
-    inport = None
-    outport = None
+    print(f"--- Bienvenue dans l'Entraîneur d'Accords MIDI ---")
+
+    inport_name = select_midi_port("input")
+    if not inport_name:
+        print("Annulation de la sélection du port d'entrée. Arrêt du programme.")
+        return
+
+    outport_name = select_midi_port("output")
+    if not outport_name:
+        print("Annulation de la sélection du port de sortie. Arrêt du programme.")
+        return
 
     try:
-        input_ports = mido.get_input_names()
-        output_ports = mido.get_output_names()
-
-        if not input_ports:
-            print("Aucun périphérique MIDI d'entrée n'a été trouvé.")
-            return
-
-        inport_name = None
-        outport_name = None
-        inport = None
-        outport = None
-
-        # Boucle pour la sélection du port d'entrée
-        while True:
-            print("\nPorts MIDI d'entrée disponibles (clavier MIDI) :")
-            for i, name in enumerate(input_ports):
-                print(f"[{i}] {name}")
-            
-            valid_choices = [str(i) for i in range(len(input_ports))] + ['q']
-            inport_choice = get_single_char_choice("Entrez le numéro du port d'entrée de votre clavier (ou 'q' pour quitter) : ", valid_choices)
-            
-            if inport_choice.lower() == 'q':
-                print("\nArrêt du programme.")
-                return
-
-            try:
-                inport_name = input_ports[int(inport_choice)]
-                inport = mido.open_input(inport_name)
-                print(f"Connecté en entrée à : {inport_name}")
-                break
-            except (ValueError, IndexError):
-                print(f"{Color.RED}Choix invalide. Veuillez entrer un numéro valide ou 'q'.{Color.END}")
-            except Exception as e:
-                print(f"{Color.RED}Erreur : Impossible d'ouvrir le port '{inport_name}'. Détails : {e}{Color.END}")
-                time.sleep(2)
-        
-        # Boucle pour la sélection du port de sortie
-        if output_ports:
-            while True:
-                print("\nPorts MIDI de sortie disponibles pour le feedback :")
-                for i, name in enumerate(output_ports):
-                    print(f"[{i}] {name}")
-
-                outport_valid_choices = [str(i) for i in range(len(output_ports))] + ['q', 'n']
-                outport_choice = get_single_char_choice("Entrez le numéro du port de sortie pour le feedback (ou 'n' pour ne pas en utiliser, 'q' pour quitter) : ", outport_valid_choices)
-
-                if outport_choice.lower() == 'q':
-                    print("\nArrêt du programme.")
-                    return
-                elif outport_choice.lower() == 'n':
-                    print("Fonctionnalité de sortie MIDI désactivée.")
-                    break
-                
-                try:
-                    outport_name = output_ports[int(outport_choice)]
-                    outport = mido.open_output(outport_name)
-                    print(f"Connecté en sortie à : {outport_name}")
-                    break
-                except (ValueError, IndexError):
-                    print(f"{Color.RED}Choix invalide. Veuillez entrer un numéro valide, 'n' ou 'q'.{Color.END}")
-                except Exception as e:
-                    print(f"{Color.RED}Erreur : Impossible d'ouvrir le port '{outport_name}'. Détails : {e}{Color.END}")
-                    time.sleep(2)
-        else:
-            print("\nAucun périphérique MIDI de sortie n'a été trouvé. Le programme fonctionnera sans retour MIDI.")
-
-
-        print("\nBienvenue dans le vérificateur d'accords MIDI ! Appuyez sur Ctrl+C pour quitter.")
-
-        progression_timer = {'enabled': False, 'timeout': 60, 'end_time': 0}
-        progression_selection_mode = 'midi_key'
-        play_progression_before_start = True # Nouvelle option, activée par défaut
-        
-        # Dictionnaire pour stocker les statistiques de la dernière session
-        session_stats = {'correct': 0, 'incorrect': 0}
-
-        while True:
-            display_statistics(session_stats)
+        with mido.open_input(inport_name) as inport, mido.open_output(outport_name) as outport:
             clear_screen()
-            print("\nSélectionnez un mode de jeu :")
-            print("[1] Accord unique (aléatoire)")
-            print("[2] Progressions d'accords (cadences classiques)")
-            print("[3] Degrés d'accords")
-            print("[4] Suites d'accords pop/rock")
-            print("[5] Accord à retrouver (le système joue)")
-            print("[6] Options")
-            print("[7] Quitter")
+            print(f"Port d'entrée MIDI sélectionné : {Color.GREEN}{inport.name}{Color.END}")
+            print(f"Port de sortie MIDI sélectionné : {Color.GREEN}{outport.name}{Color.END}")
+            time.sleep(2)
             
-            mode_choice = get_single_char_choice("Votre choix : ", ['1', '2', '3', '4', '5', '6', '7'])
-            
-            # Réinitialise les statistiques de session avant de commencer un nouveau mode
-            correct, incorrect = 0, 0
+            while True:
+                # Vider le tampon MIDI à chaque retour au menu principal
+                for _ in inport.iter_pending():
+                    pass
 
-            if mode_choice == '1':
-                action, stats = single_chord_mode(inport, outport)
-                session_stats = stats
-                if action == "quit": continue
-            elif mode_choice == '2':
-                action, stats = progression_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start)
-                session_stats = stats
-                if action == "quit": continue
-            elif mode_choice == '3':
-                action, stats = degrees_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start)
-                session_stats = stats
-                if action == "quit": continue
-            elif mode_choice == '4':
-                action, stats = pop_rock_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start)
-                session_stats = stats
-                if action == "quit": continue
-            elif mode_choice == '5':
-                action, stats = reverse_chord_mode(inport, outport)
-                session_stats = stats
-                if action == "quit": continue
-            elif mode_choice == '6':
-                progression_timer, progression_selection_mode, play_progression_before_start = options_menu(progression_timer, progression_selection_mode, play_progression_before_start)
-                session_stats = {'correct': 0, 'incorrect': 0}
-            elif mode_choice == '7':
-                print("Arrêt du programme.")
-                break
-            else:
-                print("Choix invalide. Veuillez réessayer.")
-
+                clear_screen()
+                print("\n--- Menu Principal ---")
+                print("[1] Mode Accord Simple")
+                print("[2] Mode Progressions d'Accords (aléatoires)")
+                print("[3] Mode Degrés (par tonalité)")
+                print("[4] Mode Pop/Rock (progressions célèbres)")
+                print("[5] Mode Reconnaissance d'accords")
+                print("[6] Options")
+                print("[7] Quitter")
+                
+                mode_choice = get_single_char_choice("Votre choix : ", ['1', '2', '3', '4', '5', '6', '7'])
+                
+                if mode_choice == '1':
+                    single_chord_mode(inport, outport)
+                elif mode_choice == '2':
+                    progression_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start)
+                elif mode_choice == '3':
+                    degrees_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start)
+                elif mode_choice == '4':
+                    pop_rock_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start)
+                elif mode_choice == '5':
+                    reverse_chord_mode(inport, outport)
+                elif mode_choice == '6':
+                    progression_timer, progression_selection_mode, play_progression_before_start = options_menu(progression_timer, progression_selection_mode, play_progression_before_start)
+                elif mode_choice == '7':
+                    print("Arrêt du programme.")
+                    break
+                else:
+                    pass
     except KeyboardInterrupt:
         print("\nArrêt du programme.")
     except Exception as e:
         print(f"Une erreur s'est produite : {e}")
-    finally:
-        # Cette section garantit que les ports sont fermés, peu importe comment le programme se termine.
-        if inport and not inport.closed:
-            print(f"Fermeture du port d'entrée : {inport.name}")
-            inport.close()
-        if outport and not outport.closed:
-            print(f"Fermeture du port de sortie : {outport.name}")
-            outport.close()
 
 if __name__ == "__main__":
     main()
