@@ -1,7 +1,7 @@
 # chords-training
 Entraineur d'accords midi
 
-Cet outil est un programme d'entraînement en ligne de commande conçu pour aider les musiciens à améliorer leurs compétences en théorie musicale, en particulier la reconnaissance et l'exécution des accords et des progressions d'accords. En se connectant à un clavier MIDI, il offre une expérience interactive pour pratiquer directement depuis votre terminal.
+Cet outil est un programme d'entraînement en ligne de commande conçu pour aider les musiciens amateur à améliorer leurs compétences en théorie musicale, en particulier la reconnaissance et l'exécution des accords et des progressions d'accords. En se connectant à un clavier MIDI, il offre une expérience interactive pour pratiquer directement depuis votre terminal.
 
 Fonctionnalités principales
 Mode Accords Simples : Entraînez-vous à jouer des accords individuels affichés à l'écran. Le programme vous indique si vous avez réussi ou non.
