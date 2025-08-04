@@ -740,6 +740,25 @@ def progression_mode(inport, outport, progression_timer, progression_selection_m
         pass
     wait_for_any_key(inport)
 
+def display_degrees_table(tonalite, gammes_filtrees):
+    """Affiche un tableau des accords de la gamme pour une tonalité donnée."""
+    print(f"\n--- Tonalité de {Color.YELLOW}{tonalite}{Color.END} ---")
+    print(f"{Color.CYAN}{'-' * 30}{Color.END}")
+    print(f"{Color.CYAN}{'Degré':<10} {'Accord':<20}{Color.END}")
+    print(f"{Color.CYAN}{'-' * 30}{Color.END}")
+    
+    # La liste des degrés romains
+    degrees_romans = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']
+    
+    # Trouver les accords de la gamme de la tonalité donnée
+    accords_de_la_gamme = gammes_majeures.get(tonalite, [])
+    
+    for i, accord_name in enumerate(accords_de_la_gamme):
+        if accord_name in gammes_filtrees:
+            print(f"{Color.CYAN}{degrees_romans[i]:<10} {accord_name:<20}{Color.END}")
+
+    print(f"{Color.CYAN}{'-' * 30}{Color.END}")
+
 
 def degrees_mode(inport, outport, progression_timer, progression_selection_mode, play_progression_before_start, chord_set):
     """Mode d'entraînement sur les accords par degrés."""
@@ -781,6 +800,9 @@ def degrees_mode(inport, outport, progression_timer, progression_selection_mode,
             
         last_progression_accords = progression_accords
         last_progression_to_play = progression_accords # Sauvegarder la nouvelle progression pour la répétition
+        
+        # Afficher le tableau des degrés
+        display_degrees_table(tonalite, gammes_filtrees)
 
         print(f"\nDans la tonalité de {Color.YELLOW}{tonalite}{Color.END}, jouez la progression : {Color.YELLOW}{' -> '.join(progression_accords)}{Color.END}")
         
