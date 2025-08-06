@@ -24,7 +24,7 @@ from rich.table import Table
 # Initialisation de la console Rich
 console = Console()
 
-# Couleurs ANSI pour la sortie du terminal
+# Couleurs ANSI pour l'affichage dans le terminal
 class Color:
     """Codes de couleur ANSI pour l'affichage dans le terminal."""
     GREEN = '\033[92m'
@@ -221,6 +221,14 @@ def get_note_name(midi_note):
     """Convertit un numéro de note MIDI en son nom."""
     notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
     return notes[midi_note % 12]
+
+def get_chord_type_from_name(chord_name):
+    """Extrait le type d'accord (Majeur, Mineur, 7ème, etc.) du nom de l'accord."""
+    chord_types = ["Majeur", "Mineur", "7ème", "Diminué", "4ème", "6ème"]
+    for c_type in chord_types:
+        if c_type in chord_name:
+            return c_type
+    return "Inconnu" # Fallback pour les types non listés
 
 def play_chord(outport, chord_notes, velocity=100, duration=0.5):
     """Joue un accord via MIDI."""
@@ -487,6 +495,100 @@ def single_chord_mode(inport, outport, chord_set):
         pass
     wait_for_any_key(inport)
 
+def listen_and_reveal_mode(inport, outport, chord_set):
+    """
+    Mode Écoute et Devine : joue un accord, l'utilisateur doit le reproduire.
+    Des indices sont donnés après plusieurs essais.
+    """
+    clear_screen()
+    console.print(Panel(
+        Text("Mode Écoute et Devine", style="bold orange3", justify="center"),
+        title="Écoute et Devine",
+        border_style="orange3"
+    ))
+    console.print(f"Type d'accords: [bold cyan]{'Tous' if chord_set == all_chords else 'Majeurs/Mineurs'}[/bold cyan]")
+    console.print("Écoutez l'accord joué et essayez de le reproduire.")
+    console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter l'accord.")
+    
+    correct_count = 0
+    total_attempts = 0
+    
+    exit_flag = False
+    
+    while not exit_flag:
+        # Vider le tampon MIDI
+        for _ in inport.iter_pending():
+            pass
+
+        # Choisir un nouvel accord et le jouer
+        chord_name, chord_notes = random.choice(list(chord_set.items()))
+        console.print(f"\n[bold yellow]Lecture de l'accord...[/bold yellow]")
+        play_chord(outport, chord_notes)
+        console.print("Jouez l'accord que vous venez d'entendre.")
+
+        notes_currently_on = set()
+        attempt_notes = set()
+        incorrect_attempts = 0
+        
+        while not exit_flag:
+            char = wait_for_input(timeout=0.01)
+            if char:
+                if char.lower() == 'q':
+                    exit_flag = True
+                    break
+                if char.lower() == 'r':
+                    console.print(f"[bold blue]Répétition de l'accord...[/bold blue]")
+                    play_chord(outport, chord_notes)
+                    continue
+
+            for msg in inport.iter_pending():
+                if msg.type == 'note_on' and msg.velocity > 0:
+                    notes_currently_on.add(msg.note)
+                    attempt_notes.add(msg.note)
+                elif msg.type == 'note_off':
+                    notes_currently_on.discard(msg.note)
+            
+            if not notes_currently_on and attempt_notes:
+                total_attempts += 1
+                if frozenset(attempt_notes) == frozenset(chord_notes):
+                    colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
+                    console.print(f"Notes jouées : [{colored_notes}]")
+                    console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
+                    correct_count += 1
+                    # Suppression du time.sleep(1.5) ici
+                    clear_screen() # Effacer l'écran après un accord correct
+                    break # Passer à l'accord suivant
+                else:
+                    incorrect_attempts += 1
+                    colored_string = get_colored_notes_string(attempt_notes, chord_notes)
+                    console.print(f"[bold red]Incorrect. Réessayez.[/bold red] Notes jouées : [{colored_string}]")
+
+                    if incorrect_attempts >= 3:
+                        # Révéler la tonique après 3 essais
+                        tonic_note = sorted(list(chord_notes))[0]
+                        tonic_name = get_note_name(tonic_note)
+                        console.print(f"Indice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
+                    if incorrect_attempts >= 7: # Après 7 essais incorrects
+                        # Révéler le type d'accord et attendre la validation
+                        revealed_type = get_chord_type_from_name(chord_name)
+                        console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
+                        console.print(f"[bold magenta]La réponse était : {chord_name}[/bold magenta]") # Afficher la réponse
+                        
+                        # Attendre la validation de l'utilisateur par une touche Entrée
+                        Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=console)
+                        clear_screen() # Effacer l'écran après validation
+                        break # Passer à l'accord suivant
+                    
+                    attempt_notes.clear()
+            
+            time.sleep(0.01)
+
+    # Cette partie est exécutée si on quitte le mode
+    display_stats(correct_count, total_attempts)
+    console.print("\nAppuyez sur une touche pour retourner au menu principal.")
+    for _ in inport.iter_pending():
+        pass
+    wait_for_any_key(inport)
 
 def get_progression_choice(progression_selection_mode, inport, last_progression=None):
     """Permet de choisir une progression, soit aléatoirement, soit via MIDI."""
@@ -657,8 +759,8 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
                             console.print("[bold red]Incorrect. Réessayez.[/bold red]")
 
                         console.print(f"Notes jouées : [{colored_string}]")
-                        attempt_notes.clear()
-                
+                        attempt_notes.clear() # Réinitialiser pour le prochain essai
+                        
                 time.sleep(0.01)
             
             if exit_flag:
@@ -825,7 +927,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
         display_stats(correct_count, total_count, elapsed_time)
     else:
         display_stats(correct_count, total_count)
-
+        
     console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
     for _ in inport.iter_pending():
         pass
@@ -1097,12 +1199,13 @@ def main():
                 clear_screen()
                 menu_options = Text()
                 menu_options.append("[1] Mode Accord Simple\n", style="bold yellow")
-                menu_options.append("[2] Mode Progressions d'Accords (aléatoires)\n", style="bold blue")
-                menu_options.append("[3] Mode Degrés (par tonalité)\n", style="bold red")
-                menu_options.append("[4] Mode Pop/Rock (progressions célèbres)\n", style="bold magenta")
-                menu_options.append("[5] Mode Reconnaissance d'accords\n", style="bold cyan")
-                menu_options.append("[6] Options\n", style="bold white")
-                menu_options.append("[7] Quitter", style="bold white")
+                menu_options.append("[2] Mode Écoute et Devine\n", style="bold orange3")
+                menu_options.append("[3] Mode Progressions d'Accords (aléatoires)\n", style="bold blue")
+                menu_options.append("[4] Mode Degrés (par tonalité)\n", style="bold red")
+                menu_options.append("[5] Mode Pop/Rock (progressions célèbres)\n", style="bold magenta")
+                menu_options.append("[6] Mode Reconnaissance d'accords\n", style="bold cyan")
+                menu_options.append("[7] Options\n", style="bold white")
+                menu_options.append("[8] Quitter", style="bold white")
                 
                 menu_panel = Panel(
                     menu_options,
@@ -1111,21 +1214,23 @@ def main():
                 )
                 console.print(menu_panel)
                 
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7'], show_choices=False, console=console)
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8'], show_choices=False, console=console)
                 
                 if mode_choice == '1':
                     single_chord_mode(inport, outport, current_chord_set)
                 elif mode_choice == '2':
-                    progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    listen_and_reveal_mode(inport, outport, current_chord_set)
                 elif mode_choice == '3':
-                    degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '4':
-                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '5':
-                    reverse_chord_mode(inport, outport)
+                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '6':
-                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                    reverse_chord_mode(inport, outport)
                 elif mode_choice == '7':
+                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                elif mode_choice == '8':
                     console.print("Arrêt du programme.", style="bold red")
                     break
                 else:
