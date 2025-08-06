@@ -63,6 +63,9 @@ all_chords = {
     "Si bémol Majeur": {70, 74, 77},
     "Ré bémol Majeur": {61, 65, 68},
     
+    # Correction de l'erreur enharmonique : Do bémol Majeur
+    "Do bémol Majeur": {59, 63, 66},
+    
     # Autres triades
     "Ré Majeur": {62, 66, 69},
     "Si Mineur": {71, 74, 78},
@@ -80,7 +83,6 @@ all_chords = {
     "Ré dièse Diminué": {63, 66, 69},
     "Mi dièse Diminué": {65, 68, 71},
     "La dièse Diminué": {70, 73, 76},
-    "Do bémol Majeur": {71, 74, 77}, # enharmonique de Si Majeur
     "Fa bémol Majeur": {64, 67, 71}, # enharmonique de Mi Majeur
     "Si bémol Mineur": {70, 73, 77},
     "Mi bémol Mineur": {63, 66, 70},
@@ -184,29 +186,34 @@ traductions_degres = {
 }
 
 # --- Création d'un dictionnaire de correspondance pour les accords et leurs renversements ---
-# Cette structure permet une reconnaissance rapide en associant chaque ensemble de notes (en frozenset)
-# à son nom d'accord et son type de renversement.
+# Cette structure est optimisée pour la reconnaissance d'accords indépendante de l'octave.
+# La clé est un frozenset des intervalles normalisés (par rapport à la note la plus basse)
+# de l'accord ou de son renversement.
 inversion_lookup = {}
 for chord_name, notes_set in all_chords.items():
-    # Tri des notes pour faciliter le calcul des renversements
     sorted_notes = sorted(list(notes_set))
     num_notes = len(sorted_notes)
     
-    # Renversement 0 (position fondamentale)
-    inversion_lookup[frozenset(notes_set)] = (chord_name, "position fondamentale")
+    # Calcul des intervalles pour la position fondamentale
+    normalized_fundamental = frozenset((note - sorted_notes[0]) % 12 for note in sorted_notes)
+    inversion_lookup[normalized_fundamental] = (chord_name, "position fondamentale")
     
     # 1er renversement
     if num_notes >= 3:
         first_inversion_notes = set(sorted_notes[1:])
         first_inversion_notes.add(sorted_notes[0] + 12)
-        inversion_lookup[frozenset(first_inversion_notes)] = (chord_name, "1er renversement")
+        sorted_first_inversion = sorted(list(first_inversion_notes))
+        normalized_first = frozenset((note - sorted_first_inversion[0]) % 12 for note in sorted_first_inversion)
+        inversion_lookup[normalized_first] = (chord_name, "1er renversement")
 
     # 2ème renversement
     if num_notes >= 3:
         second_inversion_notes = set(sorted_notes[2:])
         second_inversion_notes.add(sorted_notes[0] + 12)
         second_inversion_notes.add(sorted_notes[1] + 12)
-        inversion_lookup[frozenset(second_inversion_notes)] = (chord_name, "2ème renversement")
+        sorted_second_inversion = sorted(list(second_inversion_notes))
+        normalized_second = frozenset((note - sorted_second_inversion[0]) % 12 for note in sorted_second_inversion)
+        inversion_lookup[normalized_second] = (chord_name, "2ème renversement")
 
     # 3ème renversement (pour les accords de 4 notes)
     if num_notes == 4:
@@ -214,7 +221,10 @@ for chord_name, notes_set in all_chords.items():
         third_inversion_notes.add(sorted_notes[0] + 12)
         third_inversion_notes.add(sorted_notes[1] + 12)
         third_inversion_notes.add(sorted_notes[2] + 12)
-        inversion_lookup[frozenset(third_inversion_notes)] = (chord_name, "3ème renversement")
+        sorted_third_inversion = sorted(list(third_inversion_notes))
+        normalized_third = frozenset((note - sorted_third_inversion[0]) % 12 for note in sorted_third_inversion)
+        inversion_lookup[normalized_third] = (chord_name, "3ème renversement")
+
 
 # --- Fonctions utilitaires ---
 def get_note_name(midi_note):
@@ -322,11 +332,8 @@ def select_midi_port(port_type):
 def reverse_chord_mode(inport):
     """
     Mode de reconnaissance d'accords joués par l'utilisateur.
-    Reconnaît les accords en position fondamentale et leurs renversements.
-    
-    Cette fonction utilise la base de données globale `inversion_lookup` qui contient
-    l'ensemble de tous les accords définis dans le programme, indépendamment du
-    choix d'accords autorisé pour les autres modes.
+    Reconnaît les accords en position fondamentale et leurs renversements
+    de manière indépendante de l'octave.
     """
     clear_screen()
     console.print(Panel(
@@ -336,12 +343,10 @@ def reverse_chord_mode(inport):
     ))
     console.print("Jouez un accord sur votre clavier MIDI.")
     console.print("Appuyez sur 'q' pour quitter.")
-    console.print("\nCe mode reconnaît les accords à 3 ou 4 notes en position fondamentale ainsi qu'en 1er et 2ème (et 3ème) renversement.")
+    console.print("\nCe mode reconnaît les accords à 3 ou 4 notes en position fondamentale ainsi qu'en 1er et 2ème (et 3ème) renversement, quelle que soit l'octave.")
     console.print("---")
 
-    # Ensemble pour suivre les notes actuellement enfoncées
     notes_currently_on = set()
-    # Ensemble pour collecter les notes de l'accord en cours
     attempt_notes = set()
 
     while True:
@@ -349,27 +354,34 @@ def reverse_chord_mode(inport):
         if char and char.lower() == 'q':
             break
 
-        # Lire tous les messages MIDI en attente
         for msg in inport.iter_pending():
             if msg.type == 'note_on' and msg.velocity > 0:
                 notes_currently_on.add(msg.note)
                 attempt_notes.add(msg.note)
             elif msg.type == 'note_off':
-                # Retirer la note des notes actuellement enfoncées
                 notes_currently_on.discard(msg.note)
 
         # Vérifier si un accord a été joué et relâché
         if not notes_currently_on and attempt_notes:
-            found_info = inversion_lookup.get(frozenset(attempt_notes))
-            
-            if found_info:
-                chord_name, inversion_label = found_info
-                console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ({inversion_label})")
+            if len(attempt_notes) > 1:
+                # Normalisation des notes jouées pour être indépendantes de l'octave
+                sorted_played_notes = sorted(list(attempt_notes))
+                lowest_note = sorted_played_notes[0]
+                # Le calcul des intervalles normalisés doit prendre en compte les notes qui sont dans des octaves supérieures
+                # pour les renversements
+                normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
+                
+                found_info = inversion_lookup.get(normalized_intervals)
+                
+                if found_info:
+                    chord_name, inversion_label = found_info
+                    console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ({inversion_label})")
+                else:
+                    colored_string = get_colored_notes_string(attempt_notes, set())
+                    console.print(f"[bold red]Accord non reconnu.[/bold red] Notes jouées : [{colored_string}]")
             else:
-                colored_string = get_colored_notes_string(attempt_notes, set()) # Aucun accord cible, donc les notes sont toutes "incorrectes" en rouge
-                console.print(f"[bold red]Accord non reconnu.[/bold red] Notes jouées : [{colored_string}]")
+                console.print("[bold yellow]Veuillez jouer au moins 2 notes pour former un accord.[/bold yellow]")
 
-            # Réinitialiser pour le prochain accord
             attempt_notes.clear()
         
         time.sleep(0.01)
@@ -478,7 +490,14 @@ def single_chord_mode(inport, outport, chord_set):
                 else:
                     colored_string = get_colored_notes_string(attempt_notes, chord_notes)
                     
-                    found_info = inversion_lookup.get(frozenset(attempt_notes))
+                    # Logique de reconnaissance améliorée pour le retour utilisateur
+                    # Normalisation des notes jouées
+                    sorted_played_notes = sorted(list(attempt_notes))
+                    lowest_note = sorted_played_notes[0]
+                    normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
+                    
+                    found_info = inversion_lookup.get(normalized_intervals)
+                    
                     if found_info:
                         chord_name_played, inversion_label = found_info
                         console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
@@ -737,12 +756,19 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
                         break
                     else:
                         colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                        found_info = inversion_lookup.get(frozenset(attempt_notes))
+                        
+                        # Logique de reconnaissance améliorée pour le retour utilisateur
+                        sorted_played_notes = sorted(list(attempt_notes))
+                        lowest_note = sorted_played_notes[0]
+                        normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
+                        found_info = inversion_lookup.get(normalized_intervals)
+                        
                         if found_info:
                             chord_name_played, inversion_label = found_info
                             console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
                         else:
                             console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                        
                         console.print(f"Notes jouées : [{colored_string}]")
                         attempt_notes.clear()
                         
@@ -863,12 +889,19 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                         break
                     else:
                         colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                        found_info = inversion_lookup.get(frozenset(attempt_notes))
+                        
+                        # Logique de reconnaissance améliorée pour le retour utilisateur
+                        sorted_played_notes = sorted(list(attempt_notes))
+                        lowest_note = sorted_played_notes[0]
+                        normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
+                        found_info = inversion_lookup.get(normalized_intervals)
+                        
                         if found_info:
                             chord_name_played, inversion_label = found_info
                             console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
                         else:
                             console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                        
                         console.print(f"Notes jouées : [{colored_string}]")
                         attempt_notes.clear()
                 
@@ -940,7 +973,7 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
         
         display_degrees_table(tonalite, gammes_filtrees)
 
-        console.print(f"\nDans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la progression : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
+        console.print(f"\nDans la tonalité de {{[bold yellow]}}{tonalite}{{[/bold yellow]}}, jouez la progression : {{[bold yellow]}}{' -> '.join(progression_accords)}{{[/bold yellow]}}")
         
         if play_progression_before_start:
             play_progression_sequence(outport, progression_accords, chord_set)
@@ -996,12 +1029,19 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                         break
                     else:
                         colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                        found_info = inversion_lookup.get(frozenset(attempt_notes))
+                        
+                        # Logique de reconnaissance améliorée pour le retour utilisateur
+                        sorted_played_notes = sorted(list(attempt_notes))
+                        lowest_note = sorted_played_notes[0]
+                        normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
+                        found_info = inversion_lookup.get(normalized_intervals)
+                        
                         if found_info:
                             chord_name_played, inversion_label = found_info
                             console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
                         else:
                             console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                        
                         console.print(f"Notes jouées : [{colored_string}]")
                         attempt_notes.clear()
                 
@@ -1172,8 +1212,6 @@ def main():
                 elif mode_choice == '5':
                     pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '6':
-                    # L'appel a été corrigé ici pour ne plus passer le paramètre `outport`
-                    # car il n'est pas utilisé par la fonction `reverse_chord_mode`.
                     reverse_chord_mode(inport)
                 elif mode_choice == '7':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
