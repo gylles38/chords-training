@@ -319,16 +319,20 @@ def select_midi_port(port_type):
         except ValueError:
             console.print("[bold red]Saisie invalide. Veuillez entrer un numéro.[/bold red]")
 
-def reverse_chord_mode(inport, outport):
+def reverse_chord_mode(inport):
     """
     Mode de reconnaissance d'accords joués par l'utilisateur.
     Reconnaît les accords en position fondamentale et leurs renversements.
+    
+    Cette fonction utilise la base de données globale `inversion_lookup` qui contient
+    l'ensemble de tous les accords définis dans le programme, indépendamment du
+    choix d'accords autorisé pour les autres modes.
     """
     clear_screen()
     console.print(Panel(
-        Text("Mode Reconnaissance d'accords", style="bold magenta", justify="center"),
+        Text("Mode Reconnaissance d'accords (Tous les accords)", style="bold cyan", justify="center"),
         title="Reconnaissance d'accords",
-        border_style="magenta"
+        border_style="cyan"
     ))
     console.print("Jouez un accord sur votre clavier MIDI.")
     console.print("Appuyez sur 'q' pour quitter.")
@@ -1168,7 +1172,9 @@ def main():
                 elif mode_choice == '5':
                     pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '6':
-                    reverse_chord_mode(inport, outport)
+                    # L'appel a été corrigé ici pour ne plus passer le paramètre `outport`
+                    # car il n'est pas utilisé par la fonction `reverse_chord_mode`.
+                    reverse_chord_mode(inport)
                 elif mode_choice == '7':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
                 elif mode_choice == '8':
