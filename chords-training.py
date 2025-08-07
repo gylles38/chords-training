@@ -548,7 +548,6 @@ def listen_and_reveal_mode(inport, outport, chord_set):
         for _ in inport.iter_pending():
             pass
         
-        # Effacer l'écran pour le nouvel accord et réafficher l'en-tête
         clear_screen()
         console.print(Panel(
             Text("Mode Écoute et Devine", style="bold orange3", justify="center"),
@@ -559,15 +558,16 @@ def listen_and_reveal_mode(inport, outport, chord_set):
         console.print("Écoutez l'accord joué et essayez de le reproduire.")
         console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter l'accord.")
 
-        # Choisir un nouvel accord et le jouer
         chord_name, chord_notes = random.choice(list(chord_set.items()))
         console.print(f"\n[bold yellow]Lecture de l'accord...[/bold yellow]")
         play_chord(outport, chord_notes)
         console.print("Jouez l'accord que vous venez d'entendre.")
 
+        # --- Début de la nouvelle logique pour la détection des arpèges ---
         notes_currently_on = set()
         attempt_notes = set()
         incorrect_attempts = 0
+        last_note_off_time = None
         
         while not exit_flag:
             char = wait_for_input(timeout=0.01)
@@ -584,43 +584,58 @@ def listen_and_reveal_mode(inport, outport, chord_set):
                 if msg.type == 'note_on' and msg.velocity > 0:
                     notes_currently_on.add(msg.note)
                     attempt_notes.add(msg.note)
+                    last_note_off_time = None  # Annuler le timer si une nouvelle note est jouée
                 elif msg.type == 'note_off':
                     notes_currently_on.discard(msg.note)
+                    # Si toutes les notes sont relâchées, démarrer le timer de vérification
+                    if not notes_currently_on and not last_note_off_time:
+                        last_note_off_time = time.time()
             
-            if not notes_currently_on and attempt_notes:
+            # Vérifier si le timer s'est écoulé
+            if last_note_off_time and time.time() - last_note_off_time > 0.3: # Délai de 0.3 seconde
                 total_attempts += 1
-                if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
-                    colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
-                    console.print(f"Notes jouées : [{colored_notes}]")
-                    console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
-                    correct_count += 1
-                    time.sleep(1.5) # Pause pour que l'utilisateur lise la confirmation
-                    break # Passer à l'accord suivant
-                else:
-                    incorrect_attempts += 1
-                    colored_string = get_colored_notes_string(attempt_notes, chord_notes)
-                    console.print(f"[bold red]Incorrect. Réessayez.[/bold red] Notes jouées : [{colored_string}]")
-
-                    if incorrect_attempts >= 3:
-                        # Révéler la tonique après 3 essais
-                        tonic_note = sorted(list(chord_notes))[0]
-                        tonic_name = get_note_name(tonic_note)
-                        console.print(f"Indice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
-                    if incorrect_attempts >= 7: # Après 7 essais incorrects
-                        # Révéler le type d'accord et attendre la validation
-                        revealed_type = get_chord_type_from_name(chord_name)
-                        console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
-                        console.print(f"[bold magenta]La réponse était : {chord_name}[/bold magenta]") # Afficher la réponse
+                
+                # Vérification du nombre de notes jouées avant de tenter la reconnaissance
+                if len(attempt_notes) == len(chord_notes):
+                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
+                        colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
+                        console.print(f"Notes jouées : [{colored_notes}]")
+                        console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
+                        correct_count += 1
+                        time.sleep(1.5)
+                        break
+                    else:
+                        incorrect_attempts += 1
+                        colored_string = get_colored_notes_string(attempt_notes, chord_notes)
                         
-                        # Attendre la validation de l'utilisateur par une touche Entrée
-                        Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=console)
-                        break # Passer à l'accord suivant
-                    
-                    attempt_notes.clear()
+                        if recognize_chord(attempt_notes)[0]:
+                            found_chord, found_inversion = recognize_chord(attempt_notes)
+                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                        else:
+                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+
+                        console.print(f"Notes jouées : [{colored_string}]")
+
+                        if incorrect_attempts >= 3:
+                            tonic_note = sorted(list(chord_notes))[0]
+                            tonic_name = get_note_name(tonic_note)
+                            console.print(f"Indice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
+                        if incorrect_attempts >= 7:
+                            revealed_type = get_chord_type_from_name(chord_name)
+                            console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
+                            console.print(f"[bold magenta]La réponse était : {chord_name}[/bold magenta]")
+                            Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=console)
+                            break
+                else:
+                    console.print(f"[bold red]Incorrect.[/bold red] L'accord {chord_name} est composé de [bold]{len(chord_notes)}[/bold] notes, mais vous en avez joué [bold]{len(attempt_notes)}[/bold].")
+                    console.print("Réessayez en jouant le bon nombre de notes.")
+                
+                # Réinitialiser pour le prochain essai après vérification
+                attempt_notes.clear()
+                last_note_off_time = None
             
             time.sleep(0.01)
 
-    # Cette partie est exécutée si on quitte le mode
     display_stats(correct_count, total_attempts)
     console.print("\nAppuyez sur une touche pour retourner au menu principal.")
     for _ in inport.iter_pending():
@@ -819,7 +834,6 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
     for _ in inport.iter_pending():
         pass
     wait_for_any_key(inport)
-
 
 def progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
     """Mode d'entraînement sur des progressions d'accords."""
