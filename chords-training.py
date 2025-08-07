@@ -20,29 +20,15 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.prompt import Prompt
 from rich.table import Table
+from rich.errors import MarkupError
 
 # Initialisation de la console Rich
 console = Console()
 
-# Couleurs ANSI pour l'affichage dans le terminal
-class Color:
-    """Codes de couleur ANSI pour l'affichage dans le terminal."""
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    ORANGE = '\033[38;5;208m'
-    END = '\033[0m'
-    CYAN = '\033[96m'
-    BLUE = '\033[94m'
-
-def clear_screen():
-    """Efface l'écran du terminal."""
-    # os.system('cls' if os.name == 'nt' else 'clear')
-    console.clear()
-
 # --- Définition des accords, des cadences et des gammes ---
-# Un dictionnaire où la clé est le nom de l'accord et la valeur est un ensemble
-# des numéros de notes MIDI pour cet accord. Les notes sont définies pour l'octave 4.
+# Dictionnaire des accords. La clé est le nom de l'accord, et la valeur est un ensemble
+# des numéros de notes MIDI pour cet accord, dans une octave de référence.
+# Cette structure est utilisée comme la "source de vérité" pour les notes de chaque accord.
 all_chords = {
     # Accords de trois sons (triades)
     "Do Majeur": {60, 64, 67},
@@ -61,12 +47,8 @@ all_chords = {
     "Sol bémol Majeur": {66, 70, 73},
     "La bémol Majeur": {68, 72, 75},
     "Si bémol Majeur": {70, 74, 77},
-    "Ré bémol Majeur": {61, 65, 68},
-    
-    # Correction de l'erreur enharmonique : Do bémol Majeur
+    "Ré bémol Majeur": {61, 65, 68}, # enharmonique de Do dièse Majeur
     "Do bémol Majeur": {59, 63, 66},
-    
-    # Autres triades
     "Ré Majeur": {62, 66, 69},
     "Si Mineur": {71, 74, 78},
     "Fa dièse Mineur": {66, 69, 73},
@@ -74,6 +56,7 @@ all_chords = {
     "Mi dièse Mineur": {65, 68, 72}, # enharmonique de Fa Mineur
     "La Majeur": {69, 73, 76},
     "Mi Majeur": {64, 68, 71},
+    "Fa bémol Majeur": {64, 68, 71}, # Correction: enharmonique de Mi Majeur
     "Si Majeur": {71, 75, 78},
     "Sol Mineur": {67, 70, 74},
     "Do Mineur": {60, 63, 67},
@@ -83,10 +66,9 @@ all_chords = {
     "Ré dièse Diminué": {63, 66, 69},
     "Mi dièse Diminué": {65, 68, 71},
     "La dièse Diminué": {70, 73, 76},
-    "Fa bémol Majeur": {64, 67, 71}, # enharmonique de Mi Majeur
     "Si bémol Mineur": {70, 73, 77},
-    "Mi bémol Mineur": {63, 66, 70},
-    "Sol dièse Majeur": {68, 72, 75},
+    "Mi bémol Mineur": {63, 66, 70}, # enharmonique de Ré dièse Mineur
+    "Sol dièse Majeur": {68, 72, 75}, # enharmonique de La bémol Majeur
     "Si dièse Diminué": {60, 63, 66}, # enharmonique de Do Diminué
     "Ré bémol Mineur": {61, 64, 68}, # enharmonique de Do dièse Mineur
     "La bémol Mineur": {68, 71, 75}, # enharmonique de Sol dièse Mineur
@@ -100,41 +82,32 @@ all_chords = {
     "La Diminué": {69, 72, 75},
 
     # --- Accords de 7ème ---
-    # Accords de Do
     "Do Majeur 7ème": {60, 64, 67, 71},
     "Do 7ème": {60, 64, 67, 70},
     "Do Mineur 7ème": {60, 63, 67, 70},
-    # Accords de Sol
     "Sol Majeur 7ème": {67, 71, 74, 78},
     "Sol 7ème": {67, 71, 74, 77},
     "Sol Mineur 7ème": {67, 70, 74, 77},
-    # Accords de Fa
     "Fa Majeur 7ème": {65, 69, 72, 76},
     "Fa 7ème": {65, 69, 72, 75},
     "Fa Mineur 7ème": {65, 68, 72, 75},
-    # Accords de La
     "La Majeur 7ème": {69, 73, 76, 80},
     "La 7ème": {69, 73, 76, 79},
     "La Mineur 7ème": {69, 72, 76, 79},
-    # Accords de Ré
     "Ré Majeur 7ème": {62, 66, 69, 73},
     "Ré 7ème": {62, 66, 69, 72},
     "Ré Mineur 7ème": {62, 65, 69, 72},
-    # Accords de Mi
     "Mi Majeur 7ème": {64, 68, 71, 76},
     "Mi 7ème": {64, 68, 71, 74},
     "Mi Mineur 7ème": {64, 67, 71, 74},
-    # Accords de Si
     "Si Majeur 7ème": {71, 75, 78, 82},
     "Si 7ème": {71, 75, 78, 81},
     "Si Mineur 7ème": {71, 74, 78, 81},
-    # Accords de Ré#
     "Ré dièse Mineur 7ème": {63, 66, 70, 73},
-    # Accords de Mi bémol
     "Mi bémol Majeur 7ème": {63, 67, 70, 74},
     "Mi bémol 7ème": {63, 67, 70, 73},
     "Mi bémol Mineur 7ème": {63, 66, 70, 73},
-
+    
     # --- Nouveaux accords de 4ème (sus4) et 6ème (add6) ---
     "Do 4ème": {60, 65, 67}, # Do-Fa-Sol
     "Ré 4ème": {62, 67, 69},
@@ -153,9 +126,31 @@ all_chords = {
     "Si 6ème": {71, 75, 78, 80},
 }
 
+# --- Carte des équivalences enharmoniques pour la reconnaissance ---
+# Permet de lier les noms d'accords qui partagent les mêmes notes MIDI
+enharmonic_map = {
+    "Ré dièse Mineur": "Mi bémol Mineur",
+    "Mi bémol Mineur": "Ré dièse Mineur",
+    "Fa dièse Majeur": "Sol bémol Majeur",
+    "Sol bémol Majeur": "Fa dièse Majeur",
+    "Do dièse Majeur": "Ré bémol Majeur",
+    "Ré bémol Majeur": "Do dièse Majeur",
+    "Fa bémol Majeur": "Mi Majeur",
+    "Mi Majeur": "Fa bémol Majeur",
+    "Mi dièse Mineur": "Fa Mineur",
+    "Fa Mineur": "Mi dièse Mineur",
+    "Sol dièse Majeur": "La bémol Majeur",
+    "La bémol Majeur": "Sol dièse Majeur",
+    "Ré bémol Mineur": "Do dièse Mineur",
+    "Do dièse Mineur": "Ré bémol Mineur",
+    "La bémol Mineur": "Sol dièse Mineur",
+    "Sol dièse Mineur": "La bémol Mineur",
+    "Si dièse Diminué": "Do Diminué",
+    "Do Diminué": "Si dièse Diminué",
+}
+
+
 # Un sous-ensemble d'accords pour le mode par défaut (majeurs et mineurs à 3 notes)
-# Le dictionnaire `three_note_chords` doit être construit avec soin pour inclure
-# uniquement les accords à 3 notes, majeurs et mineurs.
 three_note_chords = {
     name: notes for name, notes in all_chords.items()
     if ("Majeur" in name or "Mineur" in name) and len(notes) == 3
@@ -180,53 +175,22 @@ gammes_majeures = {
     "Do bémol Majeur": ["Do bémol Majeur", "Ré bémol Mineur", "Mi bémol Mineur", "Fa bémol Majeur", "Sol bémol Majeur", "La bémol Mineur", "Si bémol Diminué"],
 }
 
-# Traduction des degrés pour le mode degrés
-traductions_degres = {
-    0: "I", 1: "ii", 2: "iii", 3: "IV", 4: "V", 5: "vi", 6: "vii°"
-}
-
-# --- Création d'un dictionnaire de correspondance pour les accords et leurs renversements ---
-# Cette structure est optimisée pour la reconnaissance d'accords indépendante de l'octave.
-# La clé est un frozenset des intervalles normalisés (par rapport à la note la plus basse)
-# de l'accord ou de son renversement.
-inversion_lookup = {}
+# --- Création d'un dictionnaire de correspondance pour la reconnaissance par classe de hauteur ---
+# Cette structure est générée une seule fois au début du programme.
+# La clé est un frozenset des classes de hauteur de l'accord, et la valeur est le nom de l'accord.
+pitch_class_lookup = {}
 for chord_name, notes_set in all_chords.items():
-    sorted_notes = sorted(list(notes_set))
-    num_notes = len(sorted_notes)
-    
-    # Calcul des intervalles pour la position fondamentale
-    normalized_fundamental = frozenset((note - sorted_notes[0]) % 12 for note in sorted_notes)
-    inversion_lookup[normalized_fundamental] = (chord_name, "position fondamentale")
-    
-    # 1er renversement
-    if num_notes >= 3:
-        first_inversion_notes = set(sorted_notes[1:])
-        first_inversion_notes.add(sorted_notes[0] + 12)
-        sorted_first_inversion = sorted(list(first_inversion_notes))
-        normalized_first = frozenset((note - sorted_first_inversion[0]) % 12 for note in sorted_first_inversion)
-        inversion_lookup[normalized_first] = (chord_name, "1er renversement")
-
-    # 2ème renversement
-    if num_notes >= 3:
-        second_inversion_notes = set(sorted_notes[2:])
-        second_inversion_notes.add(sorted_notes[0] + 12)
-        second_inversion_notes.add(sorted_notes[1] + 12)
-        sorted_second_inversion = sorted(list(second_inversion_notes))
-        normalized_second = frozenset((note - sorted_second_inversion[0]) % 12 for note in sorted_second_inversion)
-        inversion_lookup[normalized_second] = (chord_name, "2ème renversement")
-
-    # 3ème renversement (pour les accords de 4 notes)
-    if num_notes == 4:
-        third_inversion_notes = set(sorted_notes[3:])
-        third_inversion_notes.add(sorted_notes[0] + 12)
-        third_inversion_notes.add(sorted_notes[1] + 12)
-        third_inversion_notes.add(sorted_notes[2] + 12)
-        sorted_third_inversion = sorted(list(third_inversion_notes))
-        normalized_third = frozenset((note - sorted_third_inversion[0]) % 12 for note in sorted_third_inversion)
-        inversion_lookup[normalized_third] = (chord_name, "3ème renversement")
-
+    pitch_classes = frozenset(note % 12 for note in notes_set)
+    # Gérer les cas d'accords enharmoniques qui ont la même structure de notes.
+    # Ex: Mi Majeur et Fa bémol Majeur. La première occurrence dans la liste sera gardée.
+    if pitch_classes not in pitch_class_lookup:
+        pitch_class_lookup[pitch_classes] = chord_name
 
 # --- Fonctions utilitaires ---
+def clear_screen():
+    """Efface l'écran du terminal."""
+    console.clear()
+
 def get_note_name(midi_note):
     """Convertit un numéro de note MIDI en son nom."""
     notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
@@ -239,6 +203,12 @@ def get_chord_type_from_name(chord_name):
         if c_type in chord_name:
             return c_type
     return "Inconnu" # Fallback pour les types non listés
+
+def is_enharmonic_match(name1, name2, enharmonic_map):
+    """Vérifie si deux noms d'accords sont enharmoniquement équivalents."""
+    if name1 == name2:
+        return True
+    return enharmonic_map.get(name1) == name2 or enharmonic_map.get(name2) == name1
 
 def play_chord(outport, chord_notes, velocity=100, duration=0.5):
     """Joue un accord via MIDI."""
@@ -297,6 +267,59 @@ def get_single_char_choice(prompt, valid_choices):
         else:
             console.print(f"[bold red]Choix invalide. Veuillez choisir parmi {', '.join(valid_choices)}.[/bold red]")
 
+def recognize_chord(played_notes_set):
+    """
+    Reconnaît un accord à partir d'un ensemble de notes MIDI jouées,
+    en utilisant la méthode de la classe de hauteur.
+    
+    Retourne le nom de l'accord et le type de renversement, ou None si non reconnu.
+    """
+    if len(played_notes_set) < 2:
+        return None, None
+
+    # Convertir les notes jouées en un ensemble de classes de hauteur (pitch classes)
+    played_pitch_classes = frozenset(note % 12 for note in played_notes_set)
+    
+    # Rechercher la correspondance dans la table pré-calculée
+    chord_name = pitch_class_lookup.get(played_pitch_classes)
+    
+    if chord_name:
+        # Déterminer la tonique et le renversement pour le feedback utilisateur
+        chord_notes_reference = sorted(list(all_chords[chord_name]))
+        played_notes_sorted = sorted(list(played_notes_set))
+        
+        # Trouver la tonique de l'accord joué
+        tonic_played = played_notes_sorted[0] % 12
+        
+        # Trouver la tonique de l'accord de référence
+        tonic_reference = chord_notes_reference[0] % 12
+
+        # Décalage de la tonique (utile pour identifier les renversements)
+        # 0 = position fondamentale, 1 = 1er renversement, etc.
+        # Cette partie est illustrative pour l'affichage, la reconnaissance est déjà faite.
+        root_offset = 0
+        if tonic_played == tonic_reference:
+            root_offset = 0
+        elif tonic_played == chord_notes_reference[1] % 12:
+            root_offset = 1
+        elif len(chord_notes_reference) >= 3 and tonic_played == chord_notes_reference[2] % 12:
+            root_offset = 2
+        elif len(chord_notes_reference) == 4 and tonic_played == chord_notes_reference[3] % 12:
+            root_offset = 3
+
+        inversion_label = ""
+        if root_offset == 0:
+            inversion_label = "position fondamentale"
+        elif root_offset == 1:
+            inversion_label = "1er renversement"
+        elif root_offset == 2:
+            inversion_label = "2ème renversement"
+        elif root_offset == 3:
+            inversion_label = "3ème renversement"
+            
+        return chord_name, inversion_label
+    
+    return None, None
 
 def select_midi_port(port_type):
     """Permet à l'utilisateur de choisir un port MIDI parmi la liste disponible."""
@@ -364,18 +387,14 @@ def reverse_chord_mode(inport):
         # Vérifier si un accord a été joué et relâché
         if not notes_currently_on and attempt_notes:
             if len(attempt_notes) > 1:
-                # Normalisation des notes jouées pour être indépendantes de l'octave
-                sorted_played_notes = sorted(list(attempt_notes))
-                lowest_note = sorted_played_notes[0]
-                # Le calcul des intervalles normalisés doit prendre en compte les notes qui sont dans des octaves supérieures
-                # pour les renversements
-                normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
+                chord_name, inversion_label = recognize_chord(attempt_notes)
                 
-                found_info = inversion_lookup.get(normalized_intervals)
-                
-                if found_info:
-                    chord_name, inversion_label = found_info
-                    console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ({inversion_label})")
+                if chord_name:
+                    enharmonic_name = enharmonic_map.get(chord_name)
+                    if enharmonic_name:
+                        console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ou [bold green]{enharmonic_name}[/bold green] ({inversion_label})")
+                    else:
+                        console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ({inversion_label})")
                 else:
                     colored_string = get_colored_notes_string(attempt_notes, set())
                     console.print(f"[bold red]Accord non reconnu.[/bold red] Notes jouées : [{colored_string}]")
@@ -479,7 +498,11 @@ def single_chord_mode(inport, outport, chord_set):
             
             # Un accord a été joué et toutes les notes ont été relâchées
             if not notes_currently_on and attempt_notes:
-                if frozenset(attempt_notes) == frozenset(chord_notes):
+                # Vérification de l'accord joué par l'utilisateur
+                recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                
+                # Correction: Utiliser la carte enharmonique pour valider la réponse
+                if is_enharmonic_match(recognized_name, chord_name, enharmonic_map):
                     colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
                     console.print(f"Notes jouées : [{colored_notes}]")
                     console.print("[bold green]Correct ![/bold green]")
@@ -490,17 +513,8 @@ def single_chord_mode(inport, outport, chord_set):
                 else:
                     colored_string = get_colored_notes_string(attempt_notes, chord_notes)
                     
-                    # Logique de reconnaissance améliorée pour le retour utilisateur
-                    # Normalisation des notes jouées
-                    sorted_played_notes = sorted(list(attempt_notes))
-                    lowest_note = sorted_played_notes[0]
-                    normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
-                    
-                    found_info = inversion_lookup.get(normalized_intervals)
-                    
-                    if found_info:
-                        chord_name_played, inversion_label = found_info
-                        console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
+                    if recognized_name:
+                        console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name} ({recognized_inversion})")
                     else:
                         console.print("[bold red]Incorrect. Réessayez.[/bold red]")
 
@@ -575,7 +589,7 @@ def listen_and_reveal_mode(inport, outport, chord_set):
             
             if not notes_currently_on and attempt_notes:
                 total_attempts += 1
-                if frozenset(attempt_notes) == frozenset(chord_notes):
+                if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
                     colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
                     console.print(f"Notes jouées : [{colored_notes}]")
                     console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
@@ -621,7 +635,7 @@ def get_progression_choice(progression_selection_mode, inport, last_progression=
         "ii-V-I": ["Ré Mineur", "Sol Majeur", "Do Majeur"],
         "I-vi-ii-V": ["Do Majeur", "La Mineur", "Ré Mineur", "Sol Majeur"],
         "IV-I-V-vi": ["Fa Majeur", "Do Majeur", "Sol Majeur", "La Mineur"],
-        "I-IV-V": ["Do Majeur", "Fa Majeur", "Sol Majeur"], # Correction ici
+        "I-IV-V": ["Do Majeur", "Fa Majeur", "Sol Majeur"],
         "I-vi-IV-V": ["Do Majeur", "La Mineur", "Fa Majeur", "Sol Majeur"],
         "vi-IV-I-V": ["La Mineur", "Fa Majeur", "Do Majeur", "Sol Majeur"],
         "I-bVII-IV": ["Do Majeur", "Si bémol Majeur", "Fa Majeur"],
@@ -673,7 +687,6 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
     session_correct_count = 0
     session_total_chords = 0
     last_progression_name = None
-    last_progression_to_play = []
     
     exit_flag = False
     
@@ -687,7 +700,6 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
             break
         
         last_progression_name = prog_name
-        last_progression_to_play = progression
         
         clear_screen()
         console.print(Panel(
@@ -696,7 +708,7 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
             border_style="magenta"
         ))
         console.print(f"Type d'accords: [bold cyan]{'Tous' if chord_set == all_chords else 'Majeurs/Mineurs'}[/bold cyan]")
-        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter.")
+        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
         
         console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(progression)}[/bold yellow]")
         if prog_name in exemples:
@@ -709,15 +721,20 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
         is_progression_started = False
         start_time = None
         elapsed_time = 0.0 # Initialisation de la variable
-
-        for chord_name in progression:
+        skip_progression = False
+        
+        # Boucle principale pour la progression
+        prog_index = 0
+        while prog_index < len(progression) and not exit_flag and not skip_progression:
+            chord_name = progression[prog_index]
             target_notes = chord_set[chord_name]
             console.print(f"Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
             
             notes_currently_on = set()
             attempt_notes = set()
 
-            while not exit_flag:
+            # Boucle pour chaque accord
+            while not exit_flag and not skip_progression:
                 if use_timer and is_progression_started:
                     remaining_time = timer_duration - (time.time() - start_time)
                     console.print(f"Temps restant : {remaining_time:.1f} secondes", end='\r', style="bold bright_cyan")
@@ -728,14 +745,21 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
 
                 char = wait_for_input(timeout=0.01)
                 if char:
-                    if char.lower() == 'q':
+                    char = char.lower()
+                    if char == 'q':
                         exit_flag = True
                         break
-                    if char.lower() == 'r':
-                        play_progression_sequence(outport, last_progression_to_play, chord_set)
-                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
-                        continue
-                
+                    if char == 'r':
+                        # Rejouer la progression depuis le début
+                        play_progression_sequence(outport, progression, chord_set)
+                        prog_index = 0
+                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression[prog_index]}[/bold yellow]")
+                        break # Recommencer la boucle de l'accord
+                    if char == 'n':
+                        # Passer à la progression suivante
+                        skip_progression = True
+                        break
+
                 for msg in inport.iter_pending():
                     if msg.type == 'note_on' and msg.velocity > 0:
                         notes_currently_on.add(msg.note)
@@ -748,48 +772,44 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
                         is_progression_started = True
                         start_time = time.time()
                     
-                    if frozenset(attempt_notes) == frozenset(target_notes):
+                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
                         colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                         console.print(f"Notes jouées : [{colored_notes}]")
                         console.print("[bold green]Correct ![/bold green]")
                         progression_correct_count += 1
-                        break
+                        prog_index += 1
+                        break # Passer à l'accord suivant de la progression
                     else:
                         colored_string = get_colored_notes_string(attempt_notes, target_notes)
                         
-                        # Logique de reconnaissance améliorée pour le retour utilisateur
-                        sorted_played_notes = sorted(list(attempt_notes))
-                        lowest_note = sorted_played_notes[0]
-                        normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
-                        found_info = inversion_lookup.get(normalized_intervals)
+                        found_chord, found_inversion = recognize_chord(attempt_notes)
                         
-                        if found_info:
-                            chord_name_played, inversion_label = found_info
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
+                        if found_chord:
+                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
                         else:
                             console.print("[bold red]Incorrect. Réessayez.[/bold red]")
                         
                         console.print(f"Notes jouées : [{colored_string}]")
                         attempt_notes.clear()
-                        
+                
                 time.sleep(0.01)
-            
-            if exit_flag:
-                break
-            
-        session_correct_count += progression_correct_count
-        session_total_chords += len(progression)
-        
-        if use_timer and not exit_flag and is_progression_started:
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
-        elif not exit_flag and use_timer:
-            elapsed_time = 0.0
 
-        if not exit_flag:
-            Prompt.ask("\nAppuyez sur Entrée pour la progression suivante...", console=console)
+        # Fin de la progression
+        if not exit_flag and not skip_progression:
+            session_correct_count += progression_correct_count
+            session_total_chords += len(progression)
             
+            if use_timer and is_progression_started:
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
+            
+            Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+        elif skip_progression:
+            # Si l'utilisateur a skip, on ne met pas à jour les stats
+            console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
+            time.sleep(1)
+
     if use_timer:
         display_stats(session_correct_count, session_total_chords, elapsed_time)
     else:
@@ -807,7 +827,6 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
     session_correct_count = 0
     session_total_chords = 0
     last_progression_accords = []
-    last_progression_to_play = []
     
     exit_flag = False
     
@@ -822,7 +841,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             border_style="blue"
         ))
         console.print(f"Type d'accords: [bold cyan]{'Tous' if chord_set == all_chords else 'Majeurs/Mineurs'}[/bold cyan]")
-        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter.")
+        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
         
         prog_len = random.randint(3, 5)
         
@@ -831,7 +850,6 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             progression = random.sample(list(chord_set.keys()), prog_len)
         
         last_progression_accords = progression
-        last_progression_to_play = progression
         
         console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(progression)}[/bold yellow]")
         
@@ -842,15 +860,20 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
         is_progression_started = False
         start_time = None
         elapsed_time = 0.0 # Initialisation de la variable
-        
-        for chord_name in progression:
+        skip_progression = False
+
+        # Boucle principale pour la progression
+        prog_index = 0
+        while prog_index < len(progression) and not exit_flag and not skip_progression:
+            chord_name = progression[prog_index]
             target_notes = chord_set[chord_name]
             console.print(f"Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
             
             notes_currently_on = set()
             attempt_notes = set()
-            
-            while not exit_flag:
+
+            # Boucle pour chaque accord
+            while not exit_flag and not skip_progression:
                 if use_timer and is_progression_started:
                     remaining_time = timer_duration - (time.time() - start_time)
                     console.print(f"Temps restant : {remaining_time:.1f} secondes", end='\r', style="bold bright_cyan")
@@ -861,14 +884,21 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                     
                 char = wait_for_input(timeout=0.01)
                 if char:
-                    if char.lower() == 'q':
+                    char = char.lower()
+                    if char == 'q':
                         exit_flag = True
                         break
-                    if char.lower() == 'r':
-                        play_progression_sequence(outport, last_progression_to_play, chord_set)
-                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
-                        continue
-                
+                    if char == 'r':
+                        # Rejouer la progression depuis le début
+                        play_progression_sequence(outport, progression, chord_set)
+                        prog_index = 0
+                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression[prog_index]}[/bold yellow]")
+                        break
+                    if char == 'n':
+                        # Passer à la progression suivante
+                        skip_progression = True
+                        break
+
                 for msg in inport.iter_pending():
                     if msg.type == 'note_on' and msg.velocity > 0:
                         notes_currently_on.add(msg.note)
@@ -881,24 +911,20 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                         is_progression_started = True
                         start_time = time.time()
 
-                    if frozenset(attempt_notes) == frozenset(target_notes):
+                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
                         colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                         console.print(f"Notes jouées : [{colored_notes}]")
                         console.print("[bold green]Correct ![/bold green]")
                         progression_correct_count += 1
+                        prog_index += 1
                         break
                     else:
                         colored_string = get_colored_notes_string(attempt_notes, target_notes)
                         
-                        # Logique de reconnaissance améliorée pour le retour utilisateur
-                        sorted_played_notes = sorted(list(attempt_notes))
-                        lowest_note = sorted_played_notes[0]
-                        normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
-                        found_info = inversion_lookup.get(normalized_intervals)
+                        found_chord, found_inversion = recognize_chord(attempt_notes)
                         
-                        if found_info:
-                            chord_name_played, inversion_label = found_info
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
+                        if found_chord:
+                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
                         else:
                             console.print("[bold red]Incorrect. Réessayez.[/bold red]")
                         
@@ -910,19 +936,20 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             if exit_flag:
                 break
             
-        session_correct_count += progression_correct_count
-        session_total_chords += len(progression)
+        if not exit_flag and not skip_progression:
+            session_correct_count += progression_correct_count
+            session_total_chords += len(progression)
 
-        if use_timer and not exit_flag and is_progression_started:
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
-        elif not exit_flag and use_timer:
-            elapsed_time = 0.0
-
-        if not exit_flag:
-            Prompt.ask("\nAppuyez sur Entrée pour la progression suivante...", console=console)
+            if use_timer and is_progression_started:
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
             
+            Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+        elif skip_progression:
+            console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
+            time.sleep(1)
+
     if use_timer:
         display_stats(session_correct_count, session_total_chords, elapsed_time)
     else:
@@ -939,7 +966,6 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
     session_correct_count = 0
     session_total_chords = 0
     last_progression_accords = []
-    last_progression_to_play = []
     
     exit_flag = False
     
@@ -954,7 +980,7 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
             border_style="red"
         ))
         console.print(f"Type d'accords: [bold cyan]{'Tous' if chord_set == all_chords else 'Majeurs/Mineurs'}[/bold cyan]")
-        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter.")
+        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
         
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         gammes_filtrees = [g for g in gammes if g in chord_set]
@@ -969,11 +995,10 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
             progression_accords = [gammes_filtrees[d] for d in degres_progression]
             
         last_progression_accords = progression_accords
-        last_progression_to_play = progression_accords
         
         display_degrees_table(tonalite, gammes_filtrees)
 
-        console.print(f"\nDans la tonalité de {{[bold yellow]}}{tonalite}{{[/bold yellow]}}, jouez la progression : {{[bold yellow]}}{' -> '.join(progression_accords)}{{[/bold yellow]}}")
+        console.print(f"\nDans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la progression : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
         
         if play_progression_before_start:
             play_progression_sequence(outport, progression_accords, chord_set)
@@ -982,15 +1007,20 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
         is_progression_started = False
         start_time = None
         elapsed_time = 0.0 # Initialisation de la variable
+        skip_progression = False
 
-        for chord_name in progression_accords:
+        # Boucle principale pour la progression
+        prog_index = 0
+        while prog_index < len(progression_accords) and not exit_flag and not skip_progression:
+            chord_name = progression_accords[prog_index]
             target_notes = chord_set[chord_name]
             console.print(f"Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
             
             notes_currently_on = set()
             attempt_notes = set()
             
-            while not exit_flag:
+            # Boucle pour chaque accord
+            while not exit_flag and not skip_progression:
                 if use_timer and is_progression_started:
                     remaining_time = timer_duration - (time.time() - start_time)
                     console.print(f"Temps restant : {remaining_time:.1f} secondes", end='\r', style="bold bright_cyan")
@@ -1001,13 +1031,20 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
 
                 char = wait_for_input(timeout=0.01)
                 if char:
-                    if char.lower() == 'q':
+                    char = char.lower()
+                    if char == 'q':
                         exit_flag = True
                         break
-                    if char.lower() == 'r':
-                        play_progression_sequence(outport, last_progression_to_play, chord_set)
-                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
-                        continue
+                    if char == 'r':
+                        # Rejouer la progression depuis le début
+                        play_progression_sequence(outport, progression_accords, chord_set)
+                        prog_index = 0
+                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression_accords[prog_index]}[/bold yellow]")
+                        break
+                    if char == 'n':
+                        # Passer à la progression suivante
+                        skip_progression = True
+                        break
 
                 for msg in inport.iter_pending():
                     if msg.type == 'note_on' and msg.velocity > 0:
@@ -1021,24 +1058,20 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                         is_progression_started = True
                         start_time = time.time()
 
-                    if frozenset(attempt_notes) == frozenset(target_notes):
+                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
                         colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                         console.print(f"Notes jouées : [{colored_notes}]")
                         console.print("[bold green]Correct ![/bold green]")
                         progression_correct_count += 1
+                        prog_index += 1
                         break
                     else:
                         colored_string = get_colored_notes_string(attempt_notes, target_notes)
                         
-                        # Logique de reconnaissance améliorée pour le retour utilisateur
-                        sorted_played_notes = sorted(list(attempt_notes))
-                        lowest_note = sorted_played_notes[0]
-                        normalized_intervals = frozenset((note - lowest_note) % 12 for note in sorted_played_notes)
-                        found_info = inversion_lookup.get(normalized_intervals)
+                        found_chord, found_inversion = recognize_chord(attempt_notes)
                         
-                        if found_info:
-                            chord_name_played, inversion_label = found_info
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {chord_name_played} ({inversion_label})")
+                        if found_chord:
+                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
                         else:
                             console.print("[bold red]Incorrect. Réessayez.[/bold red]")
                         
@@ -1050,19 +1083,20 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
             if exit_flag:
                 break
             
-        session_correct_count += progression_correct_count
-        session_total_chords += len(progression_accords)
+        if not exit_flag and not skip_progression:
+            session_correct_count += progression_correct_count
+            session_total_chords += len(progression_accords)
 
-        if use_timer and not exit_flag and is_progression_started:
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
-        elif not exit_flag and use_timer:
-            elapsed_time = 0.0
-
-        if not exit_flag:
-            Prompt.ask("\nAppuyez sur Entrée pour la progression suivante...", console=console)
+            if use_timer and is_progression_started:
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
             
+            Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+        elif skip_progression:
+            console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
+            time.sleep(1)
+
     if use_timer:
         display_stats(session_correct_count, session_total_chords, elapsed_time)
     else:
@@ -1097,8 +1131,8 @@ def display_degrees_table(tonalite, gammes_filtrees):
 
 def options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice):
     """Menu d'options pour configurer le programme."""
-    clear_screen()
     while True:
+        clear_screen() # Correction: efface l'écran à chaque affichage du menu
         panel_content = Text()
         panel_content.append("[1] Minuteur progression: ", style="bold white")
         panel_content.append(f"Activé ({timer_duration}s)\n" if use_timer else f"Désactivé\n", style="bold green" if use_timer else "bold red")
@@ -1129,10 +1163,13 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
                 if new_duration > 0:
                     timer_duration = new_duration
                     console.print(f"Durée du minuteur mise à jour à [bold green]{timer_duration:.2f} secondes.[/bold green]")
+                    time.sleep(1)
                 else:
                     console.print("[bold red]La durée doit être un nombre positif.[/bold red]")
+                    time.sleep(1)
             except ValueError:
                 console.print("[bold red]Saisie invalide. Veuillez entrer un nombre.[/bold red]")
+                time.sleep(1)
         elif choice == '3':
             progression_selection_mode = 'midi' if progression_selection_mode == 'random' else 'random'
         elif choice == '4':
