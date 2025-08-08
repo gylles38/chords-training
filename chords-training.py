@@ -298,6 +298,15 @@ pop_rock_progressions = {
     },
 }
 
+tonal_progressions = {
+    "Cadence Parfaite": ["I", "V", "I"],
+    "Cadence Plagale": ["IV", "I"],
+    "Progression I-IV-V-I": ["I", "IV", "V", "I"],
+    "Progression ii-V-I": ["ii", "V", "I"],
+    "Progression I-V-vi-IV": ["I", "V", "vi", "IV"]  # Très courante en pop
+}
+
+
 # --- Création d'un dictionnaire de correspondance pour la reconnaissance par classe de hauteur ---
 # Cette structure est générée une seule fois au début du programme.
 # La clé est un frozenset des classes de hauteur de l'accord, et la valeur est le nom de l'accord.
@@ -1482,6 +1491,150 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
         pass
     wait_for_any_key(inport)
 
+def tonal_progression_mode(inport, outport, chord_set):
+    """Mode qui joue une progression d'accords puis demande à l'utilisateur de la rejouer."""
+    # Variables pour stocker la progression actuelle
+    current_tonalite = None
+    current_progression_name = None
+    current_progression_accords = None
+    
+    while True:
+        clear_screen()
+        console.print(Panel(
+            Text("Mode Progression Tonale", style="bold bright_magenta", justify="center"),
+            title="Progression Tonale",
+            border_style="bright_magenta"
+        ))
+        
+        # Générer une nouvelle progression seulement si nécessaire
+        if current_tonalite is None:
+            # Choisir une tonalité au hasard
+            current_tonalite, gammes = random.choice(list(gammes_majeures.items()))
+            gammes_filtrees = [g for g in gammes if g in chord_set]
+            
+            # Choisir une progression au hasard
+            current_progression_name, degres_progression = random.choice(list(tonal_progressions.items()))
+            
+            # Traduire les degrés en noms d'accords
+            current_progression_accords = []
+            for degre in degres_progression:
+                index = DEGREE_MAP.get(degre)
+                if index is not None and index < len(gammes_filtrees):
+                    current_progression_accords.append(gammes_filtrees[index])
+        
+        # Afficher les informations
+        console.print(f"Tonalité : [bold yellow]{current_tonalite}[/bold yellow]")
+        console.print(f"Progression : [bold cyan]{current_progression_name}[/bold cyan]")
+        console.print(f"Accords : [bold yellow]{' → '.join(current_progression_accords)}[/bold yellow]")
+        
+        # Jouer la progression (démonstration)
+        console.print("\n[bold green]Écoutez la progression...[/bold green]")
+        for chord_name in current_progression_accords:
+            console.print(f"Joue : [bold bright_yellow]{chord_name}[/bold bright_yellow]")
+            play_chord(outport, chord_set[chord_name], duration=1.0)
+            time.sleep(0.3)  # Petite pause entre les accords
+        
+        # Phase d'entraînement où l'utilisateur doit jouer la progression
+        console.print("\n[bold green]À vous de jouer! Répétez la progression accord par accord.[/bold green]")
+        console.print("Appuyez sur 'r' pour réécouter la progression ou 'q' pour quitter.")
+        
+        correct_count = 0
+        skip_progression = False
+        
+        # Boucle pour chaque accord de la progression
+        for chord_index, chord_name in enumerate(current_progression_accords):
+            target_notes = chord_set[chord_name]
+            
+            # CORRECTION: Utiliser une mise à jour en direct pour l'affichage
+            with Live(console=console, screen=False, auto_refresh=True) as live:
+                live.update(f"\nJouez l'accord ({chord_index+1}/{len(current_progression_accords)}): [bold yellow]{chord_name}[/bold yellow]")
+                
+                notes_currently_on = set()
+                attempt_notes = set()
+                
+                # Boucle pour chaque tentative d'accord
+                while True:
+                    char = wait_for_input(timeout=0.01)
+                    if char:
+                        char = char.lower()
+                        if char == 'q':
+                            skip_progression = True
+                            break
+                        if char == 'r':
+                            # Rejouer la progression démonstration
+                            live.console.print("[bold blue]Réécoute de la progression...[/bold blue]")
+                            for name in current_progression_accords:
+                                play_chord(outport, chord_set[name], duration=1.0)
+                                time.sleep(0.3)
+                            live.update(f"\nJouez l'accord ({chord_index+1}/{len(current_progression_accords)}): [bold yellow]{chord_name}[/bold yellow]")
+                            continue
+                    
+                    for msg in inport.iter_pending():
+                        if msg.type == 'note_on' and msg.velocity > 0:
+                            notes_currently_on.add(msg.note)
+                            attempt_notes.add(msg.note)
+                        elif msg.type == 'note_off':
+                            notes_currently_on.discard(msg.note)
+                    
+                    # Vérifier quand l'utilisateur relâche les touches
+                    if not notes_currently_on and attempt_notes:
+                        recognized_name, inversion_label = recognize_chord(attempt_notes)
+                        
+                        # Vérifier si l'accord est correct
+                        if recognized_name and is_enharmonic_match(recognized_name, chord_name, enharmonic_map) and len(attempt_notes) == len(target_notes):
+                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                            live.console.print(f"Notes jouées : [{colored_notes}]")
+                            live.console.print("[bold green]Correct ![/bold green]")
+                            correct_count += 1
+                            time.sleep(1)  # Pause pour voir le message
+                            break  # Passer à l'accord suivant
+                        else:
+                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                            
+                            if recognized_name:
+                                live.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name} ({inversion_label})")
+                            else:
+                                live.console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                            
+                            live.console.print(f"Notes jouées : [{colored_string}]")
+                            attempt_notes.clear()
+                    
+                    time.sleep(0.01)
+                
+                if skip_progression:
+                    break  # Sortir de la boucle des accords
+        
+        # Statistiques de la session (uniquement si on n'a pas quitté prématurément)
+        if not skip_progression:
+            total_chords = len(current_progression_accords)
+            accuracy = (correct_count / total_chords) * 100 if total_chords > 0 else 0
+            
+            console.print("\n--- Résultats de la progression ---")
+            console.print(f"Accords corrects : [bold green]{correct_count}/{total_chords}[/bold green]")
+            console.print(f"Précision : [bold cyan]{accuracy:.2f}%[/bold cyan]")
+            console.print("----------------------------------")
+        
+        # Menu de choix après la progression - CORRECTION: afficher seulement après la progression complète
+        console.print("\nOptions:")
+        table = Table(show_header=False, box=None)
+        table.add_row("[1] Rejouer la même progression")
+        table.add_row("[2] Jouer une nouvelle progression")
+        table.add_row("[q] Retour au menu principal")
+        console.print(table)
+        
+        choice = Prompt.ask("Votre choix", choices=['1', '2', 'q'], show_choices=False, console=console)
+        
+        if choice == '1':
+            # On garde les mêmes variables pour rejouer
+            pass
+        elif choice == '2':
+            # On réinitialise pour forcer une nouvelle génération
+            current_tonalite = None
+            current_progression_name = None
+            current_progression_accords = None
+        elif choice == 'q':
+            break  # Quitte le mode
+                
 def display_degrees_table(tonalite, gammes_filtrees):
     """Affiche un tableau des accords de la gamme pour une tonalité donnée en utilisant Rich."""
     table = Table(
@@ -1594,9 +1747,8 @@ def main():
                     pass
 
                 clear_screen()
-                # MODIFIÉ: Ajout du mode Explorateur et renumérotation
                 menu_options = Text()
-                menu_options.append("[1] Mode Explorateur d'accords (Dictionnaire)\n", style="bold bright_blue") # NOUVEAU
+                menu_options.append("[1] Mode Explorateur d'accords (Dictionnaire)\n", style="bold bright_blue")
                 menu_options.append("--- Entraînement ---\n", style="dim")
                 menu_options.append("[2] Mode Accord Simple\n", style="bold yellow")
                 menu_options.append("[3] Mode Écoute et Devine\n", style="bold orange3")
@@ -1606,10 +1758,10 @@ def main():
                 menu_options.append("[7] Mode Cadences (théorie)\n", style="bold magenta")
                 menu_options.append("[8] Mode Pop/Rock (célèbres)\n", style="bold cyan")
                 menu_options.append("[9] Mode Reconnaissance Libre\n", style="bold bright_cyan")
+                menu_options.append("[10] Mode Progression Tonale\n", style="bold bright_magenta")  # NOUVEAU MODE
                 menu_options.append("--- Configuration ---\n", style="dim")
-                menu_options.append("[10] Options\n", style="bold white")
-                menu_options.append("[11] Quitter", style="bold white")
-                
+                menu_options.append("[11] Options\n", style="bold white")
+                menu_options.append("[12] Quitter", style="bold white")                
                 menu_panel = Panel(
                     menu_options,
                     title="Menu Principal",
@@ -1618,7 +1770,7 @@ def main():
                 console.print(menu_panel)
                 
                 # MODIFIÉ: Mise à jour des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'], show_choices=False, console=console)
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'], show_choices=False, console=console)
                 
                 if mode_choice == '1':
                     chord_explorer_mode(outport)
@@ -1639,8 +1791,10 @@ def main():
                 elif mode_choice == '9':
                     reverse_chord_mode(inport)
                 elif mode_choice == '10':
-                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                    tonal_progression_mode(inport, outport, current_chord_set)                    
                 elif mode_choice == '11':
+                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                elif mode_choice == '12':
                     console.print("Arrêt du programme.", style="bold red")
                     break
                 else:
