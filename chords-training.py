@@ -21,6 +21,7 @@ from rich.text import Text
 from rich.prompt import Prompt
 from rich.table import Table
 from rich.errors import MarkupError
+from rich.live import Live
 
 # Initialisation de la console Rich
 console = Console()
@@ -173,6 +174,35 @@ gammes_majeures = {
     "Ré bémol Majeur": ["Ré bémol Majeur", "Mi bémol Mineur", "Fa Mineur", "Sol bémol Majeur", "La bémol Majeur", "Si bémol Mineur", "Do Diminué"],
     "Sol bémol Majeur": ["Sol bémol Majeur", "La bémol Mineur", "Si bémol Mineur", "Do bémol Majeur", "Ré bémol Majeur", "Mi bémol Mineur", "Fa Diminué"],
     "Do bémol Majeur": ["Do bémol Majeur", "Ré bémol Mineur", "Mi bémol Mineur", "Fa bémol Majeur", "Sol bémol Majeur", "La bémol Mineur", "Si bémol Diminué"],
+}
+
+
+# --- Exemples de progressions d'accords et de chansons ---
+progression_examples = {
+    # Exemples pour le mode Progression
+    "Do Majeur, Sol Majeur, La Mineur, Fa Majeur": ["'Let It Be' - The Beatles", "'Don't Stop Believin'' - Journey", "'Take On Me' - a-ha", "'With or Without You' - U2"],
+    "Do Majeur, Fa Majeur, Sol Majeur": ["'La Bamba' - Ritchie Valens", "'Twist and Shout' - The Beatles", "'Louie Louie' - The Kingsmen"],
+    "La Mineur, Mi Mineur, Fa Majeur, Do Majeur": ["'Californication' - Red Hot Chili Peppers", "'Don't Look Back in Anger' - Oasis"],
+}
+
+# Nouvelles progressions pour le mode Pop/Rock
+pop_rock_progressions = {
+    "1": {
+        "progression": ["Do Majeur", "Sol Majeur", "La Mineur", "Fa Majeur"],
+        "examples": ["'Let It Be' - The Beatles", "'Don't Stop Believin'' - Journey", "'Take On Me' - a-ha"]
+    },
+    "2": {
+        "progression": ["Do Majeur", "La Mineur", "Fa Majeur", "Sol Majeur"],
+        "examples": ["'No Woman, No Cry' - Bob Marley", "'Stand By Me' - Ben E. King", "'I'm Yours' - Jason Mraz"]
+    },
+    "3": {
+        "progression": ["Sol Majeur", "Ré Majeur", "Mi Mineur", "Do Majeur"],
+        "examples": ["'With or Without You' - U2", "'Wake Me Up When September Ends' - Green Day"]
+    },
+    "4": {
+        "progression": ["Mi Mineur", "Do Majeur", "Sol Majeur", "Ré Majeur"],
+        "examples": ["'All of Me' - John Legend", "'Apologize' - OneRepublic"]
+    },
 }
 
 # --- Création d'un dictionnaire de correspondance pour la reconnaissance par classe de hauteur ---
@@ -660,197 +690,127 @@ def listen_and_reveal_mode(inport, outport, chord_set):
         pass
     wait_for_any_key(inport)
 
-def get_progression_choice(progression_selection_mode, inport, last_progression=None):
-    """Permet de choisir une progression, soit aléatoirement, soit via MIDI."""
-    # Liste des progressions Pop/Rock
-    progressions_pop_rock = {
-        "I-V-vi-IV": ["Do Majeur", "Sol Majeur", "La Mineur", "Fa Majeur"],
-        "ii-V-I": ["Ré Mineur", "Sol Majeur", "Do Majeur"],
-        "I-vi-ii-V": ["Do Majeur", "La Mineur", "Ré Mineur", "Sol Majeur"],
-        "IV-I-V-vi": ["Fa Majeur", "Do Majeur", "Sol Majeur", "La Mineur"],
-        "I-IV-V": ["Do Majeur", "Fa Majeur", "Sol Majeur"],
-        "I-vi-IV-V": ["Do Majeur", "La Mineur", "Fa Majeur", "Sol Majeur"],
-        "vi-IV-I-V": ["La Mineur", "Fa Majeur", "Do Majeur", "Sol Majeur"],
-        "I-bVII-IV": ["Do Majeur", "Si bémol Majeur", "Fa Majeur"],
-    }
-    progression_examples = {
-        "I-V-vi-IV": ["Let It Be (The Beatles)", "Don't Stop Believin' (Journey)"],
-        "ii-V-I": ["Autumn Leaves (Jazz Standard)", "I Will Survive (Gloria Gaynor)"],
-        "I-vi-ii-V": ["Heart and Soul (Hoagy Carmichael)", "Blue Moon (Rodgers & Hart)"],
-        "IV-I-V-vi": ["No Woman, No Cry (Bob Marley)", "With or Without You (U2)"],
-        "I-IV-V": ["La Bamba (Ritchie Valens)", "Twist and Shout (The Beatles)"],
-        "I-vi-IV-V": ["Stand By Me (Ben E. King)", "Unchained Melody (The Righteous Brothers)"],
-        "vi-IV-I-V": ["Africa (Toto)", "With or Without You (U2)"],
-        "I-bVII-IV": ["Lust for Life (Iggy Pop)", "Sweet Home Alabama (Lynyrd Skynyrd)"],
-    }
+def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set):
+    """
+    Mode d'entraînement Pop/Rock avec des progressions d'accords courantes.
+    """
+    clear_screen()
+    console.print(Panel(
+        Text("Mode Pop/Rock", style="bold cyan", justify="center"),
+        title="Entraînement Pop/Rock", border_style="cyan"
+    ))
+    
+    # Afficher les progressions et les exemples
+    table = Table(title="Progressions Pop/Rock", style="bold blue")
+    table.add_column("Numéro", style="cyan")
+    table.add_column("Progression", style="magenta")
+    table.add_column("Exemples de chansons", style="yellow")
+    
+    for num, data in pop_rock_progressions.items():
+        prog_str = " -> ".join(data["progression"])
+        examples_str = "\n".join(data["examples"])
+        table.add_row(num, prog_str, examples_str)
+    
+    console.print(table)
+    
+    # Demander à l'utilisateur de choisir une progression
+    prog_choices = list(pop_rock_progressions.keys())
+    prog_choice = Prompt.ask("Choisissez une progression (numéro)", choices=prog_choices)
+    
+    selected_progression_data = pop_rock_progressions.get(prog_choice)
+    current_progression = selected_progression_data["progression"]
+    
+    prog_str = " -> ".join(current_progression)
+    console.print(f"\nProgression sélectionnée: [bold yellow]{prog_str}[/bold yellow]")
+    
+    # Jouer la progression si l'option est activée
+    if play_progression_before_start:
+        play_progression_sequence(outport, current_progression, all_chords)
 
-    if progression_selection_mode == 'midi':
-        console.print(f"Appuyez sur une note de la 4ème octave pour choisir une progression ([bold cyan]Do4 à La4[/bold cyan]) ou 'q' pour revenir au menu.")
-        note_map = {
-            60: "I-V-vi-IV", 62: "ii-V-I", 64: "I-vi-ii-V", 65: "IV-I-V-vi", 66: "I-IV-V", 67: "I-vi-IV-V", 69: "vi-IV-I-V", 70: "I-bVII-IV"
-        }
+    notes_currently_on = set()
+    attempt_notes = set()
+    progression_index = 0
+    start_time = None
+    
+    console.print("\n[bold green]La progression commence. Jouez l'accord affiché.[/bold green]")
+    
+    def update_live_display(time_elapsed, progression_index, current_progression):
+        """
+        Cette fonction retourne le panneau Rich mis à jour avec le temps écoulé et l'accord en cours.
+        Elle a été modifiée pour prendre les variables nécessaires en argument pour plus de clarté.
+        """
+        panel_content = Text(
+            f"Accord à jouer : [bold yellow]{current_progression[progression_index]}[/bold yellow]\n"
+            f"Temps écoulé : [bold magenta]{time_elapsed:.1f}s[/bold magenta]",
+            justify="center"
+        )
+        # Retourne le panneau avec le contenu textuel centré
+        return Panel(panel_content, title="Progression en cours", border_style="green")
+
+    # Utilisation de `with Live(...)` pour rafraîchir l'affichage
+    with Live(console=console, screen=False) as live:
+        # Initialisation des variables pour la boucle
+        start_time = None
+        progression_index = 0
+        attempt_notes = set()
+        notes_currently_on = set()
         
-        while True:
-            char = wait_for_input(timeout=0.01)
-            if char and char.lower() == 'q':
-                return None, None, None
-                
+        while progression_index < len(current_progression):
+            # Mettre à jour l'affichage en permanence dans la boucle
+            if use_timer:
+                if start_time is None:
+                    start_time = time.time()
+                time_elapsed = time.time() - start_time
+                # Met à jour le panneau en temps réel avec la fonction helper
+                live.update(update_live_display(time_elapsed, progression_index, current_progression))
+
+                if time_elapsed > timer_duration:
+                    live.stop()  # Arrêter l'affichage en direct avant d'imprimer un message
+                    console.print(f"[bold red]\nTemps écoulé ! L'accord était {current_progression[progression_index]}.[/bold red]")
+                    progression_index += 1
+                    start_time = None
+                    if progression_index < len(current_progression):
+                        console.print(f"Passage à l'accord suivant : [bold yellow]{current_progression[progression_index]}[/bold yellow]")
+                    else:
+                        break
+                    live.start() # Redémarrer l'affichage en direct
+            
+            # Le reste de votre logique pour la gestion des notes MIDI reste inchangé
             for msg in inport.iter_pending():
                 if msg.type == 'note_on' and msg.velocity > 0:
-                    note = msg.note
-                    if note in note_map:
-                        prog_name = note_map[note]
-                        if not last_progression or prog_name != last_progression:
-                            progression = progressions_pop_rock[prog_name]
-                            console.print(f"Progression sélectionnée : [bold cyan]{prog_name}[/bold cyan]")
-                            return prog_name, progression, progression_examples[prog_name]
-                        else:
-                            console.print(f"[bold red]Progression déjà jouée. Veuillez en choisir une autre.[/bold red]")
-            
-            time.sleep(0.01)
-    else: # Mode aléatoire par défaut
-        prog_name, progression = random.choice(list(progressions_pop_rock.items()))
-        while progression == last_progression:
-            prog_name, progression = random.choice(list(progressions_pop_rock.items()))
-        return prog_name, progression, progression_examples[prog_name]
+                    notes_currently_on.add(msg.note)
+                    attempt_notes.add(msg.note)
+                elif msg.type == 'note_off':
+                    notes_currently_on.discard(msg.note)
 
-def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
-    """Mode d'entraînement sur des progressions Pop/Rock."""
-    
-    session_correct_count = 0
-    session_total_chords = 0
-    last_progression_name = None
-    
-    exit_flag = False
-    
-    while not exit_flag:
-        for _ in inport.iter_pending():
-            pass
-        
-        prog_name, progression, exemples = get_progression_choice(progression_selection_mode, inport, last_progression_name)
-        if prog_name is None:
-            exit_flag = True
-            break
-        
-        last_progression_name = prog_name
-        
-        clear_screen()
-        console.print(Panel(
-            Text("Mode Progressions Pop/Rock", style="bold magenta", justify="center"),
-            title="Progressions Pop/Rock",
-            border_style="magenta"
-        ))
-        console.print(f"Type d'accords: [bold cyan]{'Tous' if chord_set == all_chords else 'Majeurs/Mineurs'}[/bold cyan]")
-        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
-        
-        console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(progression)}[/bold yellow]")
-        if prog_name in exemples:
-            console.print(f"Exemples : [bold blue]{exemples[0]}[/bold blue] et [bold blue]{exemples[1]}[/bold blue]")
-        
-        if play_progression_before_start:
-            play_progression_sequence(outport, progression, chord_set)
+            if not notes_currently_on and attempt_notes:
+                played_chord_name, _ = recognize_chord(attempt_notes)
+                target_chord_name = current_progression[progression_index]
 
-        progression_correct_count = 0
-        is_progression_started = False
-        start_time = None
-        elapsed_time = 0.0 # Initialisation de la variable
-        skip_progression = False
-        
-        # Boucle principale pour la progression
-        prog_index = 0
-        while prog_index < len(progression) and not exit_flag and not skip_progression:
-            chord_name = progression[prog_index]
-            target_notes = chord_set[chord_name]
-            console.print(f"Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
-            
-            notes_currently_on = set()
-            attempt_notes = set()
-
-            # Boucle pour chaque accord
-            while not exit_flag and not skip_progression:
-                if use_timer and is_progression_started:
-                    remaining_time = timer_duration - (time.time() - start_time)
-                    console.print(f"Temps restant : {remaining_time:.1f} secondes", end='\r', style="bold bright_cyan")
-                    if remaining_time <= 0:
-                        console.print(f"\n[bold red]Temps écoulé ! Session terminée.[/bold red]")
-                        exit_flag = True
-                        break
-
-                char = wait_for_input(timeout=0.01)
-                if char:
-                    char = char.lower()
-                    if char == 'q':
-                        exit_flag = True
-                        break
-                    if char == 'r':
-                        # Rejouer la progression depuis le début
-                        play_progression_sequence(outport, progression, chord_set)
-                        prog_index = 0
-                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression[prog_index]}[/bold yellow]")
-                        break # Recommencer la boucle de l'accord
-                    if char == 'n':
-                        # Passer à la progression suivante
-                        skip_progression = True
-                        break
-
-                for msg in inport.iter_pending():
-                    if msg.type == 'note_on' and msg.velocity > 0:
-                        notes_currently_on.add(msg.note)
-                        attempt_notes.add(msg.note)
-                    elif msg.type == 'note_off':
-                        notes_currently_on.discard(msg.note)
-
-                if not notes_currently_on and attempt_notes:
-                    if use_timer and not is_progression_started:
-                        is_progression_started = True
-                        start_time = time.time()
-                    
-                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
-                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                        console.print(f"Notes jouées : [{colored_notes}]")
-                        console.print("[bold green]Correct ![/bold green]")
-                        progression_correct_count += 1
-                        prog_index += 1
-                        break # Passer à l'accord suivant de la progression
+                if played_chord_name and (is_enharmonic_match(played_chord_name, target_chord_name, enharmonic_map) or played_chord_name == target_chord_name):
+                    live.stop()
+                    console.print(f"[bold green]Correct ! {target_chord_name}[/bold green]")
+                    progression_index += 1
+                    start_time = None
+                    if progression_index < len(current_progression):
+                        console.print(f"Passage à l'accord suivant : [bold yellow]{current_progression[progression_index]}[/bold yellow]")
                     else:
-                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                        
-                        found_chord, found_inversion = recognize_chord(attempt_notes)
-                        
-                        if found_chord:
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
-                        else:
-                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                        
-                        console.print(f"Notes jouées : [{colored_string}]")
-                        attempt_notes.clear()
+                        console.print("[bold green]Progression terminée ![/bold green]")
+                        break
+                    live.start()
+                else:
+                    live.stop()
+                    console.print(f"[bold red]Incorrect. Réessayez.[/bold red] Vous avez joué : {played_chord_name if played_chord_name else 'Accord non reconnu'} ({', '.join([get_note_name(n) for n in sorted(list(attempt_notes))])})")
+                    live.start()
                 
-                time.sleep(0.01)
+                attempt_notes.clear()
 
-        # Fin de la progression
-        if not exit_flag and not skip_progression:
-            session_correct_count += progression_correct_count
-            session_total_chords += len(progression)
-            
-            if use_timer and is_progression_started:
-                end_time = time.time()
-                elapsed_time = end_time - start_time
-                console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
-            
-            Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante...", console=console)
-        elif skip_progression:
-            # Si l'utilisateur a skip, on ne met pas à jour les stats
-            console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
-            time.sleep(1)
+            char = wait_for_input(timeout=0.01)
+            if char and char.lower() == 'q':
+                break
 
-    if use_timer:
-        display_stats(session_correct_count, session_total_chords, elapsed_time)
-    else:
-        display_stats(session_correct_count, session_total_chords)
-        
-    console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
-    for _ in inport.iter_pending():
-        pass
+    console.print("\nFin du mode Progression Pop/Rock.")
+    console.print("Appuyez sur une touche pour revenir au menu principal.")
     wait_for_any_key(inport)
 
 def progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
