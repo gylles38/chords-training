@@ -1,4 +1,4 @@
-# coding=utf-8
+ # coding=utf-8
 import mido
 import time
 import random
@@ -396,10 +396,13 @@ def reverse_chord_mode(inport):
                     else:
                         console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ({inversion_label})")
                 else:
-                    colored_string = get_colored_notes_string(attempt_notes, set())
+                    # Bug fix: utiliser la fonction de coloration corrigée pour ce mode également
+                    # Pour ce mode, il n'y a pas d'accord "cible" à comparer. On affiche juste
+                    # les notes jouées. On peut donc simplement lister les notes.
+                    colored_string = ", ".join([f"[bold red]{get_note_name(n)}[/bold red]" for n in sorted(list(attempt_notes))])
                     console.print(f"[bold red]Accord non reconnu.[/bold red] Notes jouées : [{colored_string}]")
             else:
-                console.print("[bold yellow]Veuillez jouer au moins 2 notes pour former un accord.[/bold yellow]")
+                console.print("[bold yellow]Veuillez jouer au moins 3 notes pour former un accord.[/bold yellow]")
 
             attempt_notes.clear()
         
@@ -420,20 +423,30 @@ def display_stats(correct_count, total_count, elapsed_time=None):
     console.print("-------------------------")
 
 def get_colored_notes_string(played_notes, correct_notes):
-    """Retourne une chaîne de caractères avec les notes jouées, colorées en fonction de leur justesse."""
+    """
+    Retourne une chaîne de caractères avec les notes jouées, colorées en fonction de leur justesse.
+    
+    Correction de bug : cette fonction est maintenant plus intelligente.
+    - Vert : La note jouée est exactement la bonne (même note, même octave).
+    - Jaune : La note jouée est la bonne, mais dans une octave différente.
+    - Rouge : La note jouée est incorrecte.
+    """
     output_parts = []
     
-    # Créer un dictionnaire pour vérifier les notes correctes dans n'importe quelle octave
-    correct_note_names = {get_note_name(n) for n in correct_notes}
+    # Créer un ensemble des classes de hauteur correctes (indépendant de l'octave)
+    correct_pitch_classes = {note % 12 for note in correct_notes}
     
     for note in sorted(played_notes):
         note_name = get_note_name(note)
         
         if note in correct_notes:
+            # Correspondance parfaite (note et octave)
             output_parts.append(f"[bold green]{note_name}[/bold green]")
-        elif note_name in correct_note_names:
-            output_parts.append(f"[bold orange3]{note_name}[/bold orange3]")
+        elif (note % 12) in correct_pitch_classes:
+            # Bonne note, mais mauvaise octave
+            output_parts.append(f"[bold yellow]{note_name}[/bold yellow]")
         else:
+            # Mauvaise note
             output_parts.append(f"[bold red]{note_name}[/bold red]")
             
     return ", ".join(output_parts)
@@ -501,8 +514,8 @@ def single_chord_mode(inport, outport, chord_set):
                 # Vérification de l'accord joué par l'utilisateur
                 recognized_name, recognized_inversion = recognize_chord(attempt_notes)
                 
-                # Correction: Utiliser la carte enharmonique pour valider la réponse
-                if is_enharmonic_match(recognized_name, chord_name, enharmonic_map):
+                # Correction: Utiliser la carte enharmonique et la taille pour valider la réponse
+                if is_enharmonic_match(recognized_name, chord_name, enharmonic_map) and len(attempt_notes) == len(chord_notes):
                     colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
                     console.print(f"Notes jouées : [{colored_notes}]")
                     console.print("[bold green]Correct ![/bold green]")
@@ -513,8 +526,10 @@ def single_chord_mode(inport, outport, chord_set):
                 else:
                     colored_string = get_colored_notes_string(attempt_notes, chord_notes)
                     
-                    if recognized_name:
-                        console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name} ({recognized_inversion})")
+                    found_chord, found_inversion = recognize_chord(attempt_notes)
+                    
+                    if found_chord:
+                        console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
                     else:
                         console.print("[bold red]Incorrect. Réessayez.[/bold red]")
 
@@ -566,6 +581,7 @@ def listen_and_reveal_mode(inport, outport, chord_set):
         # --- Début de la nouvelle logique pour la détection des arpèges ---
         notes_currently_on = set()
         attempt_notes = set()
+
         incorrect_attempts = 0
         last_note_off_time = None
         
@@ -595,43 +611,45 @@ def listen_and_reveal_mode(inport, outport, chord_set):
             if last_note_off_time and time.time() - last_note_off_time > 0.3: # Délai de 0.3 seconde
                 total_attempts += 1
                 
-                # Vérification du nombre de notes jouées avant de tenter la reconnaissance
-                if len(attempt_notes) == len(chord_notes):
-                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
-                        colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
-                        console.print(f"Notes jouées : [{colored_notes}]")
-                        console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
-                        correct_count += 1
-                        time.sleep(1.5)
-                        break
-                    else:
-                        incorrect_attempts += 1
-                        colored_string = get_colored_notes_string(attempt_notes, chord_notes)
-                        
-                        if recognize_chord(attempt_notes)[0]:
-                            found_chord, found_inversion = recognize_chord(attempt_notes)
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
-                        else:
-                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                # Vérification de l'accord joué par l'utilisateur
+                recognized_name, recognized_inversion = recognize_chord(attempt_notes)
 
-                        console.print(f"Notes jouées : [{colored_string}]")
-
-                        if incorrect_attempts >= 3:
-                            tonic_note = sorted(list(chord_notes))[0]
-                            tonic_name = get_note_name(tonic_note)
-                            console.print(f"Indice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
-                        if incorrect_attempts >= 7:
-                            revealed_type = get_chord_type_from_name(chord_name)
-                            console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
-                            console.print(f"[bold magenta]La réponse était : {chord_name}[/bold magenta]")
-                            Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=console)
-                            break
+                # Fix du bug: on vérifie que le nombre de notes jouées est le même que le nombre de notes de l'accord cible
+                if is_enharmonic_match(recognized_name, chord_name, enharmonic_map) and len(attempt_notes) == len(chord_notes):
+                    colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
+                    console.print(f"Notes jouées : [{colored_notes}]")
+                    console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
+                    correct_count += 1
+                    
+                    time.sleep(1.5)
+                    break
                 else:
-                    console.print(f"[bold red]Incorrect.[/bold red] L'accord {chord_name} est composé de [bold]{len(chord_notes)}[/bold] notes, mais vous en avez joué [bold]{len(attempt_notes)}[/bold].")
-                    console.print("Réessayez en jouant le bon nombre de notes.")
+                    incorrect_attempts += 1
+                    colored_string = get_colored_notes_string(attempt_notes, chord_notes)
+                    
+                    found_chord, found_inversion = recognize_chord(attempt_notes)
+                    
+                    if found_chord:
+                        console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                    else:
+                        console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                    
+                    console.print(f"Notes jouées : [{colored_string}]")
+                    attempt_notes.clear() # Réinitialiser pour le prochain essai
+                    
+                    if incorrect_attempts >= 3:
+                        tonic_note = sorted(list(chord_notes))[0]
+                        tonic_name = get_note_name(tonic_note)
+                        console.print(f"Indice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
+                    if incorrect_attempts >= 7:
+                        revealed_type = get_chord_type_from_name(chord_name)
+                        console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
+                        console.print(f"[bold magenta]La réponse était : {chord_name}[/bold magenta]")
+                        Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=console)
+                        break
                 
                 # Réinitialiser pour le prochain essai après vérification
-                attempt_notes.clear()
+                #attempt_notes.clear()
                 last_note_off_time = None
             
             time.sleep(0.01)
@@ -787,7 +805,7 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
                         is_progression_started = True
                         start_time = time.time()
                     
-                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
+                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
                         colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                         console.print(f"Notes jouées : [{colored_notes}]")
                         console.print("[bold green]Correct ![/bold green]")
@@ -925,7 +943,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                         is_progression_started = True
                         start_time = time.time()
 
-                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
+                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
                         colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                         console.print(f"Notes jouées : [{colored_notes}]")
                         console.print("[bold green]Correct ![/bold green]")
@@ -952,7 +970,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             
         if not exit_flag and not skip_progression:
             session_correct_count += progression_correct_count
-            session_total_chords += len(progression)
+            session_total_chords += len(progression_accords)
 
             if use_timer and is_progression_started:
                 end_time = time.time()
@@ -1072,7 +1090,7 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                         is_progression_started = True
                         start_time = time.time()
 
-                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map):
+                    if is_enharmonic_match(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
                         colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                         console.print(f"Notes jouées : [{colored_notes}]")
                         console.print("[bold green]Correct ![/bold green]")
