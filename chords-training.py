@@ -127,6 +127,87 @@ all_chords = {
     "Si 6ème": {71, 75, 78, 80},
 }
 
+# NOUVEAU : Dictionnaire d'alias pour le mode Explorateur
+# Fait le lien entre une saisie utilisateur simple et le nom complet de l'accord.
+chord_aliases = {
+    # Majeur (ex: "c", "C", "cmaj")
+    "c": "Do Majeur", "cmaj": "Do Majeur",
+    "c#": "Do dièse Majeur", "c#maj": "Do dièse Majeur", "db": "Ré bémol Majeur", "dbmaj": "Ré bémol Majeur",
+    "d": "Ré Majeur", "dmaj": "Ré Majeur",
+    "d#": "Mi bémol Majeur", "d#maj": "Mi bémol Majeur", "eb": "Mi bémol Majeur", "ebmaj": "Mi bémol Majeur",
+    "e": "Mi Majeur", "emaj": "Mi Majeur",
+    "f": "Fa Majeur", "fmaj": "Fa Majeur",
+    "f#": "Fa dièse Majeur", "f#maj": "Fa dièse Majeur", "gb": "Sol bémol Majeur", "gbmaj": "Sol bémol Majeur",
+    "g": "Sol Majeur", "gmaj": "Sol Majeur",
+    "g#": "La bémol Majeur", "g#maj": "La bémol Majeur", "ab": "La bémol Majeur", "abmaj": "La bémol Majeur",
+    "a": "La Majeur", "amaj": "La Majeur",
+    "a#": "Si bémol Majeur", "a#maj": "Si bémol Majeur", "bb": "Si bémol Majeur", "bbmaj": "Si bémol Majeur",
+    "b": "Si Majeur", "bmaj": "Si Majeur",
+    
+    # Mineur (ex: "cm", "C-", "cmin")
+    "cm": "Do Mineur", "c-": "Do Mineur", "cmin": "Do Mineur",
+    "c#m": "Do dièse Mineur", "c#-": "Do dièse Mineur", "dbm": "Do dièse Mineur",
+    "dm": "Ré Mineur", "d-": "Ré Mineur", "dmin": "Ré Mineur",
+    "d#m": "Ré dièse Mineur", "d#-": "Ré dièse Mineur", "ebm": "Mi bémol Mineur",
+    "em": "Mi Mineur", "e-": "Mi Mineur", "emin": "Mi Mineur",
+    "fm": "Fa Mineur", "f-": "Fa Mineur", "fmin": "Fa Mineur",
+    "f#m": "Fa dièse Mineur", "f#-": "Fa dièse Mineur", "gbm": "Fa dièse Mineur",
+    "gm": "Sol Mineur", "g-": "Sol Mineur", "gmin": "Sol Mineur",
+    "g#m": "Sol dièse Mineur", "g#-": "Sol dièse Mineur", "abm": "La bémol Mineur",
+    "am": "La Mineur", "a-": "La Mineur", "amin": "La Mineur",
+    "a#m": "La dièse Mineur", "a#-": "La dièse Mineur", "bbm": "Si bémol Mineur",
+    "bm": "Si Mineur", "b-": "Si Mineur", "bmin": "Si Mineur",
+    
+    # 7ème de dominante (ex: "c7")
+    "c7": "Do 7ème", "c#7": "Do dièse 7ème", "db7": "Do dièse 7ème", # Note: C#7 et Db7 ne sont pas dans la liste initiale, mais on peut les ajouter
+    "d7": "Ré 7ème", "d#7": "Mi bémol 7ème", "eb7": "Mi bémol 7ème",
+    "e7": "Mi 7ème", "f7": "Fa 7ème", "f#7": "Fa dièse 7ème", "gb7": "Fa dièse 7ème",
+    "g7": "Sol 7ème", "g#7": "La bémol 7ème", "ab7": "La bémol 7ème",
+    "a7": "La 7ème", "a#7": "Si bémol 7ème", "bb7": "Si bémol 7ème",
+    "b7": "Si 7ème",
+
+    # 7ème Majeur (ex: "cmaj7")
+    "cmaj7": "Do Majeur 7ème", "c#maj7": "Ré bémol Majeur 7ème", "dbmaj7": "Ré bémol Majeur 7ème",
+    "dmaj7": "Ré Majeur 7ème", "ebmaj7": "Mi bémol Majeur 7ème", "emaj7": "Mi Majeur 7ème",
+    "fmaj7": "Fa Majeur 7ème", "f#maj7": "Sol bémol Majeur 7ème", "gbmaj7": "Sol bémol Majeur 7ème",
+    "gmaj7": "Sol Majeur 7ème", "abmaj7": "La bémol Majeur 7ème", "amaj7": "La Majeur 7ème",
+    "bbmaj7": "Si bémol Majeur 7ème", "bmaj7": "Si Majeur 7ème",
+    
+    # 7ème Mineur (ex: "cm7")
+    "cm7": "Do Mineur 7ème", "c#m7": "Ré bémol Mineur 7ème", "dbm7": "Ré bémol Mineur 7ème",
+    "dm7": "Ré Mineur 7ème", "d#m7": "Ré dièse Mineur 7ème", "ebm7": "Mi bémol Mineur 7ème",
+    "em7": "Mi Mineur 7ème", "fm7": "Fa Mineur 7ème", "f#m7": "Fa dièse Mineur 7ème",
+    "gm7": "Sol Mineur 7ème", "g#m7": "La bémol Mineur 7ème", "abm7": "La bémol Mineur 7ème",
+    "am7": "La Mineur 7ème", "a#m7": "Si bémol Mineur 7ème", "bbm7": "Si bémol Mineur 7ème",
+    "bm7": "Si Mineur 7ème",
+
+    # Diminué (ex: "cdim")
+    "cdim": "Do Diminué", "c#dim": "Do dièse Diminué", "ddim": "Ré Diminué", "d#dim": "Ré dièse Diminué",
+    "edim": "Mi Diminué", "fdim": "Fa Diminué", "f#dim": "Fa dièse Diminué", "gdim": "Sol Diminué",
+    "g#dim": "Sol dièse Diminué", "adim": "La Diminué", "a#dim": "Si bémol Diminué", "bbdim": "Si bémol Diminué",
+    "bdim": "Si Diminué",
+    
+    # --- Accords de 4ème (sus4) ---
+    "c4": "Do 4ème", "csus4": "Do 4ème",
+    "d4": "Ré 4ème", "dsus4": "Ré 4ème",
+    "e4": "Mi 4ème", "esus4": "Mi 4ème",
+    "f4": "Fa 4ème", "fsus4": "Fa 4ème",
+    "g4": "Sol 4ème", "gsus4": "Sol 4ème",
+    "a4": "La 4ème", "asus4": "La 4ème",
+    "b4": "Si 4ème", "bsus4": "Si 4ème",
+
+    # --- Accords de 6ème (add6) ---
+    "c6": "Do 6ème",
+    "d6": "Ré 6ème",
+    "e6": "Mi 6ème",
+    "f6": "Fa 6ème",
+    "g6": "Sol 6ème",
+    "a6": "La 6ème",
+    "b6": "Si 6ème",
+
+}
+
+
 # --- Carte des équivalences enharmoniques pour la reconnaissance ---
 # Permet de lier les noms d'accords qui partagent les mêmes notes MIDI
 enharmonic_map = {
@@ -176,7 +257,7 @@ gammes_majeures = {
     "Do bémol Majeur": ["Do bémol Majeur", "Ré bémol Mineur", "Mi bémol Mineur", "Fa bémol Majeur", "Sol bémol Majeur", "La bémol Mineur", "Si bémol Diminué"],
 }
 
-# NOUVEAU: Définition des cadences par leurs degrés romains
+# Définition des cadences par leurs degrés romains
 cadences = {
     "Cadence Parfaite": ["V", "I"],
     "Cadence Plagale": ["IV", "I"],
@@ -185,7 +266,7 @@ cadences = {
     "Progression II-V-I": ["ii", "V", "I"]
 }
 
-# NOUVEAU: Dictionnaire pour mapper les degrés romains à un index de la liste de gamme (0-6)
+# Dictionnaire pour mapper les degrés romains à un index de la liste de gamme (0-6)
 DEGREE_MAP = {'I': 0, 'ii': 1, 'iii': 2, 'IV': 3, 'V': 4, 'vi': 5, 'vii°': 6}
 
 
@@ -495,6 +576,55 @@ def get_colored_notes_string(played_notes, correct_notes):
 
 
 # --- Modes de jeu ---
+
+# NOUVEAU: Mode Explorateur d'Accords
+def chord_explorer_mode(outport):
+    """Mode dictionnaire : l'utilisateur saisit un nom d'accord, le programme le joue et affiche ses notes."""
+    clear_screen()
+    console.print(Panel(
+        Text("Mode Explorateur d'Accords", style="bold bright_blue", justify="center"),
+        title="Dictionnaire d'accords",
+        border_style="bright_blue"
+    ))
+    console.print("Entrez un nom d'accord pour voir ses notes et l'entendre.")
+    console.print("Exemples : [cyan]C, F#m, Gm7, Bb, Ddim[/cyan]")
+
+    while True:
+        try:
+            user_input = Prompt.ask("\n[prompt.label]Accord à trouver (ou 'q' pour quitter)[/prompt.label]")
+            if user_input.lower() == 'q':
+                break
+
+            # Normaliser la saisie pour la recherche (minuscules, sans espaces)
+            lookup_key = user_input.lower().replace(" ", "")
+            full_chord_name = chord_aliases.get(lookup_key)
+
+            if full_chord_name and full_chord_name in all_chords:
+                # Accord trouvé
+                chord_notes_midi = all_chords[full_chord_name]
+                
+                # Trier les notes pour un affichage logique (Tonique, Tierce, Quinte...)
+                sorted_notes_midi = sorted(list(chord_notes_midi))
+                
+                # Obtenir le nom des notes
+                note_names = [get_note_name(n) for n in sorted_notes_midi]
+                notes_str = ", ".join(note_names)
+
+                console.print(f"L'accord [bold green]{full_chord_name}[/bold green] est composé des notes : [bold yellow]{notes_str}[/bold yellow]")
+                console.print("Lecture de l'accord...")
+                play_chord(outport, chord_notes_midi, duration=1.2) # Joue l'accord un peu plus longtemps
+            else:
+                # Accord non trouvé
+                console.print(f"[bold red]Accord '{user_input}' non reconnu.[/bold red] Veuillez réessayer.")
+
+        except Exception as e:
+            console.print(f"[bold red]Une erreur est survenue : {e}[/bold red]")
+            time.sleep(2)
+
+    console.print("\nRetour au menu principal.")
+    time.sleep(1)
+
+
 def single_chord_mode(inport, outport, chord_set):
     """Mode d'entraînement sur les accords simples. L'utilisateur doit jouer le bon accord pour passer au suivant."""
     clear_screen()
@@ -1085,7 +1215,6 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
         pass
     wait_for_any_key(inport)
 
-# NOUVEAU : Mode d'entraînement aux cadences
 def cadence_mode(inport, outport, play_progression_before_start, chord_set):
     """Mode d'entraînement sur les cadences musicales."""
 
@@ -1465,18 +1594,21 @@ def main():
                     pass
 
                 clear_screen()
-                # MODIFIÉ: Ajout du mode Cadences et renumérotation
+                # MODIFIÉ: Ajout du mode Explorateur et renumérotation
                 menu_options = Text()
-                menu_options.append("[1] Mode Accord Simple\n", style="bold yellow")
-                menu_options.append("[2] Mode Écoute et Devine\n", style="bold orange3")
-                menu_options.append("[3] Mode Progressions (aléatoires)\n", style="bold blue")
-                menu_options.append("[4] Mode Degrés (aléatoire)\n", style="bold red")
-                menu_options.append("[5] Mode Tous les Degrés (gamme)\n", style="bold purple")
-                menu_options.append("[6] Mode Cadences (théorie)\n", style="bold magenta") # NOUVEAU
-                menu_options.append("[7] Mode Pop/Rock (célèbres)\n", style="bold cyan")
-                menu_options.append("[8] Mode Reconnaissance d'accords\n", style="bold bright_cyan")
-                menu_options.append("[9] Options\n", style="bold white")
-                menu_options.append("[10] Quitter", style="bold white")
+                menu_options.append("[1] Mode Explorateur d'accords (Dictionnaire)\n", style="bold bright_blue") # NOUVEAU
+                menu_options.append("--- Entraînement ---\n", style="dim")
+                menu_options.append("[2] Mode Accord Simple\n", style="bold yellow")
+                menu_options.append("[3] Mode Écoute et Devine\n", style="bold orange3")
+                menu_options.append("[4] Mode Progressions (aléatoires)\n", style="bold blue")
+                menu_options.append("[5] Mode Degrés (aléatoire)\n", style="bold red")
+                menu_options.append("[6] Mode Tous les Degrés (gamme)\n", style="bold purple")
+                menu_options.append("[7] Mode Cadences (théorie)\n", style="bold magenta")
+                menu_options.append("[8] Mode Pop/Rock (célèbres)\n", style="bold cyan")
+                menu_options.append("[9] Mode Reconnaissance Libre\n", style="bold bright_cyan")
+                menu_options.append("--- Configuration ---\n", style="dim")
+                menu_options.append("[10] Options\n", style="bold white")
+                menu_options.append("[11] Quitter", style="bold white")
                 
                 menu_panel = Panel(
                     menu_options,
@@ -1486,28 +1618,29 @@ def main():
                 console.print(menu_panel)
                 
                 # MODIFIÉ: Mise à jour des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], show_choices=False, console=console)
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'], show_choices=False, console=console)
                 
                 if mode_choice == '1':
-                    single_chord_mode(inport, outport, current_chord_set)
+                    chord_explorer_mode(outport)
                 elif mode_choice == '2':
-                    listen_and_reveal_mode(inport, outport, current_chord_set)
+                    single_chord_mode(inport, outport, current_chord_set)
                 elif mode_choice == '3':
-                    progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    listen_and_reveal_mode(inport, outport, current_chord_set)
                 elif mode_choice == '4':
-                    degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '5':
-                    all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
-                # MODIFIÉ: Ajout de l'appel au nouveau mode
+                    degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '6':
-                    cadence_mode(inport, outport, play_progression_before_start, current_chord_set)
+                    all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '7':
-                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    cadence_mode(inport, outport, play_progression_before_start, current_chord_set)
                 elif mode_choice == '8':
-                    reverse_chord_mode(inport)
+                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '9':
-                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                    reverse_chord_mode(inport)
                 elif mode_choice == '10':
+                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                elif mode_choice == '11':
                     console.print("Arrêt du programme.", style="bold red")
                     break
                 else:
