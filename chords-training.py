@@ -1,4 +1,4 @@
- # coding=utf-8
+# coding=utf-8
 import mido
 import time
 import random
@@ -175,6 +175,18 @@ gammes_majeures = {
     "Sol bémol Majeur": ["Sol bémol Majeur", "La bémol Mineur", "Si bémol Mineur", "Do bémol Majeur", "Ré bémol Majeur", "Mi bémol Mineur", "Fa Diminué"],
     "Do bémol Majeur": ["Do bémol Majeur", "Ré bémol Mineur", "Mi bémol Mineur", "Fa bémol Majeur", "Sol bémol Majeur", "La bémol Mineur", "Si bémol Diminué"],
 }
+
+# NOUVEAU: Définition des cadences par leurs degrés romains
+cadences = {
+    "Cadence Parfaite": ["V", "I"],
+    "Cadence Plagale": ["IV", "I"],
+    "Cadence Rompue": ["V", "vi"],
+    "Demi-Cadence": ["IV", "V"],
+    "Progression II-V-I": ["ii", "V", "I"]
+}
+
+# NOUVEAU: Dictionnaire pour mapper les degrés romains à un index de la liste de gamme (0-6)
+DEGREE_MAP = {'I': 0, 'ii': 1, 'iii': 2, 'IV': 3, 'V': 4, 'vi': 5, 'vii°': 6}
 
 
 # --- Exemples de progressions d'accords et de chansons ---
@@ -1073,6 +1085,127 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
         pass
     wait_for_any_key(inport)
 
+# NOUVEAU : Mode d'entraînement aux cadences
+def cadence_mode(inport, outport, play_progression_before_start, chord_set):
+    """Mode d'entraînement sur les cadences musicales."""
+
+    session_correct_count = 0
+    session_total_chords = 0
+    exit_flag = False
+
+    while not exit_flag:
+        clear_screen()
+        console.print(Panel(
+            Text("Mode Cadences Musicales", style="bold magenta", justify="center"),
+            title="Cadences",
+            border_style="magenta"
+        ))
+        console.print("Jouez la cadence demandée dans la bonne tonalité.")
+        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer.")
+
+        # Boucle pour s'assurer que la cadence peut être jouée avec le jeu d'accords actuel
+        while True:
+            # 1. Choisir une tonalité au hasard
+            tonalite, accords_de_la_gamme = random.choice(list(gammes_majeures.items()))
+
+            # 2. Choisir une cadence au hasard
+            nom_cadence, degres_cadence = random.choice(list(cadences.items()))
+
+            # 3. Traduire les degrés en noms d'accords
+            try:
+                progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
+            except (KeyError, IndexError):
+                continue # Si un degré n'est pas dans notre map, recommencer
+
+            # 4. Vérifier si tous les accords de la cadence sont dans le `chord_set` autorisé
+            if all(accord in chord_set for accord in progression_accords):
+                break # La cadence est valide, on peut continuer
+
+        # Afficher la table des degrés de la tonalité actuelle
+        gammes_filtrees = [g for g in accords_de_la_gamme if g in chord_set]
+        display_degrees_table(tonalite, gammes_filtrees)
+
+        degres_str = ' -> '.join(degres_cadence)
+        progression_str = ' -> '.join(progression_accords)
+        console.print(f"\nDans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la [bold cyan]{nom_cadence}[/bold cyan] ([bold cyan]{degres_str}[/bold cyan]):")
+        console.print(f"[bold yellow]{progression_str}[/bold yellow]")
+
+        if play_progression_before_start:
+            play_progression_sequence(outport, progression_accords, chord_set)
+
+        progression_correct_count = 0
+        skip_progression = False
+
+        # Boucle principale pour la progression
+        prog_index = 0
+        while prog_index < len(progression_accords) and not exit_flag and not skip_progression:
+            chord_name = progression_accords[prog_index]
+            target_notes = chord_set[chord_name]
+            console.print(f"Jouez l'accord ({prog_index + 1}/{len(progression_accords)}): [bold yellow]{chord_name}[/bold yellow]")
+
+            notes_currently_on = set()
+            attempt_notes = set()
+
+            # Boucle pour chaque accord
+            while not exit_flag and not skip_progression:
+                char = wait_for_input(timeout=0.01)
+                if char:
+                    char = char.lower()
+                    if char == 'q':
+                        exit_flag = True
+                        break
+                    if char == 'r':
+                        play_progression_sequence(outport, progression_accords, chord_set)
+                        prog_index = 0 # Recommencer la cadence actuelle
+                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression_accords[prog_index]}[/bold yellow]")
+                        break
+                    if char == 'n':
+                        skip_progression = True
+                        break
+
+                for msg in inport.iter_pending():
+                    if msg.type == 'note_on' and msg.velocity > 0:
+                        notes_currently_on.add(msg.note)
+                        attempt_notes.add(msg.note)
+                    elif msg.type == 'note_off':
+                        notes_currently_on.discard(msg.note)
+
+                if not notes_currently_on and attempt_notes:
+                    recognized_name, _ = recognize_chord(attempt_notes)
+                    if is_enharmonic_match(recognized_name, chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
+                        console.print("[bold green]Correct ![/bold green]")
+                        progression_correct_count += 1
+                        prog_index += 1
+                        break # Passer à l'accord suivant
+                    else:
+                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                        found_chord, found_inversion = recognize_chord(attempt_notes)
+                        if found_chord:
+                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                        else:
+                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                        console.print(f"Notes jouées : [{colored_string}]")
+                        attempt_notes.clear()
+
+                time.sleep(0.01)
+
+            if exit_flag:
+                break
+        
+        if not exit_flag and not skip_progression:
+            session_correct_count += progression_correct_count
+            session_total_chords += len(progression_accords)
+            Prompt.ask("\nCadence terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+        elif skip_progression:
+            console.print("\n[bold yellow]Passage à la cadence suivante.[/bold yellow]")
+            time.sleep(1)
+
+    display_stats(session_correct_count, session_total_chords)
+    console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
+    for _ in inport.iter_pending():
+        pass
+    wait_for_any_key(inport)
+
 def degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
     """Mode d'entraînement sur les accords par degrés."""
     
@@ -1332,16 +1465,18 @@ def main():
                     pass
 
                 clear_screen()
+                # MODIFIÉ: Ajout du mode Cadences et renumérotation
                 menu_options = Text()
                 menu_options.append("[1] Mode Accord Simple\n", style="bold yellow")
                 menu_options.append("[2] Mode Écoute et Devine\n", style="bold orange3")
                 menu_options.append("[3] Mode Progressions (aléatoires)\n", style="bold blue")
                 menu_options.append("[4] Mode Degrés (aléatoire)\n", style="bold red")
-                menu_options.append("[5] Mode Tous les Degrés (gamme)\n", style="bold purple") # NOUVELLE OPTION
-                menu_options.append("[6] Mode Pop/Rock (célèbres)\n", style="bold magenta")
-                menu_options.append("[7] Mode Reconnaissance d'accords\n", style="bold cyan")
-                menu_options.append("[8] Options\n", style="bold white")
-                menu_options.append("[9] Quitter", style="bold white")
+                menu_options.append("[5] Mode Tous les Degrés (gamme)\n", style="bold purple")
+                menu_options.append("[6] Mode Cadences (théorie)\n", style="bold magenta") # NOUVEAU
+                menu_options.append("[7] Mode Pop/Rock (célèbres)\n", style="bold cyan")
+                menu_options.append("[8] Mode Reconnaissance d'accords\n", style="bold bright_cyan")
+                menu_options.append("[9] Options\n", style="bold white")
+                menu_options.append("[10] Quitter", style="bold white")
                 
                 menu_panel = Panel(
                     menu_options,
@@ -1350,8 +1485,8 @@ def main():
                 )
                 console.print(menu_panel)
                 
-                # Mettre à jour la liste des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9'], show_choices=False, console=console)
+                # MODIFIÉ: Mise à jour des choix possibles
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], show_choices=False, console=console)
                 
                 if mode_choice == '1':
                     single_chord_mode(inport, outport, current_chord_set)
@@ -1362,15 +1497,17 @@ def main():
                 elif mode_choice == '4':
                     degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '5':
-                    # Appeler la nouvelle fonction de mode
                     all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                # MODIFIÉ: Ajout de l'appel au nouveau mode
                 elif mode_choice == '6':
-                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    cadence_mode(inport, outport, play_progression_before_start, current_chord_set)
                 elif mode_choice == '7':
-                    reverse_chord_mode(inport)
+                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '8':
-                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                    reverse_chord_mode(inport)
                 elif mode_choice == '9':
+                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
+                elif mode_choice == '10':
                     console.print("Arrêt du programme.", style="bold red")
                     break
                 else:
