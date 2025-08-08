@@ -970,7 +970,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             
         if not exit_flag and not skip_progression:
             session_correct_count += progression_correct_count
-            session_total_chords += len(progression_accords)
+            session_total_chords += len(last_progression_accords)
 
             if use_timer and is_progression_started:
                 end_time = time.time()
