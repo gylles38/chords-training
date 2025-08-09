@@ -388,7 +388,7 @@ def wait_for_any_key(inport):
             return char.lower()
         # Vider le tampon MIDI
         for _ in inport.iter_pending():
-            pass
+            pass        
 
 def get_single_char_choice(prompt, valid_choices):
     """Demande un choix à un caractère unique avec validation, sans spammer le terminal."""
@@ -1498,9 +1498,26 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
         pass
     wait_for_any_key(inport)
 
+# --- DÉBUT DU CORRECTIF IMPORTANT ---
+def get_user_choice_from_prompt():
+    """
+    Affiche manuellement les options et lit l'entrée de l'utilisateur pour éviter
+    les problèmes d'affichage avec rich.Prompt.
+    """
+    console.print("\nOptions:")
+    console.print("  [1] Rejouer la même progression")
+    console.print("  [2] Jouer une nouvelle progression")
+    console.print("  [q] Retour au menu principal")
+    
+    while True:
+        choice = console.input("Votre choix: ")
+        if choice in ['1', '2', 'q']:
+            return choice
+        else:
+            console.print("[bold red]Choix invalide. Veuillez sélectionner 1, 2 ou q.[/bold red]")
+
 def tonal_progression_mode(inport, outport, chord_set):
     """Mode qui joue une progression d'accords puis demande à l'utilisateur de la rejouer."""
-    # Variables pour stocker la progression actuelle
     current_tonalite = None
     current_progression_name = None
     current_progression_accords = None
@@ -1513,53 +1530,46 @@ def tonal_progression_mode(inport, outport, chord_set):
             border_style="bright_magenta"
         ))
         
-        # Générer une nouvelle progression seulement si nécessaire
         if current_tonalite is None:
-            # Choisir une tonalité au hasard
             current_tonalite, gammes = random.choice(list(gammes_majeures.items()))
             gammes_filtrees = [g for g in gammes if g in chord_set]
             
-            # Choisir une progression au hasard
             current_progression_name, degres_progression = random.choice(list(tonal_progressions.items()))
             
-            # Traduire les degrés en noms d'accords
             current_progression_accords = []
             for degre in degres_progression:
                 index = DEGREE_MAP.get(degre)
                 if index is not None and index < len(gammes_filtrees):
                     current_progression_accords.append(gammes_filtrees[index])
         
-        # Afficher les informations
         console.print(f"Tonalité : [bold yellow]{current_tonalite}[/bold yellow]")
         console.print(f"Progression : [bold cyan]{current_progression_name}[/bold cyan]")
         console.print(f"Accords : [bold yellow]{' → '.join(current_progression_accords)}[/bold yellow]")
         
-        # Jouer la progression (démonstration)
         console.print("\n[bold green]Écoutez la progression...[/bold green]")
         for chord_name in current_progression_accords:
             console.print(f"Joue : [bold bright_yellow]{chord_name}[/bold bright_yellow]")
             play_chord(outport, chord_set[chord_name], duration=1.0)
-            time.sleep(0.3)  # Petite pause entre les accords
+            time.sleep(0.3)
         
-        # Phase d'entraînement où l'utilisateur doit jouer la progression
         console.print("\n[bold green]À vous de jouer! Répétez la progression accord par accord.[/bold green]")
-        console.print("Appuyez sur 'r' pour réécouter la progression ou 'q' pour quitter.")
+        console.print("Appuyez sur 'r' pour réécouter la progression ou 'q' pour quitter en cours.")
         
         correct_count = 0
         skip_progression = False
         
-        # Boucle pour chaque accord de la progression
         for chord_index, chord_name in enumerate(current_progression_accords):
+            if skip_progression:
+                break
+
             target_notes = chord_set[chord_name]
             
-            # CORRECTION: Utiliser une mise à jour en direct pour l'affichage
             with Live(console=console, screen=False, auto_refresh=True) as live:
                 live.update(f"\nJouez l'accord ({chord_index+1}/{len(current_progression_accords)}): [bold yellow]{chord_name}[/bold yellow]")
                 
                 notes_currently_on = set()
                 attempt_notes = set()
                 
-                # Boucle pour chaque tentative d'accord
                 while True:
                     char = wait_for_input(timeout=0.01)
                     if char:
@@ -1568,7 +1578,6 @@ def tonal_progression_mode(inport, outport, chord_set):
                             skip_progression = True
                             break
                         if char == 'r':
-                            # Rejouer la progression démonstration
                             live.console.print("[bold blue]Réécoute de la progression...[/bold blue]")
                             for name in current_progression_accords:
                                 play_chord(outport, chord_set[name], duration=1.0)
@@ -1583,18 +1592,16 @@ def tonal_progression_mode(inport, outport, chord_set):
                         elif msg.type == 'note_off':
                             notes_currently_on.discard(msg.note)
                     
-                    # Vérifier quand l'utilisateur relâche les touches
                     if not notes_currently_on and attempt_notes:
                         recognized_name, inversion_label = recognize_chord(attempt_notes)
                         
-                        # Vérifier si l'accord est correct
-                        if recognized_name and is_enharmonic_match(recognized_name, chord_name, enharmonic_map) and len(attempt_notes) == len(target_notes):
+                        if recognized_name and is_enharmonic_match(recognized_name, chord_name, None) and len(attempt_notes) == len(target_notes):
                             colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                             live.console.print(f"Notes jouées : [{colored_notes}]")
                             live.console.print("[bold green]Correct ![/bold green]")
                             correct_count += 1
-                            time.sleep(1)  # Pause pour voir le message
-                            break  # Passer à l'accord suivant
+                            time.sleep(1)
+                            break
                         else:
                             colored_string = get_colored_notes_string(attempt_notes, target_notes)
                             
@@ -1609,9 +1616,8 @@ def tonal_progression_mode(inport, outport, chord_set):
                     time.sleep(0.01)
                 
                 if skip_progression:
-                    break  # Sortir de la boucle des accords
+                    break
         
-        # Statistiques de la session (uniquement si on n'a pas quitté prématurément)
         if not skip_progression:
             total_chords = len(current_progression_accords)
             accuracy = (correct_count / total_chords) * 100 if total_chords > 0 else 0
@@ -1620,28 +1626,18 @@ def tonal_progression_mode(inport, outport, chord_set):
             console.print(f"Accords corrects : [bold green]{correct_count}/{total_chords}[/bold green]")
             console.print(f"Précision : [bold cyan]{accuracy:.2f}%[/bold cyan]")
             console.print("----------------------------------")
-        
-        # Menu de choix après la progression - CORRECTION: afficher seulement après la progression complète
-        console.print("\nOptions:")
-        table = Table(show_header=False, box=None)
-        table.add_row("[1] Rejouer la même progression")
-        table.add_row("[2] Jouer une nouvelle progression")
-        table.add_row("[q] Retour au menu principal")
-        console.print(table)
-        
-        choice = Prompt.ask("Votre choix", choices=['1', '2', 'q'], show_choices=False, console=console)
-        
+
+        choice = get_user_choice_from_prompt()
+
         if choice == '1':
-            # On garde les mêmes variables pour rejouer
             pass
         elif choice == '2':
-            # On réinitialise pour forcer une nouvelle génération
             current_tonalite = None
             current_progression_name = None
             current_progression_accords = None
         elif choice == 'q':
-            break  # Quitte le mode
-                
+            break
+
 def display_degrees_table(tonalite, gammes_filtrees):
     """Affiche un tableau des accords de la gamme pour une tonalité donnée en utilisant Rich."""
     table = Table(
