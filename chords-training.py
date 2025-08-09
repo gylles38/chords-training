@@ -401,54 +401,61 @@ def get_single_char_choice(prompt, valid_choices):
 
 def recognize_chord(played_notes_set):
     """
-    Reconnaît un accord à partir d'un ensemble de notes MIDI jouées,
-    en utilisant la méthode de la classe de hauteur.
+    Reconnaît un accord à partir d'un ensemble de notes MIDI jouées.
+    Cette version prend en compte la note la plus basse pour déterminer l'accord
+    correct parmi les candidats possibles et son inversion.
     
-    Retourne le nom de l'accord et le type de renversement, ou None si non reconnu.
+    Args:
+        played_notes_set (set): Un ensemble de numéros de notes MIDI.
+
+    Returns:
+        tuple: (Nom de l'accord reconnu, type de renversement)
+               ou (None, None) si non reconnu.
     """
     if len(played_notes_set) < 2:
         return None, None
 
-    # Convertir les notes jouées en un ensemble de classes de hauteur (pitch classes)
+    played_notes_sorted = sorted(list(played_notes_set))
+    lowest_note_midi = played_notes_sorted[0]
     played_pitch_classes = frozenset(note % 12 for note in played_notes_set)
+    lowest_note_pc = lowest_note_midi % 12
     
-    # Rechercher la correspondance dans la table pré-calculée
-    chord_name = pitch_class_lookup.get(played_pitch_classes)
-    
-    if chord_name:
-        # Déterminer la tonique et le renversement pour le feedback utilisateur
-        chord_notes_reference = sorted(list(all_chords[chord_name]))
-        played_notes_sorted = sorted(list(played_notes_set))
-        
-        # Trouver la tonique de l'accord joué
-        tonic_played = played_notes_sorted[0] % 12
-        
-        # Trouver la tonique de l'accord de référence
-        tonic_reference = chord_notes_reference[0] % 12
+    best_match = None
+    lowest_inversion_index = float('inf')
 
-        # Décalage de la tonique (utile pour identifier les renversements)
-        # 0 = position fondamentale, 1 = 1er renversement, etc.
-        # Cette partie est illustrative pour l'affichage, la reconnaissance est déjà faite.
-        root_offset = 0
-        if tonic_played == tonic_reference:
-            root_offset = 0
-        elif tonic_played == chord_notes_reference[1] % 12:
-            root_offset = 1
-        elif len(chord_notes_reference) >= 3 and tonic_played == chord_notes_reference[2] % 12:
-            root_offset = 2
-        elif len(chord_notes_reference) == 4 and tonic_played == chord_notes_reference[3] % 12:
-            root_offset = 3
+    # Parcourir tous les accords pour trouver les candidats
+    for chord_name, ref_notes in all_chords.items():
+        ref_pitch_classes = frozenset(note % 12 for note in ref_notes)
 
-        inversion_label = ""
-        if root_offset == 0:
-            inversion_label = "position fondamentale"
-        elif root_offset == 1:
-            inversion_label = "1er renversement"
-        elif root_offset == 2:
-            inversion_label = "2ème renversement"
-        elif root_offset == 3:
-            inversion_label = "3ème renversement"
+        # Si les classes de hauteur des notes jouées correspondent à un accord de référence
+        if played_pitch_classes == ref_pitch_classes:
             
+            # Déterminer la classe de hauteur de la racine de l'accord de référence
+            root_note_pc = min(ref_notes) % 12
+            
+            # Créer une liste ordonnée des classes de hauteur de l'accord,
+            # en commençant par la racine (fondamentale)
+            sorted_ref_pcs = sorted(list(ref_pitch_classes))
+            root_index_in_sorted = sorted_ref_pcs.index(root_note_pc)
+            ordered_chord_pcs = sorted_ref_pcs[root_index_in_sorted:] + sorted_ref_pcs[:root_index_in_sorted]
+            
+            # L'indice de la note la plus basse dans cette liste ordonnée
+            # est l'indice du renversement
+            try:
+                inversion_index = ordered_chord_pcs.index(lowest_note_pc)
+            except ValueError:
+                # Cela ne devrait pas arriver si les sets de pitch classes correspondent
+                continue
+
+            # Mettre à jour le meilleur accord s'il a un renversement plus bas
+            if inversion_index < lowest_inversion_index:
+                lowest_inversion_index = inversion_index
+                best_match = (chord_name, inversion_index)
+
+    if best_match:
+        chord_name, inversion_index = best_match
+        inversion_labels = ["position fondamentale", "1er renversement", "2ème renversement", "3ème renversement", "4ème renversement"]
+        inversion_label = inversion_labels[inversion_index] if inversion_index < len(inversion_labels) else ""
         return chord_name, inversion_label
     
     return None, None
