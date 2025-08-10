@@ -883,7 +883,6 @@ def listen_and_reveal_mode(inport, outport, chord_set):
                         break
                 
                 # Réinitialiser pour le prochain essai après vérification
-                #attempt_notes.clear()
                 last_note_off_time = None
             
             time.sleep(0.01)
@@ -1027,7 +1026,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
 
     session_correct_count = 0
     session_total_count = 0
-    session_total_attempts = 0  # NOUVEAU : compte TOUTES les tentatives    
+    session_total_attempts = 0
     last_progression_accords = []
     
     exit_flag = False
@@ -1058,132 +1057,155 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
         if play_progression_before_start:
             play_progression_sequence(outport, progression, chord_set)
 
-        progression_correct_count = 0  # Accords réussis du premier coup
-        progression_total_attempts = 0  # NOUVEAU : tentatives pour cette progression        
+        progression_correct_count = 0
+        progression_total_attempts = 0
         is_progression_started = False
         start_time = None
-        elapsed_time = 0.0 # Initialisation de la variable
+        elapsed_time = 0.0
         skip_progression = False
 
-        # Boucle principale pour la progression
-        prog_index = 0
-        while prog_index < len(progression) and not exit_flag and not skip_progression:
-            chord_name = progression[prog_index]
-            target_notes = chord_set[chord_name]
-            console.print(f"Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
-            
-            notes_currently_on = set()
-            attempt_notes = set()
-            chord_attempts = 0  # NOUVEAU : tentatives pour cet accord spécifique
+        # Fonction pour créer l'affichage live
+        def create_live_display(chord_name, prog_index, total_chords, time_info=""):
+            content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{chord_name}[/bold yellow]"
+            if time_info:
+                content += f"\n{time_info}"
+            return Panel(content, title="Progression en cours", border_style="green")
 
-            # Boucle pour chaque accord
-            while not exit_flag and not skip_progression:
+        # Boucle principale avec Live display
+        with Live(console=console, screen=False, auto_refresh=False) as live:
+            prog_index = 0
+            while prog_index < len(progression) and not exit_flag and not skip_progression:
+                chord_name = progression[prog_index]
+                target_notes = chord_set[chord_name]
+                chord_attempts = 0
+                
+                # Affichage initial
+                time_info = ""
                 if use_timer and is_progression_started:
                     remaining_time = timer_duration - (time.time() - start_time)
-                    print(f"\rTemps restant : {remaining_time:.1f} secondes", end='', flush=True)
-                    if remaining_time <= 0:
-                        print()  # Nouvelle ligne pour nettoyer l'affichage
-                        console.print(f"[bold red]Temps écoulé ! Session terminée.[/bold red]")
-                        exit_flag = True
-                        break
-                    
-                char = wait_for_input(timeout=0.01)
-                if char:
-                    char = char.lower()
-                    if char == 'q':
-                        exit_flag = True
-                        break
-                    if char == 'r':
-                        # Rejouer la progression depuis le début
-                        play_progression_sequence(outport, progression, chord_set)
-                        prog_index = 0
-                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression[prog_index]}[/bold yellow]")
-                        break
-                    if char == 'n':
-                        # Passer à la progression suivante
-                        skip_progression = True
-                        break
-
-                for msg in inport.iter_pending():
-                    if msg.type == 'note_on' and msg.velocity > 0:
-                        notes_currently_on.add(msg.note)
-                        attempt_notes.add(msg.note)
-                    elif msg.type == 'note_off':
-                        notes_currently_on.discard(msg.note)
-
-                if not notes_currently_on and attempt_notes:
-                    # NOUVEAU : Compter chaque tentative pour cet accord
-                    chord_attempts += 1
-                    progression_total_attempts += 1
-                    
-                    if use_timer and not is_progression_started:
-                        is_progression_started = True
-                        start_time = time.time()
-
-                    # Vérification de l'accord - VERSION CORRIGÉE
-                    try:
-                        recognized_name, recognized_inversion = recognize_chord(attempt_notes)
-                        
-                        # Utiliser la fonction améliorée pour la comparaison enharmonique
-                        is_correct = (recognized_name and 
-                                    is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
-                                    len(attempt_notes) == len(chord_set[chord_name]))
-                        
-                        if is_correct:
-                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                            console.print(f"Notes jouées : [{colored_notes}]")
-                            console.print("[bold green]Correct ![/bold green]")
-                            
-                            # CORRECTION : Ne compter comme "réussi du premier coup" que si c'est vraiment la première tentative
-                            if chord_attempts == 1:
-                                progression_correct_count += 1
-                            
-                            prog_index += 1
-                            break
-                        else:
-                            # Section d'affichage d'erreur - VERSION SÉCURISÉE
-                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                            
-                            if recognized_name:
-                                # Nettoyer les noms pour éviter les conflits de formatage
-                                clean_chord_name = str(recognized_name).replace('%', 'pct')
-                                clean_inversion = str(recognized_inversion) if recognized_inversion else "position inconnue"
-                                clean_inversion = clean_inversion.replace('%', 'pct')
-                                
-                                # Utiliser des chaînes séparées pour éviter les conflits de formatage
-                                error_msg = "[bold red]Incorrect.[/bold red] Vous avez joué : "
-                                chord_info = f"{clean_chord_name} ({clean_inversion})"
-                                console.print(error_msg + chord_info)
-                            else:
-                                console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                            
-                            console.print(f"Notes jouées : [{colored_string}]")
-                            attempt_notes.clear()
-                            
-                    except Exception as e:
-                        # Debug en cas d'erreur persistante
-                        print(f"ERREUR dans progression_mode: {e}")
-                        print(f"attempt_notes: {list(attempt_notes)}")
-                        print(f"chord_name cible: {chord_name}")
-                        if 'recognized_name' in locals():
-                            print(f"recognized_name: {recognized_name}")
-                        if 'recognized_inversion' in locals():
-                            print(f"recognized_inversion: {recognized_inversion}")
-                        # Continuer le jeu malgré l'erreur
-                        attempt_notes.clear()
+                    time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
                 
-                time.sleep(0.01)
-            
-            if exit_flag:
-                break
+                live.update(create_live_display(chord_name, prog_index, len(progression), time_info), refresh=True)
+                
+                notes_currently_on = set()
+                attempt_notes = set()
+
+                # Boucle pour chaque accord
+                while not exit_flag and not skip_progression:
+                    if use_timer and is_progression_started:
+                        remaining_time = timer_duration - (time.time() - start_time)
+                        time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
+                        live.update(create_live_display(chord_name, prog_index, len(progression), time_info), refresh=True)
+                        
+                        if remaining_time <= 0:
+                            live.update("[bold red]Temps écoulé ! Session terminée.[/bold red]", refresh=True)
+                            time.sleep(2)
+                            exit_flag = True
+                            break
+                        
+                    char = wait_for_input(timeout=0.01)
+                    if char:
+                        char = char.lower()
+                        if char == 'q':
+                            exit_flag = True
+                            break
+                        if char == 'r':
+                            # Vider le buffer des entrées clavier pour éviter l'accumulation
+                            while wait_for_input(timeout=0.001):
+                                pass
+                            
+                            # Afficher le message de lecture et rediriger temporairement TOUS les affichages
+                            live.update("[bold cyan]Lecture de la progression...[/bold cyan]", refresh=True)
+                            
+                            # Sauvegarder les fonctions d'affichage originales
+                            original_print = print
+                            original_console_print = console.print
+                            
+                            # Rediriger TOUS les affichages vers des fonctions vides
+                            import builtins
+                            builtins.print = lambda *args, **kwargs: None
+                            console.print = lambda *args, **kwargs: None
+                            
+                            try:
+                                play_progression_sequence(outport, progression, chord_set)
+                            finally:
+                                # Restaurer les fonctions d'affichage originales
+                                builtins.print = original_print
+                                console.print = original_console_print
+                            
+                            # Vider à nouveau le buffer après la lecture
+                            while wait_for_input(timeout=0.001):
+                                pass
+                            
+                            # Remettre l'affichage normal après la lecture
+                            prog_index = 0
+                            chord_name = progression[prog_index]
+                            target_notes = chord_set[chord_name]
+                            live.update(create_live_display(chord_name, prog_index, len(progression)), refresh=True)
+                            break
+                        if char == 'n':
+                            skip_progression = True
+                            break
+
+                    for msg in inport.iter_pending():
+                        if msg.type == 'note_on' and msg.velocity > 0:
+                            notes_currently_on.add(msg.note)
+                            attempt_notes.add(msg.note)
+                        elif msg.type == 'note_off':
+                            notes_currently_on.discard(msg.note)
+
+                    if not notes_currently_on and attempt_notes:
+                        chord_attempts += 1
+                        progression_total_attempts += 1
+                        
+                        if use_timer and not is_progression_started:
+                            is_progression_started = True
+                            start_time = time.time()
+
+                        try:
+                            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                            
+                            is_correct = (recognized_name and 
+                                        is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
+                                        len(attempt_notes) == len(chord_set[chord_name]))
+                            
+                            if is_correct:
+                                # Afficher le succès avec les notes jouées
+                                colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                                success_msg = f"[bold green]Correct ! {chord_name}[/bold green]\nNotes jouées : [{colored_notes}]"
+                                live.update(success_msg, refresh=True)
+                                time.sleep(2)
+                                
+                                if chord_attempts == 1:
+                                    progression_correct_count += 1
+                                
+                                prog_index += 1
+                                break
+                            else:
+                                # Afficher l'erreur avec les notes jouées
+                                colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name if recognized_name else 'Accord non reconnu'}\nNotes jouées : [{colored_string}]"
+                                live.update(error_msg, refresh=True)
+                                time.sleep(2)
+                                
+                                # Remettre l'affichage normal
+                                live.update(create_live_display(chord_name, prog_index, len(progression)), refresh=True)
+                                attempt_notes.clear()
+
+                        except Exception as e:
+                            print(f"ERREUR dans progression_mode: {e}")
+                            attempt_notes.clear()
+                    
+                    time.sleep(0.01)
+                
+                if exit_flag:
+                    break
             
         if not exit_flag and not skip_progression:
-            # NOUVEAU : Mise à jour des compteurs de session
             session_correct_count += progression_correct_count
             session_total_attempts += progression_total_attempts
-            session_total_count += len(progression)  # Nombre d'accords dans cette progression
+            session_total_count += len(progression)
             
-            # NOUVEAU : Affichage des stats de progression
             console.print(f"\n--- Statistiques de cette progression ---")
             console.print(f"Accords à jouer : [bold cyan]{len(progression)}[/bold cyan]")
             console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
@@ -1191,7 +1213,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             
             if progression_total_attempts > 0:
                 accuracy = (progression_correct_count / progression_total_attempts) * 100
-                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")            
+                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
             
             if use_timer and is_progression_started:
                 end_time = time.time()
@@ -1202,7 +1224,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             if choice == 'q':
                 exit_flag = True
                 break
-            clear_screen()            
+            clear_screen()
 
         elif skip_progression:
             console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
@@ -1211,21 +1233,19 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
     if use_timer:
         display_stats_fixed(session_correct_count, session_total_attempts, session_total_count, elapsed_time)
     else:
-        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)        
+        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)
         
     console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
     for _ in inport.iter_pending():
         pass
     wait_for_any_key(inport)
-    
+
 def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
-    """
-    Mode d'entraînement pour jouer tous les degrés d'une gamme dans l'ordre.
-    """
+    """Mode d'entraînement pour jouer tous les degrés d'une gamme dans l'ordre."""
+    
     session_correct_count = 0
     session_total_count = 0
-    session_total_attempts = 0  # NOUVEAU : compte TOUTES les tentatives    
-
+    session_total_attempts = 0
     last_tonalite = None
     
     exit_flag = False
@@ -1243,7 +1263,7 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
         console.print("Jouez tous les accords de la gamme dans l'ordre.")
         console.print("Appuyez sur 'q' pour quitter, 'r' pour entendre la gamme complète.")
         
-        # Choisir une nouvelle tonalité, différente de la précédente
+        # Choisir une nouvelle tonalité
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         while tonalite == last_tonalite:
             tonalite, gammes = random.choice(list(gammes_majeures.items()))
@@ -1253,9 +1273,7 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
         if len(gammes_filtrees) < 3:
             continue
             
-        # La progression est la gamme complète dans l'ordre
         progression_accords = gammes_filtrees
-            
         display_degrees_table(tonalite, gammes_filtrees)
 
         console.print(f"\nDans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la gamme complète : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
@@ -1263,105 +1281,130 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
         if play_progression_before_start:
             play_progression_sequence(outport, progression_accords, chord_set)
 
-        progression_correct_count = 0  # Accords réussis du premier coup
-        progression_total_attempts = 0  # NOUVEAU : tentatives pour cette progression                        
+        progression_correct_count = 0
+        progression_total_attempts = 0
         skip_progression = False
 
-        # Boucle principale pour la progression
-        prog_index = 0
-        while prog_index < len(progression_accords) and not exit_flag and not skip_progression:
-            chord_name = progression_accords[prog_index]
-            target_notes = chord_set[chord_name]
-            console.print(f"Jouez l'accord ({prog_index + 1}/{len(progression_accords)}): [bold yellow]{chord_name}[/bold yellow]")
-            
-            notes_currently_on = set()
-            attempt_notes = set()
-            chord_attempts = 0  # NOUVEAU : tentatives pour cet accord spécifique
-            
-            # Boucle pour chaque accord
-            while not exit_flag:
-                char = wait_for_input(timeout=0.01)
-                if char:
-                    char = char.lower()
-                    if char == 'q':
-                        exit_flag = True
-                        break
-                    if char == 'r':
-                        # Rejouer la progression depuis le début
-                        play_progression_sequence(outport, progression_accords, chord_set)
-                        # Repartir du début de la gamme actuelle
-                        prog_index = 0 
-                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression_accords[prog_index]}[/bold yellow]")
-                        break
+        # Fonction pour créer l'affichage live
+        def create_degrees_display(chord_name, prog_index, total_chords, tonalite):
+            return Panel(
+                f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{chord_name}[/bold yellow]", 
+                title="Gamme Complète", 
+                border_style="purple"
+            )
 
-                for msg in inport.iter_pending():
-                    if msg.type == 'note_on' and msg.velocity > 0:
-                        notes_currently_on.add(msg.note)
-                        attempt_notes.add(msg.note)
-                    elif msg.type == 'note_off':
-                        notes_currently_on.discard(msg.note)
-
-                if not notes_currently_on and attempt_notes:
-                    # NOUVEAU : Compter chaque tentative pour cet accord
-                    chord_attempts += 1
-                    progression_total_attempts += 1
-
-                    try:
-                        recognized_name, recognized_inversion = recognize_chord(attempt_notes)
-                        
-                        # Utiliser la fonction améliorée pour la comparaison enharmonique
-                        is_correct = (recognized_name and 
-                                    is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
-                                    len(attempt_notes) == len(chord_set[chord_name]))
-                        
-                        if is_correct:
-                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                            console.print(f"Notes jouées : [{colored_notes}]")
-                            console.print("[bold green]Correct ![/bold green]")
+        # Boucle principale avec Live display
+        with Live(console=console, screen=False, auto_refresh=False) as live:
+            prog_index = 0
+            while prog_index < len(progression_accords) and not exit_flag and not skip_progression:
+                chord_name = progression_accords[prog_index]
+                target_notes = chord_set[chord_name]
+                chord_attempts = 0
+                
+                # Affichage initial
+                live.update(create_degrees_display(chord_name, prog_index, len(progression_accords), tonalite), refresh=True)
+                
+                notes_currently_on = set()
+                attempt_notes = set()
+                
+                # Boucle pour chaque accord
+                while not exit_flag:
+                    char = wait_for_input(timeout=0.01)
+                    if char:
+                        char = char.lower()
+                        if char == 'q':
+                            exit_flag = True
+                            break
+                        if char == 'r':
+                            # Vider le buffer des entrées clavier pour éviter l'accumulation
+                            while wait_for_input(timeout=0.001):
+                                pass
                             
-                            # CORRECTION : Ne compter comme "réussi du premier coup" que si c'est vraiment la première tentative
-                            if chord_attempts == 1:
-                                progression_correct_count += 1
+                            # Afficher le message de lecture et rediriger temporairement TOUS les affichages
+                            live.update("[bold cyan]Lecture de la gamme...[/bold cyan]", refresh=True)
                             
-                            prog_index += 1
+                            # Sauvegarder les fonctions d'affichage originales
+                            original_print = print
+                            original_console_print = console.print
+                            
+                            # Rediriger TOUS les affichages vers des fonctions vides
+                            import builtins
+                            builtins.print = lambda *args, **kwargs: None
+                            console.print = lambda *args, **kwargs: None
+                            
+                            try:
+                                play_progression_sequence(outport, progression_accords, chord_set)
+                            finally:
+                                # Restaurer les fonctions d'affichage originales
+                                builtins.print = original_print
+                                console.print = original_console_print
+                            
+                            # Vider à nouveau le buffer après la lecture
+                            while wait_for_input(timeout=0.001):
+                                pass
+                            
+                            # Remettre l'affichage normal après la lecture
+                            prog_index = 0
+                            chord_name = progression_accords[prog_index]
+                            target_notes = chord_set[chord_name]
+                            live.update(create_degrees_display(chord_name, prog_index, len(progression_accords), tonalite), refresh=True)
                             break
 
-                        else:
-                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                            found_chord, found_inversion = recognize_chord(attempt_notes)
-                            
-                            if found_chord:
-                                console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
-                            else:
-                                console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                                
-                            console.print(f"Notes jouées : [{colored_string}]")
-                            attempt_notes.clear()
+                    for msg in inport.iter_pending():
+                        if msg.type == 'note_on' and msg.velocity > 0:
+                            notes_currently_on.add(msg.note)
+                            attempt_notes.add(msg.note)
+                        elif msg.type == 'note_off':
+                            notes_currently_on.discard(msg.note)
 
-                    except Exception as e:
-                        # Debug en cas d'erreur persistante
-                        print(f"ERREUR dans progression_mode: {e}")
-                        print(f"attempt_notes: {list(attempt_notes)}")
-                        print(f"chord_name cible: {chord_name}")
-                        if 'recognized_name' in locals():
-                            print(f"recognized_name: {recognized_name}")
-                        if 'recognized_inversion' in locals():
-                            print(f"recognized_inversion: {recognized_inversion}")
-                        # Continuer le jeu malgré l'erreur
-                        attempt_notes.clear()
+                    if not notes_currently_on and attempt_notes:
+                        chord_attempts += 1
+                        progression_total_attempts += 1
+
+                        try:
+                            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                            
+                            is_correct = (recognized_name and 
+                                        is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
+                                        len(attempt_notes) == len(chord_set[chord_name]))
+                            
+                            if is_correct:
+                                # Afficher le succès avec les notes jouées
+                                colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                                success_msg = f"[bold green]Correct ! {chord_name}[/bold green]\nNotes jouées : [{colored_notes}]"
+                                live.update(success_msg, refresh=True)
+                                time.sleep(2)
+                                
+                                if chord_attempts == 1:
+                                    progression_correct_count += 1
+                                
+                                prog_index += 1
+                                break
+                            else:
+                                # Afficher l'erreur avec les notes jouées
+                                colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name if recognized_name else 'Accord non reconnu'}\nNotes jouées : [{colored_string}]"
+                                live.update(error_msg, refresh=True)
+                                time.sleep(2)
+                                
+                                # Remettre l'affichage normal
+                                live.update(create_degrees_display(chord_name, prog_index, len(progression_accords), tonalite), refresh=True)
+                                attempt_notes.clear()
+
+                        except Exception as e:
+                            print(f"ERREUR dans all_degrees_mode: {e}")
+                            attempt_notes.clear()
+                    
+                    time.sleep(0.01)
                 
-                time.sleep(0.01)
-            
-            if exit_flag:
-                break
+                if exit_flag:
+                    break
             
         if not exit_flag and not skip_progression:
-            # NOUVEAU : Mise à jour des compteurs de session                        
             session_correct_count += progression_correct_count
             session_total_attempts += progression_total_attempts
-            session_total_count += len(progression_accords)  # Nombre d'accords dans cette progression
+            session_total_count += len(progression_accords)
             
-            # NOUVEAU : Affichage des stats de progression
             console.print(f"\n--- Statistiques de cette progression ---")
             console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
             console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
@@ -1369,20 +1412,20 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
             
             if progression_total_attempts > 0:
                 accuracy = (progression_correct_count / progression_total_attempts) * 100
-                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")            
+                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
             
             choice = Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante ou 'q' pour revenir au menu principal...", console=console, choices=["", "q"], show_choices=False)
             if choice == 'q':
                 exit_flag = True
                 break
-            clear_screen()            
+            clear_screen()
 
-    display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)        
+    display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)
     console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
     for _ in inport.iter_pending():
         pass
     wait_for_any_key(inport)
-    
+
 def cadence_mode(inport, outport, play_progression_before_start, chord_set):
     """Mode d'entraînement sur les cadences musicales."""
 
@@ -1545,12 +1588,11 @@ def cadence_mode(inport, outport, play_progression_before_start, chord_set):
     wait_for_any_key(inport)
 
 def degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
-    """Mode d'entraînement sur les accords par degrés."""
+    """Mode d'entraînement sur les degrés d'une tonalité."""
     
     session_correct_count = 0
     session_total_count = 0
-    session_total_attempts = 0  # NOUVEAU : compte TOUTES les tentatives    
-    last_progression_accords = []
+    session_total_attempts = 0
     
     exit_flag = False
     
@@ -1560,78 +1602,49 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
 
         clear_screen()
         console.print(Panel(
-            Text("Mode Degrés", style="bold red", justify="center"),
-            title="Degrés",
-            border_style="red"
+            Text("Mode Degrés", style="bold green", justify="center"),
+            title="Entraînement par Degrés",
+            border_style="green"
         ))
-        console.print(f"Type d'accords: [bold cyan]{'Tous' if chord_set == all_chords else 'Majeurs/Mineurs'}[/bold cyan]")
-        console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
+        console.print("Jouez l'accord correspondant au degré affiché.")
+        console.print("Appuyez sur 'q' pour quitter.")
         
+        # Choisir une tonalité aléatoire
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         gammes_filtrees = [g for g in gammes if g in chord_set]
+        
         if len(gammes_filtrees) < 3:
             continue
             
-        prog_len = random.randint(3, min(len(gammes_filtrees), 5))
-        
-        progression_accords = []
-        while not progression_accords or progression_accords == last_progression_accords:
-            degres_progression = random.sample(range(len(gammes_filtrees)), prog_len)
-            progression_accords = [gammes_filtrees[d] for d in degres_progression]
-            
-        last_progression_accords = progression_accords
-        
         display_degrees_table(tonalite, gammes_filtrees)
-
-        console.print(f"\nDans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la progression : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
         
-        if play_progression_before_start:
-            play_progression_sequence(outport, progression_accords, chord_set)
+        # Choisir un accord aléatoire dans la gamme
+        chord_name = random.choice(gammes_filtrees)
+        target_notes = chord_set[chord_name]
+        degree_number = gammes_filtrees.index(chord_name) + 1
+        
+        chord_attempts = 0
 
-        progression_correct_count = 0
-        progression_total_attempts = 0  # NOUVEAU : tentatives pour cette progression                
-        is_progression_started = False
-        start_time = None
-        elapsed_time = 0.0 # Initialisation de la variable
-        skip_progression = False
+        # Fonction pour créer l'affichage live
+        def create_degree_display(degree_num, tonalite, chord_name):
+            return Panel(
+                f"Jouez le degré [bold cyan]{degree_num}[/bold cyan]: [bold yellow]{chord_name}[/bold yellow]", 
+                title="Degré à jouer", 
+                border_style="green"
+            )
 
-        # Boucle principale pour la progression
-        prog_index = 0
-        while prog_index < len(progression_accords) and not exit_flag and not skip_progression:
-            chord_name = progression_accords[prog_index]
-            target_notes = chord_set[chord_name]
-            console.print(f"Jouez l'accord [bold yellow]{chord_name}[/bold yellow]")
+        # Boucle avec Live display
+        with Live(console=console, screen=False, auto_refresh=False) as live:
+            live.update(create_degree_display(degree_number, tonalite, chord_name), refresh=True)
             
             notes_currently_on = set()
             attempt_notes = set()
             
-            # Boucle pour chaque accord
-            while not exit_flag and not skip_progression:
-                if use_timer and is_progression_started:
-                    remaining_time = timer_duration - (time.time() - start_time)
-                    print(f"\rTemps restant : {remaining_time:.1f} secondes", end='', flush=True)
-                    if remaining_time <= 0:
-                        print()  # Nouvelle ligne
-                        console.print(f"[bold red]Temps écoulé ! Session terminée.[/bold red]")
-                        exit_flag = True
-                        break
-                    
+            while not exit_flag:
                 char = wait_for_input(timeout=0.01)
-                if char:
-                    char = char.lower()
-                    if char == 'q':
-                        exit_flag = True
-                        break
-                    if char == 'r':
-                        # Rejouer la progression depuis le début
-                        play_progression_sequence(outport, progression_accords, chord_set)
-                        prog_index = 0
-                        console.print(f"Reprenons. Jouez l'accord [bold yellow]{progression_accords[prog_index]}[/bold yellow]")
-                        break
-                    if char == 'n':
-                        # Passer à la progression suivante
-                        skip_progression = True
-                        break
+                if char and char.lower() == 'q':
+                    exit_flag = True
+                    break
 
                 for msg in inport.iter_pending():
                     if msg.type == 'note_on' and msg.velocity > 0:
@@ -1641,126 +1654,51 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                         notes_currently_on.discard(msg.note)
 
                 if not notes_currently_on and attempt_notes:
-                    # NOUVEAU : Compter chaque tentative
-                    progression_total_attempts += 1
-                                        
-                    if use_timer and not is_progression_started:
-                        is_progression_started = True
-                        start_time = time.time()
-                    # Vérification de l'accord - VERSION CORRIGÉE
+                    chord_attempts += 1
+                    session_total_attempts += 1
+
                     try:
                         recognized_name, recognized_inversion = recognize_chord(attempt_notes)
                         
-                        # Utiliser la fonction améliorée pour la comparaison enharmonique
                         is_correct = (recognized_name and 
                                     is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
                                     len(attempt_notes) == len(chord_set[chord_name]))
                         
                         if is_correct:
+                            # Afficher le succès avec les notes jouées
                             colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                            console.print(f"Notes jouées : [{colored_notes}]")
-                            console.print("[bold green]Correct ![/bold green]")
-                            progression_correct_count += 1
-                            prog_index += 1
+                            success_msg = f"[bold green]Correct ! Degré {degree_number}: {chord_name}[/bold green]\nNotes jouées : [{colored_notes}]"
+                            live.update(success_msg, refresh=True)
+                            time.sleep(2)
+                            
+                            if chord_attempts == 1:
+                                session_correct_count += 1
+                            
+                            session_total_count += 1
+                           
                             break
                         else:
-                            # Section d'affichage d'erreur - VERSION SÉCURISÉE
+                            # Afficher l'erreur avec les notes jouées
                             colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                            error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name if recognized_name else 'Accord non reconnu'}\nNotes jouées : [{colored_string}]"
+                            live.update(error_msg, refresh=True)
+                            time.sleep(2)
                             
-                            if recognized_name:
-                                # Nettoyer les noms pour éviter les conflits de formatage
-                                clean_chord_name = str(recognized_name).replace('%', 'pct')
-                                clean_inversion = str(recognized_inversion) if recognized_inversion else "position inconnue"
-                                clean_inversion = clean_inversion.replace('%', 'pct')
-                                
-                                # Utiliser des chaînes séparées pour éviter les conflits de formatage
-                                error_msg = "[bold red]Incorrect.[/bold red] Vous avez joué : "
-                                chord_info = f"{clean_chord_name} ({clean_inversion})"
-                                console.print(error_msg + chord_info)
-                            else:
-                                console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                            # Décrémenter le nombre de bonnes réponses si incorrect
-                            if progression_correct_count > 0:
-                                progression_correct_count -= 1
-
-                            console.print(f"Notes jouées : [{colored_string}]")
+                            # Remettre l'affichage normal
+                            live.update(create_degree_display(degree_number, tonalite, chord_name), refresh=True)
                             attempt_notes.clear()
-                            
+
                     except Exception as e:
-                        # Debug en cas d'erreur persistante
-                        print(f"ERREUR dans progression_mode: {e}")
-                        print(f"attempt_notes: {list(attempt_notes)}")
-                        print(f"chord_name cible: {chord_name}")
-                        if 'recognized_name' in locals():
-                            print(f"recognized_name: {recognized_name}")
-                        if 'recognized_inversion' in locals():
-                            print(f"recognized_inversion: {recognized_inversion}")
-                        # Continuer le jeu malgré l'erreur
+                        print(f"ERREUR dans degrees_mode: {e}")
                         attempt_notes.clear()
                 
                 time.sleep(0.01)
-            
-            if exit_flag:
-                break
-            
-        if not exit_flag and not skip_progression:
-            # NOUVEAU : Mise à jour des compteurs de session            
-            session_correct_count += progression_correct_count
-            session_total_attempts += progression_total_attempts
-            session_total_count += len(progression_accords)  # Nombre d'accords dans cette progression
-            
-            # NOUVEAU : Affichage des stats de progression
-            console.print(f"\n--- Statistiques de cette progression ---")
-            console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
-            console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
-            console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
-            
-            if progression_total_attempts > 0:
-                accuracy = (progression_correct_count / progression_total_attempts) * 100
-                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")            
 
-            if use_timer and is_progression_started:
-                end_time = time.time()
-                elapsed_time = end_time - start_time
-                console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
-            
-            choice = Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante ou 'q' pour revenir au menu principal...", console=console, choices=["", "q"], show_choices=False)
-            if choice == 'q':
-                exit_flag = True
-                break
-            clear_screen()            
-            
-        elif skip_progression:
-            console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
-            time.sleep(1)
-
-    if use_timer:
-        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count, elapsed_time)
-    else:
-        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)        
-        
+    display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)
     console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
     for _ in inport.iter_pending():
         pass
     wait_for_any_key(inport)
-
-# --- DÉBUT DU CORRECTIF IMPORTANT ---
-def get_user_choice_from_prompt():
-    """
-    Affiche manuellement les options et lit l'entrée de l'utilisateur pour éviter
-    les problèmes d'affichage avec rich.Prompt.
-    """
-    console.print("\nOptions:")
-    console.print("  [1] Rejouer la même progression")
-    console.print("  [2] Jouer une nouvelle progression")
-    console.print("  [q] Retour au menu principal")
-    
-    while True:
-        choice = console.input("Votre choix: ")
-        if choice in ['1', '2', 'q']:
-            return choice
-        else:
-            console.print("[bold red]Choix invalide. Veuillez sélectionner 1, 2 ou q.[/bold red]")
 
 def tonal_progression_mode(inport, outport, chord_set):
     """Mode qui joue une progression d'accords puis demande à l'utilisateur de la rejouer."""
@@ -1873,15 +1811,19 @@ def tonal_progression_mode(inport, outport, chord_set):
             console.print(f"Précision : [bold cyan]{accuracy:.2f}%[/bold cyan]")
             console.print("----------------------------------")
 
-        choice = get_user_choice_from_prompt()
+        choice = Prompt.ask(
+            "\nProgression terminée ! Appuyez sur Entrée pour choisir une autre progression ou 'q' pour revenir au menu principal...", 
+            console=console, 
+            choices=["", "q"], 
+            show_choices=False
+        )
 
-        if choice == '1':
+        if choice == '':
             pass
-        elif choice == '2':
+        elif choice == 'q':
             current_tonalite = None
             current_progression_name = None
             current_progression_accords = None
-        elif choice == 'q':
             break
 
 def display_degrees_table(tonalite, gammes_filtrees):
