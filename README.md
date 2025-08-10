@@ -42,6 +42,16 @@ python chords-training.py
 
 Le programme vous demandera de choisir les ports d'entrée et de sortie MIDI que vous souhaitez utiliser.
 
+### Aperçu du Programme
+
+![Démarrage](assets/demarrage.jpg)  
+
+![Menu principal du programme](assets/menu.jpg) 
+ 
+![Menu des options](assets/options.jpg)
+
+
+
 ### Fonctionnalités principales
 
 * **Mode Accords Simples** : Entraînez-vous à jouer des accords individuels affichés à l'écran. Le programme vous indique si vous avez réussi ou non.
