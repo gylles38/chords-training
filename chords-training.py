@@ -208,29 +208,50 @@ chord_aliases = {
 }
 
 
-# --- Carte des équivalences enharmoniques pour la reconnaissance ---
-# Permet de lier les noms d'accords qui partagent les mêmes notes MIDI
+# --- Carte des équivalences enharmoniques COMPLÈTE ---
 enharmonic_map = {
-    "Ré dièse Mineur": "Mi bémol Mineur",
-    "Mi bémol Mineur": "Ré dièse Mineur",
-    "Fa dièse Majeur": "Sol bémol Majeur",
-    "Sol bémol Majeur": "Fa dièse Majeur",
-    "Do dièse Majeur": "Ré bémol Majeur",
-    "Ré bémol Majeur": "Do dièse Majeur",
-    "Fa bémol Majeur": "Mi Majeur",
-    "Mi Majeur": "Fa bémol Majeur",
-    "Mi dièse Mineur": "Fa Mineur",
-    "Fa Mineur": "Mi dièse Mineur",
-    "Sol dièse Majeur": "La bémol Majeur",
-    "La bémol Majeur": "Sol dièse Majeur",
-    "Ré bémol Mineur": "Do dièse Mineur",
-    "Do dièse Mineur": "Ré bémol Mineur",
-    "La bémol Mineur": "Sol dièse Mineur",
-    "Sol dièse Mineur": "La bémol Mineur",
-    "Si dièse Diminué": "Do Diminué",
-    "Do Diminué": "Si dièse Diminué",
+    # Majeurs
+    "Ré dièse Majeur": ["Mi bémol Majeur"],
+    "Mi bémol Majeur": ["Ré dièse Majeur"],
+    "Fa dièse Majeur": ["Sol bémol Majeur"],
+    "Sol bémol Majeur": ["Fa dièse Majeur"],
+    "Do dièse Majeur": ["Ré bémol Majeur"],
+    "Ré bémol Majeur": ["Do dièse Majeur"],
+    "Fa bémol Majeur": ["Mi Majeur"],
+    "Mi Majeur": ["Fa bémol Majeur"],
+    "Sol dièse Majeur": ["La bémol Majeur"],
+    "La bémol Majeur": ["Sol dièse Majeur"],
+    
+    # Mineurs
+    "Ré dièse Mineur": ["Mi bémol Mineur"],
+    "Mi bémol Mineur": ["Ré dièse Mineur"],
+    "Fa dièse Mineur": ["Sol bémol Mineur"],
+    "Sol bémol Mineur": ["Fa dièse Mineur"],
+    "Do dièse Mineur": ["Ré bémol Mineur"],
+    "Ré bémol Mineur": ["Do dièse Mineur"],
+    "Mi dièse Mineur": ["Fa Mineur"],
+    "Fa Mineur": ["Mi dièse Mineur"],
+    "Sol dièse Mineur": ["La bémol Mineur"],
+    "La bémol Mineur": ["Sol dièse Mineur"],
+    "La dièse Mineur": ["Si bémol Mineur"],  # AJOUT MANQUANT
+    "Si bémol Mineur": ["La dièse Mineur"],  # AJOUT MANQUANT
+    
+    # Diminués
+    "Si dièse Diminué": ["Do Diminué"],
+    "Do Diminué": ["Si dièse Diminué"],
+    
+    # 7èmes (ajout pour plus de complétude)
+    "Do dièse 7ème": ["Ré bémol 7ème"],
+    "Ré bémol 7ème": ["Do dièse 7ème"],
+    "Ré dièse 7ème": ["Mi bémol 7ème"],
+    "Mi bémol 7ème": ["Ré dièse 7ème"],
+    "Fa dièse 7ème": ["Sol bémol 7ème"],
+    "Sol bémol 7ème": ["Fa dièse 7ème"],
+    "Sol dièse 7ème": ["La bémol 7ème"],
+    "La bémol 7ème": ["Sol dièse 7ème"],
+    "La dièse 7ème": ["Si bémol 7ème"],
+    "Si bémol 7ème": ["La dièse 7ème"],
 }
-
 
 # Un sous-ensemble d'accords pour le mode par défaut (majeurs et mineurs à 3 notes)
 three_note_chords = {
@@ -338,9 +359,9 @@ def get_chord_type_from_name(chord_name):
 
 def is_enharmonic_match_improved(played_chord_name, target_chord_name, all_chords_dict):
     """
-    Version améliorée qui compare les classes de hauteur plutôt que les noms.
+    Version améliorée qui compare les classes de hauteur ET utilise la carte enharmonique.
     Cette fonction est plus robuste car elle détecte automatiquement toutes
-    les équivalences enharmoniques sans avoir besoin de les lister manuellement.
+    les équivalences enharmoniques.
     """
     if played_chord_name == target_chord_name:
         return True
@@ -351,7 +372,18 @@ def is_enharmonic_match_improved(played_chord_name, target_chord_name, all_chord
     if played_chord_name not in all_chords_dict or target_chord_name not in all_chords_dict:
         return False
     
-    # Comparer les classes de hauteur (indépendamment de l'octave)
+    # 1. D'abord vérifier avec la carte enharmonique
+    enharmonic_equivalents = enharmonic_map.get(played_chord_name, [])
+    if target_chord_name in enharmonic_equivalents:
+        return True
+    
+    # Vérifier dans l'autre sens aussi
+    enharmonic_equivalents_reverse = enharmonic_map.get(target_chord_name, [])
+    if played_chord_name in enharmonic_equivalents_reverse:
+        return True
+    
+    # 2. Ensuite comparer les classes de hauteur (indépendamment de l'octave)
+    # Ceci capture les équivalences non listées dans la carte
     played_pitch_classes = {note % 12 for note in all_chords_dict[played_chord_name]}
     target_pitch_classes = {note % 12 for note in all_chords_dict[target_chord_name]}
     
@@ -844,43 +876,57 @@ def listen_and_reveal_mode(inport, outport, chord_set):
             if last_note_off_time and time.time() - last_note_off_time > 0.3: # Délai de 0.3 seconde
                 total_attempts += 1
                 
-                # Vérification de l'accord joué par l'utilisateur
-                recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                # Vérification de l'accord joué par l'utilisateur avec gestion d'erreur
+                try:
+                    recognized_name, recognized_inversion = recognize_chord(attempt_notes)
 
-                # Fix du bug: on vérifie que le nombre de notes jouées est le même que le nombre de notes de l'accord cible
-                #if is_enharmonic_match(recognized_name, chord_name, enharmonic_map) and len(attempt_notes) == len(chord_notes):
-                if recognized_name and (is_enharmonic_match_improved(recognized_name, chord_name, enharmonic_map)) and len(attempt_notes) == len(chord_notes):                    
-                    colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
-                    console.print(f"Notes jouées : [{colored_notes}]")
-                    console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
-                    correct_count += 1
+                    # Vérifier la correspondance avec la fonction améliorée
+                    is_correct = (recognized_name and 
+                                is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
+                                len(attempt_notes) == len(chord_notes))
                     
-                    time.sleep(1.5)
-                    break
-                else:
-                    incorrect_attempts += 1
-                    colored_string = get_colored_notes_string(attempt_notes, chord_notes)
-                    
-                    found_chord, found_inversion = recognize_chord(attempt_notes)
-                    
-                    if found_chord:
-                        console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
-                    else:
-                        console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                    
-                    console.print(f"Notes jouées : [{colored_string}]")
-                    attempt_notes.clear() # Réinitialiser pour le prochain essai
-                    
-                    if incorrect_attempts >= 3:
-                        tonic_note = sorted(list(chord_notes))[0]
-                        tonic_name = get_note_name(tonic_note)
-                        console.print(f"Indice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
-                    if incorrect_attempts >= 7:
-                        revealed_type = get_chord_type_from_name(chord_name)
-                        console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
-                        console.print(f"[bold magenta]La réponse était : {chord_name}[/bold magenta]")
-                        Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=console)
+                    if is_correct:
+                        colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
+                        console.print(f"Notes jouées : [{colored_notes}]")
+                        console.print(f"[bold green]Correct ! C'était bien {chord_name}.[/bold green]")
+                        correct_count += 1
+                        
+                        time.sleep(1.5)
                         break
+                    else:
+                        incorrect_attempts += 1
+                        colored_string = get_colored_notes_string(attempt_notes, chord_notes)
+                        
+                        if recognized_name:
+                            # Nettoyer les noms pour éviter les conflits de formatage
+                            clean_chord_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
+                            clean_inversion = str(recognized_inversion) if recognized_inversion else "position inconnue"
+                            clean_inversion = clean_inversion.replace('%', 'pct').replace('{', '(').replace('}', ')')
+                            
+                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_chord_name} ({clean_inversion})")
+                        else:
+                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                        
+                        console.print(f"Notes jouées : [{colored_string}]")
+                        attempt_notes.clear() # Réinitialiser pour le prochain essai
+                        
+                        if incorrect_attempts >= 3:
+                            tonic_note = sorted(list(chord_notes))[0]
+                            tonic_name = get_note_name(tonic_note)
+                            console.print(f"Indice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
+                        if incorrect_attempts >= 7:
+                            revealed_type = get_chord_type_from_name(chord_name)
+                            console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
+                            console.print(f"[bold magenta]La réponse était : {chord_name}[/bold magenta]")
+                            Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=console)
+                            break
+                
+                except Exception as e:
+                    # Debug en cas d'erreur persistante
+                    console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
+                    console.print(f"Notes jouées : {list(attempt_notes)}")
+                    console.print("Réessayez...")
+                    attempt_notes.clear()
                 
                 # Réinitialiser pour le prochain essai après vérification
                 last_note_off_time = None
@@ -1779,7 +1825,8 @@ def tonal_progression_mode(inport, outport, chord_set):
                     if not notes_currently_on and attempt_notes:
                         recognized_name, inversion_label = recognize_chord(attempt_notes)
                         
-                        if recognized_name and is_enharmonic_match_improved(recognized_name, chord_name, None) and len(attempt_notes) == len(target_notes):
+                        # CORRECTION: Utiliser chord_set au lieu de None
+                        if recognized_name and is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and len(attempt_notes) == len(target_notes):
                             colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                             live.console.print(f"Notes jouées : [{colored_notes}]")
                             live.console.print("[bold green]Correct ![/bold green]")
@@ -1819,11 +1866,11 @@ def tonal_progression_mode(inport, outport, chord_set):
         )
 
         if choice == '':
-            pass
-        elif choice == 'q':
+            # Réinitialiser pour choisir une nouvelle progression
             current_tonalite = None
             current_progression_name = None
             current_progression_accords = None
+        elif choice == 'q':
             break
 
 def display_degrees_table(tonalite, gammes_filtrees):
