@@ -357,6 +357,18 @@ def is_enharmonic_match_improved(played_chord_name, target_chord_name, all_chord
     
     return played_pitch_classes == target_pitch_classes
 
+def safe_format_chord_info(chord_name, inversion):
+    """Formate de manière sécurisée les informations d'accord"""
+    if not chord_name:
+        return "Accord non reconnu"
+    
+    # Nettoyer les caractères problématiques
+    safe_name = str(chord_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
+    safe_inversion = str(inversion) if inversion else "position inconnue"
+    safe_inversion = safe_inversion.replace('%', 'pct').replace('{', '(').replace('}', ')')
+    
+    return f"{safe_name} ({safe_inversion})"
+
 def play_chord(outport, chord_notes, velocity=100, duration=0.5):
     """Joue un accord via MIDI."""
     for note in chord_notes:
@@ -1045,9 +1057,10 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             while not exit_flag and not skip_progression:
                 if use_timer and is_progression_started:
                     remaining_time = timer_duration - (time.time() - start_time)
-                    console.print(f"Temps restant : {remaining_time:.1f} secondes", end='\r', style="bold bright_cyan")
+                    print(f"\rTemps restant : {remaining_time:.1f} secondes", end='', flush=True)
                     if remaining_time <= 0:
-                        console.print(f"\n[bold red]Temps écoulé ! Session terminée.[/bold red]")
+                        print()  # Nouvelle ligne pour nettoyer l'affichage
+                        console.print(f"[bold red]Temps écoulé ! Session terminée.[/bold red]")
                         exit_flag = True
                         break
                     
@@ -1080,24 +1093,52 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                         is_progression_started = True
                         start_time = time.time()
 
-                    if is_enharmonic_match_improved(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
-                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                        console.print(f"Notes jouées : [{colored_notes}]")
-                        console.print("[bold green]Correct ![/bold green]")
-                        progression_correct_count += 1
-                        prog_index += 1
-                        break
-                    else:
-                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                    # Vérification de l'accord - VERSION CORRIGÉE
+                    try:
+                        recognized_name, recognized_inversion = recognize_chord(attempt_notes)
                         
-                        found_chord, found_inversion = recognize_chord(attempt_notes)
+                        # Utiliser la fonction améliorée pour la comparaison enharmonique
+                        is_correct = (recognized_name and 
+                                    is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
+                                    len(attempt_notes) == len(chord_set[chord_name]))
                         
-                        if found_chord:
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                        if is_correct:
+                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                            console.print(f"Notes jouées : [{colored_notes}]")
+                            console.print("[bold green]Correct ![/bold green]")
+                            progression_correct_count += 1
+                            prog_index += 1
+                            break
                         else:
-                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                        
-                        console.print(f"Notes jouées : [{colored_string}]")
+                            # Section d'affichage d'erreur - VERSION SÉCURISÉE
+                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                            
+                            if recognized_name:
+                                # Nettoyer les noms pour éviter les conflits de formatage
+                                clean_chord_name = str(recognized_name).replace('%', 'pct')
+                                clean_inversion = str(recognized_inversion) if recognized_inversion else "position inconnue"
+                                clean_inversion = clean_inversion.replace('%', 'pct')
+                                
+                                # Utiliser des chaînes séparées pour éviter les conflits de formatage
+                                error_msg = "[bold red]Incorrect.[/bold red] Vous avez joué : "
+                                chord_info = f"{clean_chord_name} ({clean_inversion})"
+                                console.print(error_msg + chord_info)
+                            else:
+                                console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                            
+                            console.print(f"Notes jouées : [{colored_string}]")
+                            attempt_notes.clear()
+                            
+                    except Exception as e:
+                        # Debug en cas d'erreur persistante
+                        print(f"ERREUR dans progression_mode: {e}")
+                        print(f"attempt_notes: {list(attempt_notes)}")
+                        print(f"chord_name cible: {chord_name}")
+                        if 'recognized_name' in locals():
+                            print(f"recognized_name: {recognized_name}")
+                        if 'recognized_inversion' in locals():
+                            print(f"recognized_inversion: {recognized_inversion}")
+                        # Continuer le jeu malgré l'erreur
                         attempt_notes.clear()
                 
                 time.sleep(0.01)
@@ -1428,12 +1469,13 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
             while not exit_flag and not skip_progression:
                 if use_timer and is_progression_started:
                     remaining_time = timer_duration - (time.time() - start_time)
-                    console.print(f"Temps restant : {remaining_time:.1f} secondes", end='\r', style="bold bright_cyan")
+                    print(f"\rTemps restant : {remaining_time:.1f} secondes", end='', flush=True)
                     if remaining_time <= 0:
-                        console.print(f"\n[bold red]Temps écoulé ! Session terminée.[/bold red]")
+                        print()  # Nouvelle ligne
+                        console.print(f"[bold red]Temps écoulé ! Session terminée.[/bold red]")
                         exit_flag = True
                         break
-
+                    
                 char = wait_for_input(timeout=0.01)
                 if char:
                     char = char.lower()
@@ -1462,25 +1504,52 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                     if use_timer and not is_progression_started:
                         is_progression_started = True
                         start_time = time.time()
-
-                    if is_enharmonic_match_improved(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
-                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                        console.print(f"Notes jouées : [{colored_notes}]")
-                        console.print("[bold green]Correct ![/bold green]")
-                        progression_correct_count += 1
-                        prog_index += 1
-                        break
-                    else:
-                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                    # Vérification de l'accord - VERSION CORRIGÉE
+                    try:
+                        recognized_name, recognized_inversion = recognize_chord(attempt_notes)
                         
-                        found_chord, found_inversion = recognize_chord(attempt_notes)
+                        # Utiliser la fonction améliorée pour la comparaison enharmonique
+                        is_correct = (recognized_name and 
+                                    is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
+                                    len(attempt_notes) == len(chord_set[chord_name]))
                         
-                        if found_chord:
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                        if is_correct:
+                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                            console.print(f"Notes jouées : [{colored_notes}]")
+                            console.print("[bold green]Correct ![/bold green]")
+                            progression_correct_count += 1
+                            prog_index += 1
+                            break
                         else:
-                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                        
-                        console.print(f"Notes jouées : [{colored_string}]")
+                            # Section d'affichage d'erreur - VERSION SÉCURISÉE
+                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                            
+                            if recognized_name:
+                                # Nettoyer les noms pour éviter les conflits de formatage
+                                clean_chord_name = str(recognized_name).replace('%', 'pct')
+                                clean_inversion = str(recognized_inversion) if recognized_inversion else "position inconnue"
+                                clean_inversion = clean_inversion.replace('%', 'pct')
+                                
+                                # Utiliser des chaînes séparées pour éviter les conflits de formatage
+                                error_msg = "[bold red]Incorrect.[/bold red] Vous avez joué : "
+                                chord_info = f"{clean_chord_name} ({clean_inversion})"
+                                console.print(error_msg + chord_info)
+                            else:
+                                console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                            
+                            console.print(f"Notes jouées : [{colored_string}]")
+                            attempt_notes.clear()
+                            
+                    except Exception as e:
+                        # Debug en cas d'erreur persistante
+                        print(f"ERREUR dans progression_mode: {e}")
+                        print(f"attempt_notes: {list(attempt_notes)}")
+                        print(f"chord_name cible: {chord_name}")
+                        if 'recognized_name' in locals():
+                            print(f"recognized_name: {recognized_name}")
+                        if 'recognized_inversion' in locals():
+                            print(f"recognized_inversion: {recognized_inversion}")
+                        # Continuer le jeu malgré l'erreur
                         attempt_notes.clear()
                 
                 time.sleep(0.01)
