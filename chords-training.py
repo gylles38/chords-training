@@ -583,7 +583,27 @@ def display_stats(correct_count, total_count, elapsed_time=None):
         console.print(f"Accords incorrects : [bold red]{total_count - correct_count}[/bold red]")
         console.print(f"Taux de réussite : [bold cyan]{pourcentage:.2f}%[/bold cyan]")
     else:
-        console.print("Aucun accord n'a été joué.")
+        console.print("Aucun accord ou progression d'accords n'a été joué.")
+    if elapsed_time is not None:
+        console.print(f"Temps écoulé : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
+    console.print("-------------------------")
+
+def display_stats_fixed(correct_count, total_attempts, total_chords, elapsed_time=None):
+    """Affiche les statistiques de performance corrigées."""
+    console.print("\n--- Bilan de la session ---")
+    if total_attempts > 0:
+        accuracy = (correct_count / total_attempts) * 100
+        console.print(f"Tentatives totales : [bold yellow]{total_attempts}[/bold yellow]")
+        console.print(f"Tentatives réussies : [bold green]{correct_count}[/bold green]")
+        console.print(f"Tentatives échouées : [bold red]{total_attempts - correct_count}[/bold red]")
+        console.print(f"Précision globale : [bold cyan]{accuracy:.2f}%[/bold cyan]")
+        
+        if total_chords > 0:
+            avg_attempts_per_chord = total_attempts / total_chords
+            console.print(f"Moyenne tentatives/accord : [bold magenta]{avg_attempts_per_chord:.1f}[/bold magenta]")
+    else:
+        console.print("Aucune tentative enregistrée.")
+    
     if elapsed_time is not None:
         console.print(f"Temps écoulé : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
     console.print("-------------------------")
@@ -987,14 +1007,14 @@ def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_select
         # Ce message s'affiche uniquement si la progression est terminée.
         console.print("[bold green]Progression terminée ![/bold green]")
         
-        # Demander à l'utilisateur s'il veut continuer
-        another_round = Prompt.ask(
-            "\n[bold]Voulez-vous choisir une autre progression ? ([/bold][cyan]o[/cyan][bold]/[/bold][cyan]n[/cyan][bold])[/bold]",
-            choices=["o", "n"],
-            default="o",
+        # Nouveau comportement simplifié
+        choice = Prompt.ask(
+            "\nProgression terminée ! Appuyez sur Entrée pour choisir une autre progression ou 'q' pour revenir au menu principal...", 
+            console=console, 
+            choices=["", "q"], 
             show_choices=False
         )
-        if another_round.lower() == 'n':
+        if choice == 'q':
             break # Quitte la boucle principale du mode
 
     # Message de sortie du mode
@@ -1006,7 +1026,8 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
     """Mode d'entraînement sur des progressions d'accords."""
 
     session_correct_count = 0
-    session_total_chords = 0
+    session_total_count = 0
+    session_total_attempts = 0  # NOUVEAU : compte TOUTES les tentatives    
     last_progression_accords = []
     
     exit_flag = False
@@ -1037,7 +1058,8 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
         if play_progression_before_start:
             play_progression_sequence(outport, progression, chord_set)
 
-        progression_correct_count = 0
+        progression_correct_count = 0  # Accords réussis du premier coup
+        progression_total_attempts = 0  # NOUVEAU : tentatives pour cette progression        
         is_progression_started = False
         start_time = None
         elapsed_time = 0.0 # Initialisation de la variable
@@ -1052,6 +1074,7 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
             
             notes_currently_on = set()
             attempt_notes = set()
+            chord_attempts = 0  # NOUVEAU : tentatives pour cet accord spécifique
 
             # Boucle pour chaque accord
             while not exit_flag and not skip_progression:
@@ -1089,6 +1112,10 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                         notes_currently_on.discard(msg.note)
 
                 if not notes_currently_on and attempt_notes:
+                    # NOUVEAU : Compter chaque tentative pour cet accord
+                    chord_attempts += 1
+                    progression_total_attempts += 1
+                    
                     if use_timer and not is_progression_started:
                         is_progression_started = True
                         start_time = time.time()
@@ -1106,7 +1133,11 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                             colored_notes = get_colored_notes_string(attempt_notes, target_notes)
                             console.print(f"Notes jouées : [{colored_notes}]")
                             console.print("[bold green]Correct ![/bold green]")
-                            progression_correct_count += 1
+                            
+                            # CORRECTION : Ne compter comme "réussi du premier coup" que si c'est vraiment la première tentative
+                            if chord_attempts == 1:
+                                progression_correct_count += 1
+                            
                             prog_index += 1
                             break
                         else:
@@ -1147,35 +1178,54 @@ def progression_mode(inport, outport, use_timer, timer_duration, progression_sel
                 break
             
         if not exit_flag and not skip_progression:
+            # NOUVEAU : Mise à jour des compteurs de session
             session_correct_count += progression_correct_count
-            session_total_chords += len(last_progression_accords)
-
+            session_total_attempts += progression_total_attempts
+            session_total_count += len(progression)  # Nombre d'accords dans cette progression
+            
+            # NOUVEAU : Affichage des stats de progression
+            console.print(f"\n--- Statistiques de cette progression ---")
+            console.print(f"Accords à jouer : [bold cyan]{len(progression)}[/bold cyan]")
+            console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
+            console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
+            
+            if progression_total_attempts > 0:
+                accuracy = (progression_correct_count / progression_total_attempts) * 100
+                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")            
+            
             if use_timer and is_progression_started:
                 end_time = time.time()
                 elapsed_time = end_time - start_time
                 console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
             
-            Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+            choice = Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante ou 'q' pour revenir au menu principal...", console=console, choices=["", "q"], show_choices=False)
+            if choice == 'q':
+                exit_flag = True
+                break
+            clear_screen()            
+
         elif skip_progression:
             console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
             time.sleep(1)
 
     if use_timer:
-        display_stats(session_correct_count, session_total_chords, elapsed_time)
+        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count, elapsed_time)
     else:
-        display_stats(session_correct_count, session_total_chords)
+        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)        
         
     console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
     for _ in inport.iter_pending():
         pass
     wait_for_any_key(inport)
-
+    
 def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
     """
     Mode d'entraînement pour jouer tous les degrés d'une gamme dans l'ordre.
     """
     session_correct_count = 0
-    session_total_chords = 0
+    session_total_count = 0
+    session_total_attempts = 0  # NOUVEAU : compte TOUTES les tentatives    
+
     last_tonalite = None
     
     exit_flag = False
@@ -1213,7 +1263,8 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
         if play_progression_before_start:
             play_progression_sequence(outport, progression_accords, chord_set)
 
-        progression_correct_count = 0
+        progression_correct_count = 0  # Accords réussis du premier coup
+        progression_total_attempts = 0  # NOUVEAU : tentatives pour cette progression                        
         skip_progression = False
 
         # Boucle principale pour la progression
@@ -1225,6 +1276,7 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
             
             notes_currently_on = set()
             attempt_notes = set()
+            chord_attempts = 0  # NOUVEAU : tentatives pour cet accord spécifique
             
             # Boucle pour chaque accord
             while not exit_flag:
@@ -1250,23 +1302,52 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
                         notes_currently_on.discard(msg.note)
 
                 if not notes_currently_on and attempt_notes:
-                    if is_enharmonic_match_improved(recognize_chord(attempt_notes)[0], chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
-                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                        console.print(f"Notes jouées : [{colored_notes}]")
-                        console.print("[bold green]Correct ![/bold green]")
-                        progression_correct_count += 1
-                        prog_index += 1
-                        break
-                    else:
-                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                        found_chord, found_inversion = recognize_chord(attempt_notes)
+                    # NOUVEAU : Compter chaque tentative pour cet accord
+                    chord_attempts += 1
+                    progression_total_attempts += 1
+
+                    try:
+                        recognized_name, recognized_inversion = recognize_chord(attempt_notes)
                         
-                        if found_chord:
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                        # Utiliser la fonction améliorée pour la comparaison enharmonique
+                        is_correct = (recognized_name and 
+                                    is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
+                                    len(attempt_notes) == len(chord_set[chord_name]))
+                        
+                        if is_correct:
+                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                            console.print(f"Notes jouées : [{colored_notes}]")
+                            console.print("[bold green]Correct ![/bold green]")
+                            
+                            # CORRECTION : Ne compter comme "réussi du premier coup" que si c'est vraiment la première tentative
+                            if chord_attempts == 1:
+                                progression_correct_count += 1
+                            
+                            prog_index += 1
+                            break
+
                         else:
-                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                        
-                        console.print(f"Notes jouées : [{colored_string}]")
+                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                            found_chord, found_inversion = recognize_chord(attempt_notes)
+                            
+                            if found_chord:
+                                console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                            else:
+                                console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                                
+                            console.print(f"Notes jouées : [{colored_string}]")
+                            attempt_notes.clear()
+
+                    except Exception as e:
+                        # Debug en cas d'erreur persistante
+                        print(f"ERREUR dans progression_mode: {e}")
+                        print(f"attempt_notes: {list(attempt_notes)}")
+                        print(f"chord_name cible: {chord_name}")
+                        if 'recognized_name' in locals():
+                            print(f"recognized_name: {recognized_name}")
+                        if 'recognized_inversion' in locals():
+                            print(f"recognized_inversion: {recognized_inversion}")
+                        # Continuer le jeu malgré l'erreur
                         attempt_notes.clear()
                 
                 time.sleep(0.01)
@@ -1275,17 +1356,33 @@ def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_sel
                 break
             
         if not exit_flag and not skip_progression:
+            # NOUVEAU : Mise à jour des compteurs de session                        
             session_correct_count += progression_correct_count
-            session_total_chords += len(progression_accords)
+            session_total_attempts += progression_total_attempts
+            session_total_count += len(progression_accords)  # Nombre d'accords dans cette progression
             
-            Prompt.ask("\nGamme terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+            # NOUVEAU : Affichage des stats de progression
+            console.print(f"\n--- Statistiques de cette progression ---")
+            console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
+            console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
+            console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
+            
+            if progression_total_attempts > 0:
+                accuracy = (progression_correct_count / progression_total_attempts) * 100
+                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")            
+            
+            choice = Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante ou 'q' pour revenir au menu principal...", console=console, choices=["", "q"], show_choices=False)
+            if choice == 'q':
+                exit_flag = True
+                break
+            clear_screen()            
 
-    display_stats(session_correct_count, session_total_chords)
+    display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)        
     console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
     for _ in inport.iter_pending():
         pass
     wait_for_any_key(inport)
-
+    
 def cadence_mode(inport, outport, play_progression_before_start, chord_set):
     """Mode d'entraînement sur les cadences musicales."""
 
@@ -1371,20 +1468,55 @@ def cadence_mode(inport, outport, play_progression_before_start, chord_set):
                         notes_currently_on.discard(msg.note)
 
                 if not notes_currently_on and attempt_notes:
-                    recognized_name, _ = recognize_chord(attempt_notes)
-                    if is_enharmonic_match_improved(recognized_name, chord_name, enharmonic_map) and len(attempt_notes) == len(chord_set[chord_name]):
-                        console.print("[bold green]Correct ![/bold green]")
-                        progression_correct_count += 1
-                        prog_index += 1
-                        break # Passer à l'accord suivant
-                    else:
-                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                        found_chord, found_inversion = recognize_chord(attempt_notes)
-                        if found_chord:
-                            console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {found_chord} ({found_inversion})")
+                    # Vérification de l'accord - VERSION CORRIGÉE
+                    try:
+                        recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                        
+                        # Utiliser la fonction améliorée pour la comparaison enharmonique
+                        is_correct = (recognized_name and 
+                                    is_enharmonic_match_improved(recognized_name, chord_name, chord_set) and 
+                                    len(attempt_notes) == len(chord_set[chord_name]))
+                        
+                        if is_correct:
+                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                            console.print(f"Notes jouées : [{colored_notes}]")
+                            console.print("[bold green]Correct ![/bold green]")
+                            progression_correct_count += 1
+                            prog_index += 1
+                            break
                         else:
-                            console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                        console.print(f"Notes jouées : [{colored_string}]")
+                            # Section d'affichage d'erreur - VERSION SÉCURISÉE
+                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                            
+                            if recognized_name:
+                                # Nettoyer les noms pour éviter les conflits de formatage
+                                clean_chord_name = str(recognized_name).replace('%', 'pct')
+                                clean_inversion = str(recognized_inversion) if recognized_inversion else "position inconnue"
+                                clean_inversion = clean_inversion.replace('%', 'pct')
+                                
+                                # Utiliser des chaînes séparées pour éviter les conflits de formatage
+                                error_msg = "[bold red]Incorrect.[/bold red] Vous avez joué : "
+                                chord_info = f"{clean_chord_name} ({clean_inversion})"
+                                console.print(error_msg + chord_info)
+                            else:
+                                console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+                            # Décrémenter le nombre de bonnes réponses si incorrect
+                            if progression_correct_count > 0:
+                                progression_correct_count -= 1
+
+                            console.print(f"Notes jouées : [{colored_string}]")
+                            attempt_notes.clear()
+                            
+                    except Exception as e:
+                        # Debug en cas d'erreur persistante
+                        print(f"ERREUR dans progression_mode: {e}")
+                        print(f"attempt_notes: {list(attempt_notes)}")
+                        print(f"chord_name cible: {chord_name}")
+                        if 'recognized_name' in locals():
+                            print(f"recognized_name: {recognized_name}")
+                        if 'recognized_inversion' in locals():
+                            print(f"recognized_inversion: {recognized_inversion}")
+                        # Continuer le jeu malgré l'erreur
                         attempt_notes.clear()
 
                 time.sleep(0.01)
@@ -1395,7 +1527,13 @@ def cadence_mode(inport, outport, play_progression_before_start, chord_set):
         if not exit_flag and not skip_progression:
             session_correct_count += progression_correct_count
             session_total_chords += len(progression_accords)
-            Prompt.ask("\nCadence terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+
+            choice = Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante ou 'q' pour revenir au menu principal...", console=console, choices=["", "q"], show_choices=False)
+            if choice == 'q':
+                exit_flag = True
+                break
+            clear_screen()            
+
         elif skip_progression:
             console.print("\n[bold yellow]Passage à la cadence suivante.[/bold yellow]")
             time.sleep(1)
@@ -1410,7 +1548,8 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
     """Mode d'entraînement sur les accords par degrés."""
     
     session_correct_count = 0
-    session_total_chords = 0
+    session_total_count = 0
+    session_total_attempts = 0  # NOUVEAU : compte TOUTES les tentatives    
     last_progression_accords = []
     
     exit_flag = False
@@ -1450,6 +1589,7 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
             play_progression_sequence(outport, progression_accords, chord_set)
 
         progression_correct_count = 0
+        progression_total_attempts = 0  # NOUVEAU : tentatives pour cette progression                
         is_progression_started = False
         start_time = None
         elapsed_time = 0.0 # Initialisation de la variable
@@ -1501,6 +1641,9 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                         notes_currently_on.discard(msg.note)
 
                 if not notes_currently_on and attempt_notes:
+                    # NOUVEAU : Compter chaque tentative
+                    progression_total_attempts += 1
+                                        
                     if use_timer and not is_progression_started:
                         is_progression_started = True
                         start_time = time.time()
@@ -1536,7 +1679,10 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                                 console.print(error_msg + chord_info)
                             else:
                                 console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-                            
+                            # Décrémenter le nombre de bonnes réponses si incorrect
+                            if progression_correct_count > 0:
+                                progression_correct_count -= 1
+
                             console.print(f"Notes jouées : [{colored_string}]")
                             attempt_notes.clear()
                             
@@ -1558,23 +1704,40 @@ def degrees_mode(inport, outport, use_timer, timer_duration, progression_selecti
                 break
             
         if not exit_flag and not skip_progression:
+            # NOUVEAU : Mise à jour des compteurs de session            
             session_correct_count += progression_correct_count
-            session_total_chords += len(progression_accords)
+            session_total_attempts += progression_total_attempts
+            session_total_count += len(progression_accords)  # Nombre d'accords dans cette progression
+            
+            # NOUVEAU : Affichage des stats de progression
+            console.print(f"\n--- Statistiques de cette progression ---")
+            console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
+            console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
+            console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
+            
+            if progression_total_attempts > 0:
+                accuracy = (progression_correct_count / progression_total_attempts) * 100
+                console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")            
 
             if use_timer and is_progression_started:
                 end_time = time.time()
                 elapsed_time = end_time - start_time
                 console.print(f"\nTemps pour la progression : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
             
-            Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante...", console=console)
+            choice = Prompt.ask("\nProgression terminée ! Appuyez sur Entrée pour la suivante ou 'q' pour revenir au menu principal...", console=console, choices=["", "q"], show_choices=False)
+            if choice == 'q':
+                exit_flag = True
+                break
+            clear_screen()            
+            
         elif skip_progression:
             console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
             time.sleep(1)
 
     if use_timer:
-        display_stats(session_correct_count, session_total_chords, elapsed_time)
+        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count, elapsed_time)
     else:
-        display_stats(session_correct_count, session_total_chords)
+        display_stats_fixed(session_correct_count, session_total_attempts, session_total_count)        
         
     console.print("\nAppuyez sur Entrée pour retourner au menu principal.")
     for _ in inport.iter_pending():
