@@ -22,7 +22,7 @@ def play_chord(outport, chord_notes, velocity=100, duration=0.5):
 
 def play_progression_sequence(outport, progression, chord_set):
     """Joue une séquence d'accords."""
-    console.print("[bold blue]Lecture de la progression...[/bold blue]")
+    #console.print("[bold blue]Lecture de la progression...[/bold blue]")
     for chord_name in progression:
         # S'assurer que l'accord existe dans le jeu d'accords sélectionné
         if chord_name in chord_set:

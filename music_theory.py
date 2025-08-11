@@ -101,8 +101,3 @@ def get_chord_type_from_name(chord_name):
         if c_type in chord_name:
             return c_type
     return "Inconnu" # Fallback pour les types non listés
-
-def get_note_name(midi_note):
-    """Convertit un numéro de note MIDI en son nom."""
-    notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
-    return notes[midi_note % 12]
