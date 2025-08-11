@@ -1,33 +1,99 @@
 # midi_handler.py
-import mido
 import time
-import sys
+import mido
 
-# Importation des bibliothèques spécifiques à la plateforme pour la saisie non-bloquante
-try:
-    # Pour Windows
-    import msvcrt
-except ImportError:
-    # Pour les systèmes Unix (Linux, macOS)
-    import select
-    import tty
-    import termios
-
-# Importation de Rich pour la sélection des ports
+from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt
 
-def select_midi_port(port_type, console):
+from data.chords import all_chords
+
+console = Console()
+
+def play_chord(outport, chord_notes, velocity=100, duration=0.5):
+    """Joue un accord via MIDI."""
+    for note in chord_notes:
+        msg = mido.Message('note_on', note=note, velocity=velocity)
+        outport.send(msg)
+    time.sleep(duration)
+    for note in chord_notes:
+        msg = mido.Message('note_off', note=note, velocity=0)
+        outport.send(msg)
+
+def play_progression_sequence(outport, progression, chord_set):
+    """Joue une séquence d'accords."""
+    console.print("[bold blue]Lecture de la progression...[/bold blue]")
+    for chord_name in progression:
+        # S'assurer que l'accord existe dans le jeu d'accords sélectionné
+        if chord_name in chord_set:
+            play_chord(outport, chord_set[chord_name], duration=0.8)
+            time.sleep(0.5)
+        else:
+            console.print(f"[bold red]L'accord {chord_name} n'a pas pu être joué (non trouvé dans le set sélectionné).[/bold red]")
+
+def recognize_chord(played_notes_set):
     """
-    Permet à l'utilisateur de choisir un port MIDI parmi la liste disponible.
+    Reconnaît un accord à partir d'un ensemble de notes MIDI jouées.
+    Cette version prend en compte la note la plus basse pour déterminer l'accord
+    correct parmi les candidats possibles et son inversion.
     
     Args:
-        port_type (str): "input" ou "output".
-        console (rich.console.Console): L'instance de la console pour l'affichage.
+        played_notes_set (set): Un ensemble de numéros de notes MIDI.
 
     Returns:
-        str | None: Le nom du port choisi, ou None si l'utilisateur quitte.
+        tuple: (Nom de l'accord reconnu, type de renversement)
+               ou (None, None) si non reconnu.
     """
+    if len(played_notes_set) < 2:
+        return None, None
+
+    played_notes_sorted = sorted(list(played_notes_set))
+    lowest_note_midi = played_notes_sorted[0]
+    played_pitch_classes = frozenset(note % 12 for note in played_notes_set)
+    lowest_note_pc = lowest_note_midi % 12
+    
+    best_match = None
+    lowest_inversion_index = float('inf')
+
+    # Parcourir tous les accords pour trouver les candidats
+    for chord_name, ref_notes in all_chords.items():
+        ref_pitch_classes = frozenset(note % 12 for note in ref_notes)
+
+        # Si les classes de hauteur des notes jouées correspondent à un accord de référence
+        if played_pitch_classes == ref_pitch_classes:
+            
+            # Déterminer la classe de hauteur de la racine de l'accord de référence
+            root_note_pc = min(ref_notes) % 12
+            
+            # Créer une liste ordonnée des classes de hauteur de l'accord,
+            # en commençant par la racine (fondamentale)
+            sorted_ref_pcs = sorted(list(ref_pitch_classes))
+            root_index_in_sorted = sorted_ref_pcs.index(root_note_pc)
+            ordered_chord_pcs = sorted_ref_pcs[root_index_in_sorted:] + sorted_ref_pcs[:root_index_in_sorted]
+            
+            # L'indice de la note la plus basse dans cette liste ordonnée
+            # est l'indice du renversement
+            try:
+                inversion_index = ordered_chord_pcs.index(lowest_note_pc)
+            except ValueError:
+                # Cela ne devrait pas arriver si les sets de pitch classes correspondent
+                continue
+
+            # Mettre à jour le meilleur accord s'il a un renversement plus bas
+            if inversion_index < lowest_inversion_index:
+                lowest_inversion_index = inversion_index
+                best_match = (chord_name, inversion_index)
+
+    if best_match:
+        chord_name, inversion_index = best_match
+        inversion_labels = ["position fondamentale", "1er renversement", "2ème renversement", "3ème renversement", "4ème renversement"]
+        inversion_label = inversion_labels[inversion_index] if inversion_index < len(inversion_labels) else ""
+        return chord_name, inversion_label
+    
+    return None, None
+
+def select_midi_port(port_type):
+    """Permet à l'utilisateur de choisir un port MIDI parmi la liste disponible."""
     ports = mido.get_input_names() if port_type == "input" else mido.get_output_names()
     
     if not ports:
@@ -56,91 +122,3 @@ def select_midi_port(port_type, console):
                 console.print(f"[bold red]Choix invalide. Veuillez entrer un numéro entre 1 et {len(ports)}.[/bold red]")
         except ValueError:
             console.print("[bold red]Saisie invalide. Veuillez entrer un numéro.[/bold red]")
-
-def play_chord(outport, chord_notes, velocity=100, duration=0.5):
-    """
-    Joue un accord via MIDI.
-    
-    Args:
-        outport (mido.ports.BaseOutput): Le port de sortie MIDI.
-        chord_notes (iterable): Un ensemble ou une liste de numéros de notes MIDI.
-        velocity (int): La vélocité des notes (0-127).
-        duration (float): La durée pendant laquelle les notes sont maintenues (en secondes).
-    """
-    for note in chord_notes:
-        msg = mido.Message('note_on', note=note, velocity=velocity)
-        outport.send(msg)
-    time.sleep(duration)
-    for note in chord_notes:
-        msg = mido.Message('note_off', note=note, velocity=0)
-        outport.send(msg)
-
-def play_progression_sequence(outport, progression, chord_set, console):
-    """
-    Joue une séquence d'accords.
-    
-    Args:
-        outport (mido.ports.BaseOutput): Le port de sortie MIDI.
-        progression (list): Une liste de noms d'accords.
-        chord_set (dict): Le dictionnaire contenant les notes des accords.
-        console (rich.console.Console): L'instance de la console pour afficher les messages.
-    """
-    console.print("[bold blue]Lecture de la progression...[/bold blue]")
-    for chord_name in progression:
-        if chord_name in chord_set:
-            notes = chord_set[chord_name]
-            # Affiche le nom de l'accord joué
-            console.print(f"  -> Joue : [bold yellow]{chord_name}[/bold yellow]")
-            play_chord(outport, notes, duration=0.8)
-            time.sleep(0.3) # Petite pause entre les accords
-        else:
-            console.print(f"[bold red]L'accord '{chord_name}' n'a pas pu être joué (non trouvé).[/bold red]")
-
-def wait_for_input(timeout=0.01):
-    """
-    Saisie de caractère non-bloquante, compatible Windows et Unix.
-    
-    Args:
-        timeout (float): Le temps d'attente maximum en secondes.
-
-    Returns:
-        str | None: Le caractère saisi, ou None si le timeout est atteint.
-    """
-    if 'msvcrt' in sys.modules:
-        if msvcrt.kbhit():
-            return msvcrt.getch().decode('utf-8')
-    else: # Pour Unix
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            if select.select([sys.stdin], [], [], timeout)[0]:
-                return sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return None
-
-def wait_for_any_key(inport):
-    """
-    Fonction bloquante qui attend n'importe quelle touche du clavier.
-    Vide également le tampon des messages MIDI en attente pour éviter les
-    notes "fantômes" au démarrage du mode suivant.
-    
-    Args:
-        inport (mido.ports.BaseInput): Le port d'entrée MIDI, pour vider son tampon.
-    """
-    # Vider le tampon MIDI
-    for _ in inport.iter_pending():
-        pass
-        
-    # Attendre une touche du clavier
-    if 'msvcrt' in sys.modules:
-        msvcrt.getch()
-    else: # Pour Unix
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
