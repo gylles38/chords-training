@@ -4,7 +4,6 @@ import time
 from rich.console import Console
 from rich.text import Text
 from rich.panel import Panel
-from rich.prompt import Prompt
 
 from ui import get_colored_notes_string, display_stats
 from screen_handler import clear_screen
