@@ -22,6 +22,8 @@ class ChordModeBase:
         self.total_attempts = 0
         self.exit_flag = False
 
+        self.wait_for_input = wait_for_input
+
     def clear_midi_buffer(self):
         for _ in self.inport.iter_pending():
             pass
