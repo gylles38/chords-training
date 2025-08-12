@@ -3,28 +3,13 @@ import time
 
 from rich.live import Live
 from rich.table import Table
+from rich.panel import Panel
 
 from .chord_mode_base import ChordModeBase
 
 from ui import get_colored_notes_string
 from keyboard_handler import wait_for_input
-from rich.panel import Panel
-
-def int_to_roman(num):
-    """Convert an integer to a Roman numeral (1-7 for degrees)."""
-    if not 0 < num <= 7:
-        return str(num)
-    roman_values = [
-        (1000, "M"), (900, "CM"), (500, "D"), (400, "CD"),
-        (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
-        (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")
-    ]
-    result = ""
-    for value, symbol in roman_values:
-        while num >= value:
-            result += symbol
-            num -= value
-    return result.lower() if num <= 3 else result  # Lowercase for i, ii, iii; uppercase for IV, V, etc.
+from screen_handler import int_to_roman
 
 class DegreesMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):

@@ -36,7 +36,7 @@ def get_colored_notes_string(played_notes, correct_notes):
 
 def display_stats(correct_count, total_count, elapsed_time=None):
     """Affiche les statistiques de performance."""
-    console.print("\n--- Bilan de la session ---")
+    console.print("\n--- Bilan de la session totale ---")
     if total_count > 0:
         pourcentage = (correct_count / total_count) * 100
         console.print(f"Accords corrects : [bold green]{correct_count}[/bold green]")
