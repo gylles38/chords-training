@@ -14,33 +14,45 @@ except ImportError:
 
 console = Console()
 
-def wait_for_input(timeout=0.01):
-    """Saisie de caractère non-bloquante."""
-    if 'msvcrt' in sys.modules:
-        if msvcrt.kbhit():
-            return msvcrt.getch().decode('utf-8')
-    else:
-        # Pour les systèmes Unix
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            if select.select([sys.stdin], [], [], timeout)[0]:
-                return sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+# ---------- Gestion du mode raw permanent ----------
+_fd = sys.stdin.fileno()
+_old_settings = None
+
+def enable_raw_mode():
+    """Passe le terminal en mode raw permanent (désactive écho et mode ligne)."""
+    global _old_settings
+    _old_settings = termios.tcgetattr(_fd)
+    tty.setraw(_fd)
+    new_settings = termios.tcgetattr(_fd)
+    new_settings[3] &= ~(termios.ECHO | termios.ICANON)  # pas d'écho, pas de mode ligne
+    termios.tcsetattr(_fd, termios.TCSADRAIN, new_settings)
+
+def disable_raw_mode():
+    """Restaure le mode normal du terminal."""
+    if _old_settings:
+        termios.tcsetattr(_fd, termios.TCSADRAIN, _old_settings)
+
+# ---------- Fonctions de lecture clavier ----------
+def wait_for_input(timeout=0.05):
+    """Saisie de caractère non-bloquante sans affichage et sans saut de ligne."""
+    if select.select([sys.stdin], [], [], timeout)[0]:
+        ch = sys.stdin.read(1)
+        # On ignore retour chariot et newline
+        if ch in ('\n', '\r'):
+            return None
+        return ch
     return None
 
 def wait_for_any_key(inport):
-    """Fonction non-bloquante pour attendre n'importe quelle touche du clavier."""
+    """Attend n'importe quelle touche du clavier (non bloquant sur le MIDI)."""
     while True:
-        char = wait_for_input(timeout=0.01)
+        char = wait_for_input(timeout=0.05)
         if char:
             return char.lower()
         # Vider le tampon MIDI
         for _ in inport.iter_pending():
-            pass        
-
+            pass
+        
 def get_single_char_choice(prompt, valid_choices):
     """Demande un choix à un caractère unique avec validation, sans spammer le terminal."""
     while True:

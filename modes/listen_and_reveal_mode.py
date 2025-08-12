@@ -9,7 +9,6 @@ from midi_handler import play_chord
 from screen_handler import clear_screen
 from music_theory import get_note_name, get_chord_type_from_name
 
-
 class ListenAndRevealMode(ChordModeBase):
     def handle_keyboard_input(self, char):
         # Quitter si 'q'

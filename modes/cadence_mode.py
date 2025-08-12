@@ -8,7 +8,7 @@ from rich.panel import Panel
 
 from .chord_mode_base import ChordModeBase
 from ui import get_colored_notes_string
-from keyboard_handler import wait_for_input
+from keyboard_handler import wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_progression_sequence
 from screen_handler import int_to_roman
 
@@ -16,6 +16,8 @@ class CadenceMode(ChordModeBase):
     def __init__(self, inport, outport, play_progression_before_start, chord_set):
         super().__init__(inport, outport, chord_set)
         self.play_progression_before_start = play_progression_before_start
+        self.first_display_done = False
+        self.current_cadence = None              
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
         """Affiche le tableau des degrés pour la tonalité donnée"""
@@ -86,75 +88,95 @@ class CadenceMode(ChordModeBase):
         target_notes = self.chord_set[chord_name]
         
         with Live(console=self.console, screen=False, auto_refresh=False) as live:
-            live.update(self.create_cadence_display(nom_cadence, degres_str, progression_str, tonalite, prog_index, progression_accords), refresh=True)
+            if not self.first_display_done:
+                live.update(self.create_cadence_display(nom_cadence, degres_str, progression_str, tonalite, prog_index, progression_accords), refresh=True)
+                self.first_display_done = True  # Pour éviter de réafficher la cadence à chaque itération                
             
             notes_currently_on = set()
             attempt_notes = set()
             
-            while not self.exit_flag:
-                # Gestion des entrées clavier
-                char = wait_for_input(timeout=0.01)
-                action = self.handle_keyboard_input(char)
-                
-                if action == 'quit':
-                    return 'quit'
-                elif action == 'repeat':
-                    return 'repeat'
-                elif action == 'next':
-                    return 'next'
-                
-                # Gestion MIDI
-                for msg in self.inport.iter_pending():
-                    if msg.type == 'note_on' and msg.velocity > 0:
-                        notes_currently_on.add(msg.note)
-                        attempt_notes.add(msg.note)
-                    elif msg.type == 'note_off':
-                        notes_currently_on.discard(msg.note)
+            try:
+                while not self.exit_flag:
+                    # Gestion des entrées clavier
+                    while self.wait_for_input(timeout=0) is not None:
+                        pass
 
-                # Vérification de l'accord quand toutes les notes sont relâchées
-                if not notes_currently_on and attempt_notes:
-                    # Incrémenter le compteur de tentatives à chaque essai
-                    self.total_attempts += 1
+                    char = wait_for_input(timeout=0.05)
+                    action = self.handle_keyboard_input(char)
+                                   
+                    if action == 'quit':
+                        return 'quit'
+                    elif action == 'repeat':
+                        return 'repeat'
+                    elif action == 'next':
+                        return 'next'
                     
-                    is_correct, recognized_name, recognized_inversion = self.check_chord(
-                        attempt_notes, chord_name, target_notes
-                    )
-                    
-                    if is_correct:
-                        colored_notes = get_colored_notes_string(attempt_notes, target_notes)
-                        success_msg = f"[bold green]Correct ! {chord_name}[/bold green]\nNotes jouées : [{colored_notes}]"
-                        live.update(success_msg, refresh=True)
-                        time.sleep(1)
-                        # Incrémenter le compteur de réussites
-                        self.correct_count += 1
-                        return 'correct'
-                    else:
-                        # Affichage de l'erreur
-                        colored_string = get_colored_notes_string(attempt_notes, target_notes)
-                        if recognized_name:
-                            clean_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
-                            clean_inversion = str(recognized_inversion).replace('%', 'pct').replace('{', '(').replace('}', ')') if recognized_inversion else "position inconnue"
-                            error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name} ({clean_inversion})\nNotes jouées : [{colored_string}]"
-                        else:
-                            error_msg = f"[bold red]Incorrect. Réessayez.[/bold red]\nNotes jouées : [{colored_string}]"
+                    # Gestion MIDI
+                    for msg in self.inport.iter_pending():
+                        if msg.type == 'note_on' and msg.velocity > 0:
+                            notes_currently_on.add(msg.note)
+                            attempt_notes.add(msg.note)
+                        elif msg.type == 'note_off':
+                            notes_currently_on.discard(msg.note)
+
+                    # Vérification de l'accord quand toutes les notes sont relâchées
+                    if not notes_currently_on and attempt_notes:
+                        # Incrémenter le compteur de tentatives à chaque essai
+                        self.total_attempts += 1
                         
-                        live.update(error_msg, refresh=True)
-                        time.sleep(2)
-                        live.update(self.create_cadence_display(nom_cadence, degres_str, progression_str, tonalite, prog_index, progression_accords), refresh=True)
-                        attempt_notes.clear()
+                        is_correct, recognized_name, recognized_inversion = self.check_chord(
+                            attempt_notes, chord_name, target_notes
+                        )
+                        
+                        if is_correct:
+                            colored_notes = get_colored_notes_string(attempt_notes, target_notes)
+                            success_msg = f"[bold green]Correct ! {chord_name}[/bold green]\nNotes jouées : [{colored_notes}]"
+                            live.update(success_msg, refresh=True)
+                            time.sleep(1)
+                            # Incrémenter le compteur de réussites
+                            self.correct_count += 1
+                            return 'correct'
+                        else:
+                            # Affichage de l'erreur
+                            colored_string = get_colored_notes_string(attempt_notes, target_notes)
+                            if recognized_name:
+                                clean_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
+                                clean_inversion = str(recognized_inversion).replace('%', 'pct').replace('{', '(').replace('}', ')') if recognized_inversion else "position inconnue"
+                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name} ({clean_inversion})\nNotes jouées : [{colored_string}]"
+                            else:
+                                error_msg = f"[bold red]Incorrect. Réessayez.[/bold red]\nNotes jouées : [{colored_string}]"
+                            
+                            live.update(error_msg, refresh=True)
+                            time.sleep(2)
+                            if not self.first_display_done:
+                                live.update(self.create_cadence_display(nom_cadence, degres_str, progression_str, tonalite, prog_index, progression_accords), refresh=True)
+                            attempt_notes.clear()
 
-                time.sleep(0.01)
+                    time.sleep(0.01)
+                    
+            finally:
+                disable_raw_mode()
 
         return 'quit'
 
+    def afficher_entete_cadence(self):
+        """Affiche l'entête et la consigne pour la cadence en cours"""
+        self.display_header("Cadences", "Mode Cadences Musicales", "magenta")
+        self.console.print("Jouez la cadence demandée dans la bonne tonalité.")
+        self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer.")
+
+#    def afficher_cadence(self):
+#        self.first_display_done = True
+        
     def run(self):
         """Méthode principale du mode cadence"""
+       
         while not self.exit_flag:
             self.clear_midi_buffer()
-            self.display_header("Cadences", "Mode Cadences Musicales", "magenta")
-            self.console.print("Jouez la cadence demandée dans la bonne tonalité.")
-            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer.")
-
+            # Affichage uniquement si ce n'est pas déjà fait pour cette cadence
+            #if not self.first_display_done:
+            self.afficher_entete_cadence()
+                
             # Sélectionner une cadence valide
             tonalite, nom_cadence, degres_cadence, progression_accords, gammes_filtrees = self.select_valid_cadence()
 
@@ -168,14 +190,14 @@ class CadenceMode(ChordModeBase):
             self.console.print(f"[bold yellow]{progression_str}[/bold yellow]")
 
             # Jouer la progression si demandé
-            if self.play_progression_before_start:
+            if self.play_progression_before_start and progression_accords:
                 play_progression_sequence(self.outport, progression_accords, self.chord_set)
 
             # Traitement de la progression
             progression_correct_count = 0
             prog_index = 0
             skip_progression = False
-
+                        
             while prog_index < len(progression_accords) and not self.exit_flag and not skip_progression:
                 result = self.play_single_chord(prog_index, progression_accords, tonalite, nom_cadence, degres_str, progression_str)
                 
@@ -189,6 +211,7 @@ class CadenceMode(ChordModeBase):
                     progression_correct_count = 0
                 elif result == 'next':
                     skip_progression = True
+                    self.first_display_done = False  # Pour réafficher la prochaine fois                    
                     break
                 elif result == 'correct':
                     progression_correct_count += 1
