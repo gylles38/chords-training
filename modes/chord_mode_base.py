@@ -430,7 +430,7 @@ class ChordModeBase:
             time.sleep(1)
             return 'skipped'
 
-        # Progression terminée : mise à jour stats de session + affichage
+        # Progression terminée : mise à jour stats de session
         self.session_correct_count += progression_correct_count
         self.session_total_attempts += progression_total_attempts
         self.session_total_count += len(progression_accords)
@@ -441,7 +441,7 @@ class ChordModeBase:
             self.console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
             self.console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
             self.console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
-            
+
             if progression_total_attempts > 0:
                 accuracy = (progression_correct_count / progression_total_attempts) * 100
                 self.console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
@@ -450,12 +450,12 @@ class ChordModeBase:
                 end_time = time.time()
                 self.elapsed_time = end_time - start_time
                 self.console.print(f"\nTemps pour la progression : [bold cyan]{self.elapsed_time:.2f} secondes[/bold cyan]")
-                
+
             # Pause fin progression
             self.wait_for_end_choice()
             if not self.exit_flag:
                 clear_screen()
-                
+
         return 'done'
 
     # Les classes filles doivent implémenter run()
