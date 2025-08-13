@@ -7,7 +7,7 @@ from rich.panel import Panel
 
 from ui import get_colored_notes_string, display_stats
 from screen_handler import clear_screen
-from keyboard_handler import wait_for_input, wait_for_any_key
+from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_chord
 from data.chords import all_chords
 from music_theory import recognize_chord, is_enharmonic_match_improved, get_chord_type_from_name, get_note_name
@@ -39,11 +39,43 @@ class ChordModeBase:
         self.console.print(f"Type d'accords: [bold cyan]{chord_type}[/bold cyan]")
 
     def handle_keyboard_input(self, char):
+        # Gère les entrées communes dans la classe mère
         if char and char.lower() == 'q':
             self.exit_flag = True
             return True
-        return False
+        if char and char.lower() == 'r':
+            return 'repeat'
+        if char and char.lower() == 'n':
+            return 'next'
 
+        # Appelle la méthode des classes filles pour gérer leurs entrées spécifiques
+        return self._handle_custom_input(char)
+
+    def _handle_custom_input(self, char):
+        # Cette méthode est un "placeholder" qui sera redéfini par les classes filles
+        return False
+    
+    def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
+        content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{chord_name}[/bold yellow]"
+        if time_info:
+            content += f"\n{time_info}"
+        return Panel(content, title="Progression en cours", border_style="green")
+    
+    def wait_for_end_choice(self):
+        """Attend une saisie instantanée pour continuer ou quitter"""
+        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur une touche pour continuer ou 'q' pour quitter...")
+        enable_raw_mode()
+        try:
+            while not self.exit_flag:
+                char = wait_for_input(timeout=0.05)
+                if char:
+                    if char.lower() == 'q':
+                        self.exit_flag = True
+                    return  # N'importe quelle autre touche continue
+                time.sleep(0.01)
+        finally:
+            disable_raw_mode()
+    
     def collect_notes(self):
         notes_currently_on = set()
         attempt_notes = set()
