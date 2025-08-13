@@ -573,7 +573,7 @@ def main():
                 elif mode_choice == '6':
                     all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '7':
-                    cadence_mode(inport, outport, play_progression_before_start, current_chord_set)
+                    cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '8':
                     pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '9':
