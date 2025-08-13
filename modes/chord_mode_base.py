@@ -435,25 +435,27 @@ class ChordModeBase:
         self.session_total_attempts += progression_total_attempts
         self.session_total_count += len(progression_accords)
 
-        self.console.print(f"\n--- Statistiques de cette progression ---")
-        self.console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
-        self.console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
-        self.console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
+        # Affichage et pause de fin optionnels (peuvent être supprimés par une classe fille)
+        if not getattr(self, "suppress_progression_summary", False):
+            self.console.print(f"\n--- Statistiques de cette progression ---")
+            self.console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
+            self.console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
+            self.console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
+            
+            if progression_total_attempts > 0:
+                accuracy = (progression_correct_count / progression_total_attempts) * 100
+                self.console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
 
-        if progression_total_attempts > 0:
-            accuracy = (progression_correct_count / progression_total_attempts) * 100
-            self.console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
-
-        if getattr(self, "use_timer", False) and is_progression_started:
-            end_time = time.time()
-            self.elapsed_time = end_time - start_time
-            self.console.print(f"\nTemps pour la progression : [bold cyan]{self.elapsed_time:.2f} secondes[/bold cyan]")
-
-        # Pause fin progression
-        self.wait_for_end_choice()
-        if not self.exit_flag:
-            clear_screen()
-
+            if getattr(self, "use_timer", False) and is_progression_started:
+                end_time = time.time()
+                self.elapsed_time = end_time - start_time
+                self.console.print(f"\nTemps pour la progression : [bold cyan]{self.elapsed_time:.2f} secondes[/bold cyan]")
+                
+            # Pause fin progression
+            self.wait_for_end_choice()
+            if not self.exit_flag:
+                clear_screen()
+                
         return 'done'
 
     # Les classes filles doivent implémenter run()
