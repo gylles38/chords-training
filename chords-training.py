@@ -35,6 +35,7 @@ from modes.degrees_mode import degrees_mode
 from modes.all_degrees_mode import all_degrees_mode
 from modes.cadence_mode import cadence_mode
 from modes.pop_rock_mode import pop_rock_mode as pop_rock_mode_refactored
+from modes.chord_explorer_mode import chord_explorer_mode
 
 #TODO : voir si supprimable une fois tout refactorisé
 console = Console()
@@ -123,52 +124,6 @@ def reverse_chord_mode(inport):
 
 # --- Modes de jeu ---
 
-# NOUVEAU: Mode Explorateur d'Accords
-def chord_explorer_mode(outport):
-    """Mode dictionnaire : l'utilisateur saisit un nom d'accord, le programme le joue et affiche ses notes."""
-    clear_screen()
-    console.print(Panel(
-        Text("Mode Explorateur d'Accords", style="bold bright_blue", justify="center"),
-        title="Dictionnaire d'accords",
-        border_style="bright_blue"
-    ))
-    console.print("Entrez un nom d'accord pour voir ses notes et l'entendre.")
-    console.print("Exemples : [cyan]C, F#m, Gm7, Bb, Ddim[/cyan]")
-
-    while True:
-        try:
-            user_input = Prompt.ask("\n[prompt.label]Accord à trouver (ou 'q' pour quitter)[/prompt.label]")
-            if user_input.lower() == 'q':
-                break
-
-            # Normaliser la saisie pour la recherche (minuscules, sans espaces)
-            lookup_key = user_input.lower().replace(" ", "")
-            full_chord_name = chord_aliases.get(lookup_key)
-
-            if full_chord_name and full_chord_name in all_chords:
-                # Accord trouvé
-                chord_notes_midi = all_chords[full_chord_name]
-                
-                # Trier les notes pour un affichage logique (Tonique, Tierce, Quinte...)
-                sorted_notes_midi = sorted(list(chord_notes_midi))
-                
-                # Obtenir le nom des notes
-                note_names = [get_note_name(n) for n in sorted_notes_midi]
-                notes_str = ", ".join(note_names)
-
-                console.print(f"L'accord [bold green]{full_chord_name}[/bold green] est composé des notes : [bold yellow]{notes_str}[/bold yellow]")
-                console.print("Lecture de l'accord...")
-                play_chord(outport, chord_notes_midi, duration=1.2) # Joue l'accord un peu plus longtemps
-            else:
-                # Accord non trouvé
-                console.print(f"[bold red]Accord '{user_input}' non reconnu.[/bold red] Veuillez réessayer.")
-
-        except Exception as e:
-            console.print(f"[bold red]Une erreur est survenue : {e}[/bold red]")
-            time.sleep(2)
-
-    console.print("\nRetour au menu principal.")
-    time.sleep(1)
 
 def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set):
     # Délégué vers la version refactorisée basée sur ChordModeBase
