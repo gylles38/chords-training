@@ -1,14 +1,17 @@
 # Base class for chord modes
 import random
 import time
+from typing import Callable, List, Optional
+
 from rich.console import Console
 from rich.text import Text
 from rich.panel import Panel
+from rich.live import Live
 
 from ui import get_colored_notes_string, display_stats, display_stats_fixed
 from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
-from midi_handler import play_chord
+from midi_handler import play_chord, play_progression_sequence
 from data.chords import all_chords
 from music_theory import recognize_chord, is_enharmonic_match_improved, get_chord_type_from_name, get_note_name
 
@@ -18,11 +21,18 @@ class ChordModeBase:
         self.outport = outport
         self.chord_set = chord_set
         self.console = Console()
+        # Compteurs hérités (utilisés par certains modes simples)
         self.correct_count = 0
         self.total_attempts = 0
         self.exit_flag = False
 
         self.wait_for_input = wait_for_input
+
+        # Compteurs de session (utilisés par les modes de progression)
+        self.session_correct_count = 0
+        self.session_total_count = 0
+        self.session_total_attempts = 0
+        self.elapsed_time = 0.0
 
     def clear_midi_buffer(self):
         for _ in self.inport.iter_pending():
@@ -86,8 +96,10 @@ class ChordModeBase:
             char = wait_for_input(timeout=0.05)  # délai augmenté pour fiabilité
             if char:
                 # handle_keyboard_input gère 'q' et 'r'
-                if self.handle_keyboard_input(char):
-                    return None, None  # stop total (pour 'q')
+                result = self.handle_keyboard_input(char)
+                if result is True:  # 'q' a été pressé
+                    return None, None  # stop total
+                # Pour 'r' et autres touches, on continue la collecte
 
             # 2️⃣ Lecture MIDI
             for msg in self.inport.iter_pending():
@@ -122,153 +134,15 @@ class ChordModeBase:
             self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
             return False, None, None
 
-    def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion):
-        colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
-        self.console.print(f"Notes jouées : [{colored_notes}]")
-
-        if is_correct:
-            self.console.print(f"[bold green]Correct ! C'était bien {recognized_name}.[/bold green]")
-        else:
-            if recognized_name:
-                clean_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
-                clean_inversion = str(recognized_inversion).replace('%', 'pct').replace('{', '(').replace('}', ')') if recognized_inversion else "position inconnue"
-                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name} ({clean_inversion})")
-            else:
-                self.console.print("[bold red]Incorrect. Réessayez.[/bold red]")
-
-    def run(self):
-        raise NotImplementedError("Subclasses must implement the run method.")
-
-    def display_final_stats(self):
-        display_stats(self.correct_count, self.total_attempts)
-        self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
-        self.clear_midi_buffer()
-        wait_for_any_key(self.inport)# modes/chord_mode_base.py
-import time
-from typing import Callable, List, Optional
-
-from rich.console import Console
-from rich.text import Text
-from rich.panel import Panel
-from rich.live import Live
-
-from ui import get_colored_notes_string, display_stats_fixed
-from screen_handler import clear_screen
-from keyboard_handler import wait_for_any_key, wait_for_input, enable_raw_mode, disable_raw_mode
-from midi_handler import play_progression_sequence
-from data.chords import all_chords
-from music_theory import recognize_chord, is_enharmonic_match_improved
-
-class ChordModeBase:
-    """
-    Classe de base factorisant la logique commune de jeu d'une progression :
-    - affichage d'entête
-    - boucle Live avec lecture MIDI/clavier
-    - gestion des touches q/n/r (inchangé)
-    - gestion minuterie (optionnelle)
-    - feedback Correct/Incorrect
-    - stats par progression + stats de session
-    """
-    def __init__(self, inport, outport, chord_set):
-        self.inport = inport
-        self.outport = outport
-        self.chord_set = chord_set
-        self.console = Console()
-        self.exit_flag = False
-
-        # Compteurs session (communs aux 2 modes fils)
-        self.session_correct_count = 0
-        self.session_total_count = 0
-        self.session_total_attempts = 0
-        self.elapsed_time = 0.0
-
-        # Ces attributs sont définis dans les classes filles
-        # self.use_timer: bool
-        # self.timer_duration: float
-        # self.play_progression_before_start: bool
-
-    # ---------- Outils communs ----------
-    def clear_midi_buffer(self):
-        for _ in self.inport.iter_pending():
-            pass
-
-    def display_header(self, mode_title, mode_name, border_style):
-        clear_screen()
-        self.console.print(Panel(
-            Text(mode_name, style=f"bold {border_style}", justify="center"),
-            title=mode_title,
-            border_style=border_style
-        ))
-        chord_type = 'Tous' if self.chord_set == all_chords else 'Majeurs/Mineurs'
-        self.console.print(f"Type d'accords: [bold cyan]{chord_type}[/bold cyan]")
-
-    def handle_keyboard_input(self, char):
-        """
-        ⚠️ Ne pas modifier : garde strictement le même comportement.
-        - 'q' → exit_flag=True et retourne True
-        - 'r' → 'repeat'
-        - 'n' → 'next'
-        - Sinon délègue aux classes filles via _handle_custom_input (optionnel)
-        """
-        if char and char.lower() == 'q':
-            self.exit_flag = True
-            return True
-        if char and char.lower() == 'r':
-            return 'repeat'
-        if char and char.lower() == 'n':
-            return 'next'
-        return self._handle_custom_input(char)
-
-    def _handle_custom_input(self, char):
-        """Point d'extension optionnel pour les classes filles (ex: 'p' pause)."""
-        return False
-
-    def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
-        content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{chord_name}[/bold yellow]"
-        if time_info:
-            content += f"\n{time_info}"
-        return Panel(content, title="Progression en cours", border_style="green")
-
-    def wait_for_end_choice(self):
-        """Attend une saisie instantanée pour continuer ou quitter"""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur une touche pour continuer ou 'q' pour quitter...")
-        enable_raw_mode()
-        try:
-            while not self.exit_flag:
-                char = wait_for_input(timeout=0.05)
-                if char:
-                    if char.lower() == 'q':
-                        self.exit_flag = True
-                    return  # N'importe quelle autre touche continue
-                time.sleep(0.01)
-        finally:
-            disable_raw_mode()
-
-    def check_chord(self, attempt_notes, chord_name, chord_notes):
-        if not attempt_notes:
-            return False, None, None
-        try:
-            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
-            is_correct = (
-                recognized_name
-                and is_enharmonic_match_improved(recognized_name, chord_name, self.chord_set)
-                and len(attempt_notes) == len(chord_notes)
-            )
-            return is_correct, recognized_name, recognized_inversion
-        except Exception as e:
-            self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
-            return False, None, None
-
     def show_overall_stats_and_wait(self):
         """Affiche les stats globales de la session et attend une touche."""
         self.console.print("\nAffichage des statistiques.")
-        # On réutilise display_stats_fixed, avec ou sans chronomètre
         display_stats_fixed(self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
         self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
         self.clear_midi_buffer()
         wait_for_any_key(self.inport)
 
-    # ---------- Factorisation principale ----------
+    # ---------- Boucle commune pour les modes de progression ----------
     def run_progression(
         self,
         progression_accords: List[str],
@@ -278,11 +152,8 @@ class ChordModeBase:
         pre_display: Optional[Callable[[], None]] = None,
     ) -> str:
         """
-        Exécute une progression complète (boucle commune aux deux modes).
-        Retourne :
-          - 'exit' si 'q' a été pressé
-          - 'skipped' si 'n' a été pressé
-          - 'done' si progression terminée normalement (stats + fin)
+        Exécute une progression complète (boucle commune aux modes Cadence/Progression/Degrees).
+        Retourne : 'exit' | 'skipped' | 'done'
         """
         if self.exit_flag:
             return 'exit'
@@ -297,7 +168,8 @@ class ChordModeBase:
         # Ligne d'aide commune
         self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
         # Affichage progression
-        self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
+        if progression_accords:
+            self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
 
         # Lecture de la progression avant départ si demandé
         if getattr(self, "play_progression_before_start", False) and progression_accords:
@@ -458,6 +330,25 @@ class ChordModeBase:
 
         return 'done'
 
-    # Les classes filles doivent implémenter run()
+    def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion):
+        colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
+        self.console.print(f"Notes jouées : [{colored_notes}]")
+
+        if is_correct:
+            self.console.print(f"[bold green]Correct ! C'était bien {recognized_name}.[/bold green]")
+        else:
+            if recognized_name:
+                clean_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
+                clean_inversion = str(recognized_inversion).replace('%', 'pct').replace('{', '(').replace('}', ')') if recognized_inversion else "position inconnue"
+                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name} ({clean_inversion})")
+            else:
+                self.console.print("[bold red]Incorrect. Réessayez.[/bold red]")
+
     def run(self):
         raise NotImplementedError("Subclasses must implement the run method.")
+
+    def display_final_stats(self):
+        display_stats(self.correct_count, self.total_attempts)
+        self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
+        self.clear_midi_buffer()
+        wait_for_any_key(self.inport)

@@ -11,15 +11,13 @@ from music_theory import get_note_name, get_chord_type_from_name
 
 class ListenAndRevealMode(ChordModeBase):
     def handle_keyboard_input(self, char):
-        # Quitter si 'q'
-        if super().handle_keyboard_input(char):
+        action = super().handle_keyboard_input(char)
+        if action is True:  # 'q'
             return True
-        # Répéter uniquement si un accord est en cours — NE PAS retourner True pour 'r'
-        if char and char.lower() == 'r' and getattr(self, "current_chord_notes", None) is not None:
+        if action == 'repeat' and getattr(self, "current_chord_notes", None) is not None:
             play_chord(self.outport, self.current_chord_notes)
-            # important : retourner False pour ne pas interrompre collect_notes()
-            return False
-        return False
+            return False  # ne pas interrompre collect_notes
+        return action
     
     def run(self):
         # Affichage du header et des instructions une seule fois
