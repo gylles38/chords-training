@@ -8,22 +8,68 @@ from .chord_mode_base import ChordModeBase
 from midi_handler import play_chord
 from screen_handler import clear_screen
 from music_theory import get_note_name, get_chord_type_from_name
+from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
 
 class ListenAndRevealMode(ChordModeBase):
-    def handle_keyboard_input(self, char):
-        action = super().handle_keyboard_input(char)
-        if action is True:  # 'q'
-            return True
-        if action == 'repeat' and getattr(self, "current_chord_notes", None) is not None:
+    def _handle_repeat(self):
+        """Redéfinition pour rejouer l'accord en cours dans ce mode"""
+        if hasattr(self, "current_chord_notes") and self.current_chord_notes is not None:
             play_chord(self.outport, self.current_chord_notes)
             return False  # ne pas interrompre collect_notes
-        return action
+        return 'repeat'  # comportement par défaut si pas d'accord en cours
+    
+    def collect_notes_listen_mode(self):
+        """Version spécialisée de collect_notes pour le mode Écoute et Devine avec saisie instantanée"""
+        notes_currently_on = set()
+        attempt_notes = set()
+        last_note_off_time = None
+
+        enable_raw_mode()
+        try:
+            while not self.exit_flag:
+                # 1️⃣ Lecture clavier en priorité avec timeout très court pour la réactivité
+                char = wait_for_input(timeout=0.01)  # délai très court pour plus de réactivité
+                if char:
+                    # Gestion directe des touches spéciales pour ce mode
+                    if char.lower() == 'q':
+                        self.exit_flag = True
+                        return None, None
+                    elif char.lower() == 'n':
+                        return None, None  # stop pour passer au suivant
+                    elif char.lower() == 'r' and getattr(self, "current_chord_notes", None) is not None:
+                        # Désactiver temporairement le mode raw pour jouer l'accord proprement
+                        disable_raw_mode()
+                        play_chord(self.outport, self.current_chord_notes)
+                        enable_raw_mode()
+                        # Continuer la collecte après avoir joué l'accord
+                        continue
+
+                # 2️⃣ Lecture MIDI
+                for msg in self.inport.iter_pending():
+                    if msg.type == 'note_on' and msg.velocity > 0:
+                        notes_currently_on.add(msg.note)
+                        attempt_notes.add(msg.note)
+                        last_note_off_time = None
+                    elif msg.type == 'note_off':
+                        notes_currently_on.discard(msg.note)
+                        if not notes_currently_on and not last_note_off_time:
+                            last_note_off_time = time.time()
+
+                # 3️⃣ Validation si toutes les notes sont relâchées depuis un moment
+                if last_note_off_time and time.time() - last_note_off_time > 0.3:
+                    return attempt_notes, True
+
+                time.sleep(0.01)  # petite pause pour éviter 100% CPU
+        finally:
+            disable_raw_mode()
+
+        return None, None
     
     def run(self):
         # Affichage du header et des instructions une seule fois
         self.display_header("Écoute et Devine", "Mode Écoute et Devine", "orange3")
         self.console.print("Écoutez l'accord joué et essayez de le reproduire.")
-        self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter l'accord.")
+        self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter l'accord, 'n' pour passer au suivant.")
 
         while not self.exit_flag:
             self.clear_midi_buffer()
@@ -34,10 +80,19 @@ class ListenAndRevealMode(ChordModeBase):
             self.console.print("Jouez l'accord que vous venez d'entendre.")
 
             incorrect_attempts = 0
+            skip_to_next = False
 
-            while not self.exit_flag:
-                attempt_notes, ready = self.collect_notes()
+            while not self.exit_flag and not skip_to_next:
+                # Utiliser la version spécialisée de collect_notes
+                attempt_notes, ready = self.collect_notes_listen_mode()
                 if not ready:
+                    # Si c'est None, None, c'est probablement 'q' ou 'n'
+                    if attempt_notes is None:
+                        if self.exit_flag:
+                            return  # Sortir complètement
+                        else:
+                            skip_to_next = True  # 'n' a été pressé
+                            break
                     break
 
                 self.total_attempts += 1
@@ -63,14 +118,15 @@ class ListenAndRevealMode(ChordModeBase):
                         revealed_type = get_chord_type_from_name(self.current_chord_name)
                         self.console.print(f"Indice : C'est un accord de type [bold yellow]{revealed_type}[/bold yellow].")
                         self.console.print(f"[bold magenta]La réponse était : {self.current_chord_name}[/bold magenta]")
-                        Prompt.ask("\nAppuyez sur Entrée pour continuer...", console=self.console)
+                        # Suppression de Prompt.ask - on continue automatiquement
+                        time.sleep(2)  # Pause pour lire l'information
                         break
 
             # Passer à l'accord suivant : effacer l'écran et réafficher les instructions minimales
             clear_screen()
             self.display_header("Écoute et Devine", "Mode Écoute et Devine", "orange3")
             self.console.print("Écoutez l'accord joué et essayez de le reproduire.")
-            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter l'accord.")
+            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter l'accord, 'n' pour passer au suivant.")
 
             # Accord terminé → on supprime la référence pour éviter répétition hors cycle
             self.current_chord_notes = None

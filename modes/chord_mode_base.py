@@ -54,13 +54,18 @@ class ChordModeBase:
             self.exit_flag = True
             return True
         if char and char.lower() == 'r':
-            return 'repeat'
+            # Appeler la méthode spécialisée pour la répétition
+            return self._handle_repeat()
         if char and char.lower() == 'n':
             return 'next'
 
         # Appelle la méthode des classes filles pour gérer leurs entrées spécifiques
         return self._handle_custom_input(char)
 
+    def _handle_repeat(self):
+        """Méthode par défaut pour la répétition - peut être redéfinie par les classes filles"""
+        return 'repeat'
+    
     def _handle_custom_input(self, char):
         # Cette méthode est un "placeholder" qui sera redéfini par les classes filles
         return False
@@ -99,6 +104,8 @@ class ChordModeBase:
                 result = self.handle_keyboard_input(char)
                 if result is True:  # 'q' a été pressé
                     return None, None  # stop total
+                if result == 'next':  # 'n' a été pressé
+                    return None, None  # stop pour passer au suivant
                 # Pour 'r' et autres touches, on continue la collecte
 
             # 2️⃣ Lecture MIDI
@@ -335,12 +342,18 @@ class ChordModeBase:
         self.console.print(f"Notes jouées : [{colored_notes}]")
 
         if is_correct:
-            self.console.print(f"[bold green]Correct ! C'était bien {recognized_name}.[/bold green]")
+            if recognized_name:
+                self.console.print(f"[bold green]Correct ! C'était bien {recognized_name}.[/bold green]")
+            else:
+                self.console.print("[bold green]Correct ![/bold green]")
         else:
             if recognized_name:
-                clean_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
-                clean_inversion = str(recognized_inversion).replace('%', 'pct').replace('{', '(').replace('}', ')') if recognized_inversion else "position inconnue"
-                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name} ({clean_inversion})")
+                try:
+                    clean_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
+                    clean_inversion = str(recognized_inversion).replace('%', 'pct').replace('{', '(').replace('}', ')') if recognized_inversion else "position inconnue"
+                    self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name} ({clean_inversion})")
+                except Exception:
+                    self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name}")
             else:
                 self.console.print("[bold red]Incorrect. Réessayez.[/bold red]")
 

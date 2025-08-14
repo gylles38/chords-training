@@ -64,7 +64,10 @@ def recognize_chord(played_notes_set):
     if best_match:
         chord_name, inversion_index = best_match
         inversion_labels = ["position fondamentale", "1er renversement", "2ème renversement", "3ème renversement", "4ème renversement"]
-        inversion_label = inversion_labels[inversion_index] if inversion_index < len(inversion_labels) else ""
+        if 0 <= inversion_index < len(inversion_labels):
+            inversion_label = inversion_labels[inversion_index]
+        else:
+            inversion_label = f"{inversion_index + 1}ème renversement"
         return chord_name, inversion_label
     
     return None, None

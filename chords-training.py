@@ -36,6 +36,7 @@ from modes.all_degrees_mode import all_degrees_mode
 from modes.cadence_mode import cadence_mode
 from modes.pop_rock_mode import pop_rock_mode as pop_rock_mode_refactored
 from modes.chord_explorer_mode import chord_explorer_mode
+from modes.reverse_chord_mode import reverse_chord_mode
 
 #TODO : voir si supprimable une fois tout refactorisé
 console = Console()
@@ -65,64 +66,6 @@ def safe_format_chord_info(chord_name, inversion):
     safe_inversion = safe_inversion.replace('%', 'pct').replace('{', '(').replace('}', ')')
     
     return f"{safe_name} ({safe_inversion})"
-
-def reverse_chord_mode(inport):
-    """
-    Mode de reconnaissance d'accords joués par l'utilisateur.
-    Reconnaît les accords en position fondamentale et leurs renversements
-    de manière indépendante de l'octave.
-    """
-    clear_screen()
-    console.print(Panel(
-        Text("Mode Reconnaissance d'accords (Tous les accords)", style="bold cyan", justify="center"),
-        title="Reconnaissance d'accords",
-        border_style="cyan"
-    ))
-    console.print("Jouez un accord sur votre clavier MIDI.")
-    console.print("Appuyez sur 'q' pour quitter.")
-    console.print("\nCe mode reconnaît les accords à 3 ou 4 notes en position fondamentale ainsi qu'en 1er et 2ème (et 3ème) renversement, quelle que soit l'octave.")
-    console.print("---")
-
-    notes_currently_on = set()
-    attempt_notes = set()
-
-    while True:
-        char = wait_for_input(timeout=0.01)
-        if char and char.lower() == 'q':
-            break
-
-        for msg in inport.iter_pending():
-            if msg.type == 'note_on' and msg.velocity > 0:
-                notes_currently_on.add(msg.note)
-                attempt_notes.add(msg.note)
-            elif msg.type == 'note_off':
-                notes_currently_on.discard(msg.note)
-
-        # Vérifier si un accord a été joué et relâché
-        if not notes_currently_on and attempt_notes:
-            if len(attempt_notes) > 1:
-                chord_name, inversion_label = recognize_chord(attempt_notes)
-                
-                if chord_name:
-                    enharmonic_name = enharmonic_map.get(chord_name)
-                    if enharmonic_name:
-                        console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ou [bold green]{enharmonic_name}[/bold green] ({inversion_label})")
-                    else:
-                        console.print(f"Accord reconnu : [bold green]{chord_name}[/bold green] ({inversion_label})")
-                else:
-                    # Bug fix: utiliser la fonction de coloration corrigée pour ce mode également
-                    # Pour ce mode, il n'y a pas d'accord "cible" à comparer. On affiche juste
-                    # les notes jouées. On peut donc simplement lister les notes.
-                    colored_string = ", ".join([f"[bold red]{get_note_name(n)}[/bold red]" for n in sorted(list(attempt_notes))])
-                    console.print(f"[bold red]Accord non reconnu.[/bold red] Notes jouées : [{colored_string}]")
-            else:
-                console.print("[bold yellow]Veuillez jouer au moins 3 notes pour former un accord.[/bold yellow]")
-
-            attempt_notes.clear()
-        
-        time.sleep(0.01)
-
-# --- Modes de jeu ---
 
 
 def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set):
@@ -409,7 +352,7 @@ def main():
                 elif mode_choice == '8':
                     pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '9':
-                    reverse_chord_mode(inport)
+                    reverse_chord_mode(inport, outport, current_chord_set)
                 elif mode_choice == '10':
                     tonal_progression_mode(inport, outport, current_chord_set)                    
                 elif mode_choice == '11':
