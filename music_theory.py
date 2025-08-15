@@ -72,30 +72,15 @@ def recognize_chord(played_notes_set):
     
     return None, None
 
-def is_enharmonic_match_improved(played_chord_name, target_chord_name, all_chords_dict=None):
+def are_chord_names_enharmonically_equivalent(name1, name2):
     """
-    Version améliorée qui compare les classes de hauteur plutôt que les noms.
-    Cette fonction est plus robuste car elle détecte automatiquement toutes
-    les équivalences enharmoniques sans avoir besoin de les lister manuellement.
+    Vérifie si deux noms d'accords sont équivalents de manière enharmonique.
     """
-    if all_chords_dict is None:
-        from data.chords import all_chords
-        all_chords_dict = all_chords
-    
-    if played_chord_name == target_chord_name:
-        return True
-    
-    # Si l'un des deux accords n'existe pas, pas de correspondance
-    if not played_chord_name or not target_chord_name:
-        return False
-    if played_chord_name not in all_chords_dict or target_chord_name not in all_chords_dict:
+    from data.chords import all_chords
+    if name1 not in all_chords or name2 not in all_chords:
         return False
     
-    # Comparer les classes de hauteur (indépendamment de l'octave)
-    played_pitch_classes = {note % 12 for note in all_chords_dict[played_chord_name]}
-    target_pitch_classes = {note % 12 for note in all_chords_dict[target_chord_name]}
-    
-    return played_pitch_classes == target_pitch_classes
+    return {n % 12 for n in all_chords[name1]} == {n % 12 for n in all_chords[name2]}
 
 def get_chord_type_from_name(chord_name):
     """Extrait le type d'accord (Majeur, Mineur, 7ème, etc.) du nom de l'accord."""
