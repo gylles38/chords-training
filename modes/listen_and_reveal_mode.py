@@ -138,7 +138,7 @@ class ListenAndRevealMode(ChordModeBase):
         self.display_final_stats()
         # En complément, informer du record pour ce mode basé sur les compteurs hérités
         if self.total_attempts > 0:
-            from stats_manager import update_mode_record
+            from stats_manager import update_mode_record, update_stopwatch_record, update_timer_remaining_record
             accuracy = (self.correct_count / self.total_attempts) * 100.0
             mode_key = self.__class__.__name__
             is_new_record, prev_best, new_best = update_mode_record(mode_key, accuracy, self.total_attempts)
@@ -147,6 +147,21 @@ class ListenAndRevealMode(ChordModeBase):
                     self.console.print(f"\n[bold bright_green]Nouveau record ![/bold bright_green] Précision {accuracy:.2f}% (ancien: {float(prev_best):.2f}%).")
                 else:
                     self.console.print(f"\n[bold bright_green]Premier record enregistré ![/bold bright_green] Précision {accuracy:.2f}%.")
+
+            # Record de temps en fin de session pour ce mode
+            if getattr(self, "use_timer", False):
+                # Dans ce mode, pas de timer géré; on garde la structure pour homogénéité
+                pass
+            else:
+                # Chronomètre: utiliser self.elapsed_time calculé dans display_final_stats (via session_stopwatch_start_time)
+                if getattr(self, "session_stopwatch_start_time", None) is not None:
+                    elapsed = time.time() - self.session_stopwatch_start_time if not getattr(self, "elapsed_time", None) else self.elapsed_time
+                    is_new_time, prev_time, new_time = update_stopwatch_record(mode_key, float(elapsed))
+                    if is_new_time:
+                        if prev_time is not None:
+                            self.console.print(f"[bold bright_green]Nouveau record de temps ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")
+                        else:
+                            self.console.print(f"[bold bright_green]Premier record de temps ![/bold bright_green] {new_time:.2f}s.")
 
 
 def listen_and_reveal_mode(inport, outport, chord_set):
