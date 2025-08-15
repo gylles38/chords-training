@@ -34,6 +34,8 @@ class ChordModeBase:
         self.session_total_attempts = 0
         self.elapsed_time = 0.0
         self.last_played_notes = None  # Ajout de la variable ici pour la persistance
+        # Chronomètre de session (actif quand le compte à rebours n'est pas utilisé)
+        self.session_stopwatch_start_time = None
 
     def clear_midi_buffer(self):
         for _ in self.inport.iter_pending():
@@ -112,6 +114,9 @@ class ChordModeBase:
             # 2️⃣ Lecture MIDI
             for msg in self.inport.iter_pending():
                 if msg.type == 'note_on' and msg.velocity > 0:
+                    # Démarrer le chronomètre de session au premier appui MIDI si pas de compte à rebours
+                    if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is None:
+                        self.session_stopwatch_start_time = time.time()
                     notes_currently_on.add(msg.note)
                     attempt_notes.add(msg.note)
                     last_note_off_time = None
@@ -145,6 +150,9 @@ class ChordModeBase:
     def show_overall_stats_and_wait(self):
         """Affiche les stats globales de la session et attend une touche."""
         self.console.print("\nAffichage des statistiques.")
+        # Calculer le temps écoulé juste avant l'affichage si le chronomètre est actif (sans compte à rebours)
+        if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is not None:
+            self.elapsed_time = time.time() - self.session_stopwatch_start_time
         display_stats_fixed(self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
         self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
         self.clear_midi_buffer()
@@ -268,6 +276,9 @@ class ChordModeBase:
                         # MIDI
                         for msg in self.inport.iter_pending():
                             if msg.type == 'note_on' and msg.velocity > 0:
+                                # Démarrer le chronomètre de session si pas de compte à rebours
+                                if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is None:
+                                    self.session_stopwatch_start_time = time.time()
                                 notes_currently_on.add(msg.note)
                                 attempt_notes.add(msg.note)
                             elif msg.type == 'note_off':
@@ -377,7 +388,10 @@ class ChordModeBase:
         raise NotImplementedError("Subclasses must implement the run method.")
 
     def display_final_stats(self):
-        display_stats(self.correct_count, self.total_attempts)
+        # Calculer le temps écoulé de session si chronomètre actif (sans compte à rebours)
+        if not getattr(self, "use_timer", False) and getattr(self, "session_stopwatch_start_time", None) is not None:
+            self.elapsed_time = time.time() - self.session_stopwatch_start_time
+        display_stats(self.correct_count, self.total_attempts, self.elapsed_time if self.elapsed_time else None)
         self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
         self.clear_midi_buffer()
         wait_for_any_key(self.inport)
