@@ -337,15 +337,18 @@ class ChordModeBase:
 
         return 'done'
 
-    def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion):
+    def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, specific = False):
         colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
         self.console.print(f"Notes jouées : [{colored_notes}]")
 
         if is_correct:
             if recognized_name:
-                self.console.print(f"[bold green]Correct ! C'était bien {recognized_name}.[/bold green]")
+                self.console.print(f"[bold green]{recognized_name}.[/bold green]")
             else:
-                self.console.print("[bold green]Correct ![/bold green]")
+                if not specific:
+                    self.console.print("[bold green]Correct ![/bold green]")
+                else:
+                    self.console.print("[bold red]Accord non reconnu ![/bold red]")
         else:
             if recognized_name:
                 try:
