@@ -229,7 +229,7 @@ def main():
                 elif mode_choice == '9':
                     reverse_chord_mode(inport, outport, current_chord_set)
                 elif mode_choice == '10':
-                    tonal_progression_mode(inport, outport, current_chord_set)                    
+                    tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '11':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
                 elif mode_choice == '12':
