@@ -156,7 +156,7 @@ class ListenAndRevealMode(ChordModeBase):
                 # Chronomètre: utiliser self.elapsed_time calculé dans display_final_stats (via session_stopwatch_start_time)
                 if getattr(self, "session_stopwatch_start_time", None) is not None:
                     elapsed = time.time() - self.session_stopwatch_start_time if not getattr(self, "elapsed_time", None) else self.elapsed_time
-                    is_new_time, prev_time, new_time = update_stopwatch_record(mode_key, float(elapsed))
+                    is_new_time, prev_time, new_time = update_stopwatch_record(mode_key, float(elapsed), int(self.total_attempts))
                     if is_new_time:
                         if prev_time is not None:
                             self.console.print(f"[bold bright_green]Nouveau record de temps ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")

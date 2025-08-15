@@ -174,7 +174,7 @@ class ChordModeBase:
         mode_key = self.__class__.__name__
         if getattr(self, "use_timer", False):
             if getattr(self, "session_max_remaining_time", None) is not None:
-                is_new_time, prev_time, new_time = update_timer_remaining_record(mode_key, float(self.session_max_remaining_time))
+                is_new_time, prev_time, new_time = update_timer_remaining_record(mode_key, float(self.session_max_remaining_time), int(self.session_total_attempts))
                 if is_new_time:
                     if prev_time is not None:
                         self.console.print(f"[bold bright_green]Nouveau record de temps restant ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")
@@ -182,7 +182,7 @@ class ChordModeBase:
                         self.console.print(f"[bold bright_green]Premier record de temps restant ![/bold bright_green] {new_time:.2f}s.")
         else:
             if self.elapsed_time:
-                is_new_time, prev_time, new_time = update_stopwatch_record(mode_key, float(self.elapsed_time))
+                is_new_time, prev_time, new_time = update_stopwatch_record(mode_key, float(self.elapsed_time), int(self.session_total_attempts))
                 if is_new_time:
                     if prev_time is not None:
                         self.console.print(f"[bold bright_green]Nouveau record de temps ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")

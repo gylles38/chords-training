@@ -76,10 +76,15 @@ def update_mode_record(mode_key: str, accuracy_percent: float, attempts: int) ->
     return False, prev_best, float(prev_best) if prev_best is not None else float(accuracy_percent)
 
 
-def update_stopwatch_record(mode_key: str, elapsed_seconds: float):
+def update_stopwatch_record(mode_key: str, elapsed_seconds: float, attempts: int):
     """
     Met à jour le record de temps écoulé (chronomètre) pour un mode donné.
-    Amélioration = temps plus court.
+    Amélioration = temps plus court, en comparant aussi le nombre de tentatives.
+
+    Critères d'amélioration:
+    - Si aucun record → améliorer
+    - Si attempts > prev_attempts et elapsed_seconds <= prev_time → améliorer
+    - Si attempts == prev_attempts et elapsed_seconds < prev_time → améliorer
 
     Retourne (is_new_record, previous_best_seconds_or_None, new_best_seconds)
     """
@@ -87,16 +92,23 @@ def update_stopwatch_record(mode_key: str, elapsed_seconds: float):
     mode_stats = stats.get(mode_key, {})
 
     prev_best = mode_stats.get("best_stopwatch_time_seconds")
+    prev_best_attempts = mode_stats.get("best_stopwatch_attempts", 0)
 
     is_better = False
     if prev_best is None:
         is_better = True
-    elif elapsed_seconds < float(prev_best):
-        is_better = True
+    else:
+        prev_time = float(prev_best)
+        prev_attempts = int(prev_best_attempts)
+        if attempts > prev_attempts and elapsed_seconds <= prev_time:
+            is_better = True
+        elif attempts == prev_attempts and elapsed_seconds < prev_time:
+            is_better = True
 
     if is_better:
         mode_stats.update({
             "best_stopwatch_time_seconds": float(elapsed_seconds),
+            "best_stopwatch_attempts": int(attempts),
             "best_stopwatch_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
         })
         stats[mode_key] = mode_stats
