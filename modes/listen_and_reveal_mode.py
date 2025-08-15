@@ -133,6 +133,17 @@ class ListenAndRevealMode(ChordModeBase):
             self.current_chord_name = None
 
         self.display_final_stats()
+        # En complément, informer du record pour ce mode basé sur les compteurs hérités
+        if self.total_attempts > 0:
+            from stats_manager import update_mode_record
+            accuracy = (self.correct_count / self.total_attempts) * 100.0
+            mode_key = self.__class__.__name__
+            is_new_record, prev_best, new_best = update_mode_record(mode_key, accuracy, self.total_attempts)
+            if is_new_record:
+                if prev_best is not None:
+                    self.console.print(f"\n[bold bright_green]Nouveau record ![/bold bright_green] Précision {accuracy:.2f}% (ancien: {float(prev_best):.2f}%).")
+                else:
+                    self.console.print(f"\n[bold bright_green]Premier record enregistré ![/bold bright_green] Précision {accuracy:.2f}%.")
 
 
 def listen_and_reveal_mode(inport, outport, chord_set):

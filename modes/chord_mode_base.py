@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.live import Live
 
 from ui import get_colored_notes_string, display_stats, display_stats_fixed
+from stats_manager import update_mode_record
 from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_chord, play_progression_sequence
@@ -153,7 +154,21 @@ class ChordModeBase:
         # Calculer le temps écoulé juste avant l'affichage si le chronomètre est actif (sans compte à rebours)
         if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is not None:
             self.elapsed_time = time.time() - self.session_stopwatch_start_time
+
+        # Affichage principal
         display_stats_fixed(self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
+
+        # Mise à jour du record de précision pour ce mode (si des tentatives existent)
+        if self.session_total_attempts > 0:
+            accuracy = (self.session_correct_count / self.session_total_attempts) * 100.0
+            mode_key = self.__class__.__name__
+            is_new_record, prev_best, new_best = update_mode_record(mode_key, accuracy, self.session_total_attempts)
+            if is_new_record:
+                if prev_best is not None:
+                    self.console.print(f"\n[bold bright_green]Nouveau record ![/bold bright_green] Précision {accuracy:.2f}% (ancien: {float(prev_best):.2f}%).")
+                else:
+                    self.console.print(f"\n[bold bright_green]Premier record enregistré ![/bold bright_green] Précision {accuracy:.2f}%.")
+
         self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
         self.clear_midi_buffer()
         wait_for_any_key(self.inport)
