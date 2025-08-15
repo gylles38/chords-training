@@ -47,6 +47,9 @@ class ListenAndRevealMode(ChordModeBase):
                 # 2️⃣ Lecture MIDI
                 for msg in self.inport.iter_pending():
                     if msg.type == 'note_on' and msg.velocity > 0:
+                        # Démarrer le chronomètre de session au premier appui MIDI si pas de compte à rebours
+                        if not getattr(self, "use_timer", False) and getattr(self, "session_stopwatch_start_time", None) is None:
+                            self.session_stopwatch_start_time = time.time()
                         notes_currently_on.add(msg.note)
                         attempt_notes.add(msg.note)
                         last_note_off_time = None

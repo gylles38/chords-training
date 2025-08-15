@@ -74,3 +74,63 @@ def update_mode_record(mode_key: str, accuracy_percent: float, attempts: int) ->
         return True, prev_best, float(accuracy_percent)
 
     return False, prev_best, float(prev_best) if prev_best is not None else float(accuracy_percent)
+
+
+def update_stopwatch_record(mode_key: str, elapsed_seconds: float):
+    """
+    Met à jour le record de temps écoulé (chronomètre) pour un mode donné.
+    Amélioration = temps plus court.
+
+    Retourne (is_new_record, previous_best_seconds_or_None, new_best_seconds)
+    """
+    stats = load_stats()
+    mode_stats = stats.get(mode_key, {})
+
+    prev_best = mode_stats.get("best_stopwatch_time_seconds")
+
+    is_better = False
+    if prev_best is None:
+        is_better = True
+    elif elapsed_seconds < float(prev_best):
+        is_better = True
+
+    if is_better:
+        mode_stats.update({
+            "best_stopwatch_time_seconds": float(elapsed_seconds),
+            "best_stopwatch_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        })
+        stats[mode_key] = mode_stats
+        save_stats(stats)
+        return True, prev_best, float(elapsed_seconds)
+
+    return False, prev_best, float(prev_best) if prev_best is not None else float(elapsed_seconds)
+
+
+def update_timer_remaining_record(mode_key: str, remaining_seconds: float):
+    """
+    Met à jour le record de temps restant (minuteur) pour un mode donné.
+    Amélioration = plus de temps restant.
+
+    Retourne (is_new_record, previous_best_seconds_or_None, new_best_seconds)
+    """
+    stats = load_stats()
+    mode_stats = stats.get(mode_key, {})
+
+    prev_best = mode_stats.get("best_timer_remaining_seconds")
+
+    is_better = False
+    if prev_best is None:
+        is_better = True
+    elif remaining_seconds > float(prev_best):
+        is_better = True
+
+    if is_better:
+        mode_stats.update({
+            "best_timer_remaining_seconds": float(remaining_seconds),
+            "best_timer_remaining_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        })
+        stats[mode_key] = mode_stats
+        save_stats(stats)
+        return True, prev_best, float(remaining_seconds)
+
+    return False, prev_best, float(prev_best) if prev_best is not None else float(remaining_seconds)

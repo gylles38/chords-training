@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.live import Live
 
 from ui import get_colored_notes_string, display_stats, display_stats_fixed
-from stats_manager import update_mode_record
+from stats_manager import update_mode_record, update_stopwatch_record, update_timer_remaining_record
 from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_chord, play_progression_sequence
@@ -37,6 +37,7 @@ class ChordModeBase:
         self.last_played_notes = None  # Ajout de la variable ici pour la persistance
         # Chronomètre de session (actif quand le compte à rebours n'est pas utilisé)
         self.session_stopwatch_start_time = None
+        self.session_max_remaining_time = None
 
     def clear_midi_buffer(self):
         for _ in self.inport.iter_pending():
@@ -168,6 +169,25 @@ class ChordModeBase:
                     self.console.print(f"\n[bold bright_green]Nouveau record ![/bold bright_green] Précision {accuracy:.2f}% (ancien: {float(prev_best):.2f}%).")
                 else:
                     self.console.print(f"\n[bold bright_green]Premier record enregistré ![/bold bright_green] Précision {accuracy:.2f}%.")
+
+        # Record de temps: soit chronomètre (moins de temps), soit minuteur (plus de temps restant)
+        mode_key = self.__class__.__name__
+        if getattr(self, "use_timer", False):
+            if getattr(self, "session_max_remaining_time", None) is not None:
+                is_new_time, prev_time, new_time = update_timer_remaining_record(mode_key, float(self.session_max_remaining_time))
+                if is_new_time:
+                    if prev_time is not None:
+                        self.console.print(f"[bold bright_green]Nouveau record de temps restant ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")
+                    else:
+                        self.console.print(f"[bold bright_green]Premier record de temps restant ![/bold bright_green] {new_time:.2f}s.")
+        else:
+            if self.elapsed_time:
+                is_new_time, prev_time, new_time = update_stopwatch_record(mode_key, float(self.elapsed_time))
+                if is_new_time:
+                    if prev_time is not None:
+                        self.console.print(f"[bold bright_green]Nouveau record de temps ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")
+                    else:
+                        self.console.print(f"[bold bright_green]Premier record de temps ![/bold bright_green] {new_time:.2f}s.")
 
         self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
         self.clear_midi_buffer()
@@ -368,6 +388,10 @@ class ChordModeBase:
                 end_time = time.time()
                 self.elapsed_time = end_time - start_time
                 self.console.print(f"\nTemps pour la progression : [bold cyan]{self.elapsed_time:.2f} secondes[/bold cyan]")
+                # Mettre à jour le meilleur temps restant de la session si minuteur actif
+                remaining_time = max(0.0, self.timer_duration - self.elapsed_time)
+                if getattr(self, "session_max_remaining_time", None) is None or remaining_time > self.session_max_remaining_time:
+                    self.session_max_remaining_time = remaining_time
 
             # Pause fin progression
             self.wait_for_end_choice()
