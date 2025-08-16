@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.live import Live
 
 from ui import get_colored_notes_string, display_stats, display_stats_fixed
-from stats_manager import update_mode_record, update_stopwatch_record, update_timer_remaining_record
+from stats_manager import update_mode_record, update_stopwatch_record, update_timer_remaining_record, update_chord_error, update_chord_success
 from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_chord, play_progression_sequence
@@ -210,6 +210,7 @@ class ChordModeBase:
         header_name: str,
         border_style: str,
         pre_display: Optional[Callable[[], None]] = None,
+        debug_info: Optional[str] = None,
     ) -> str:
         """
         Exécute une progression complète (boucle commune aux modes Cadence/Progression/Degrees).
@@ -220,6 +221,10 @@ class ChordModeBase:
 
         self.clear_midi_buffer()
         self.display_header(header_title, header_name, border_style)
+
+        # Affichage des informations de débogage si fournies
+        if debug_info:
+            self.console.print(debug_info)
 
         # Réinitialiser last_played_notes au début de chaque progression
         self.last_played_notes = None
@@ -341,6 +346,7 @@ class ChordModeBase:
                             is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, chord_name, target_notes)
 
                             if is_correct:
+                                update_chord_success(chord_name)
                                 success_msg = f"[bold green]Correct ! {chord_name}[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)
@@ -353,6 +359,7 @@ class ChordModeBase:
                                 self.last_played_notes = attempt_notes
                                 break
                             else:
+                                update_chord_error(chord_name)
                                 error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name if recognized_name else 'Accord non reconnu'}\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)

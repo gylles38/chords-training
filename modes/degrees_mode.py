@@ -4,6 +4,7 @@ import random
 from rich.table import Table
 
 from .chord_mode_base import ChordModeBase
+from stats_manager import get_chord_errors
 from data.chords import gammes_majeures
 from screen_handler import int_to_roman
 
@@ -29,10 +30,29 @@ class DegreesMode(ChordModeBase):
         self.console.print(table)
 
     def run(self):
-        active_degree_pos = None  # 0-based dans la liste filtrée        
+        active_degree_pos = None  # 0-based dans la liste filtrée
+        last_tonalite = None
+
         while not self.exit_flag:
-            # Choisir une tonalité aléatoire et filtrer selon les accords disponibles
-            tonalite, gammes = random.choice(list(gammes_majeures.items()))
+            chord_errors = get_chord_errors()
+            # Choisir une tonalité de manière pondérée
+            tonalites = list(gammes_majeures.keys())
+            weights = [1 + sum(chord_errors.get(chord, 0) ** 2 for chord in gammes_majeures[t]) for t in tonalites]
+
+            # --- DEBUG DISPLAY ---
+            debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Tonalites --[/bold dim]\n"
+            weighted_tonalites = sorted(zip(tonalites, weights), key=lambda x: x[1], reverse=True)
+            for t, w in weighted_tonalites[:5]:
+                if w > 1:
+                    debug_info += f"[dim] - {t}: {w}[/dim]\n"
+            # --- END DEBUG ---
+
+            tonalite = random.choices(tonalites, weights=weights, k=1)[0]
+            while tonalite == last_tonalite:
+                tonalite = random.choices(tonalites, weights=weights, k=1)[0]
+            last_tonalite = tonalite
+
+            gammes = gammes_majeures[tonalite]
             gammes_filtrees = [g for g in gammes if g in self.chord_set]
 
             # Besoin d'au moins quelques accords pour que le tableau soit pertinent
@@ -66,6 +86,7 @@ class DegreesMode(ChordModeBase):
                 header_name="Mode Degrés",
                 border_style="green",
                 pre_display=pre_display,
+                debug_info=debug_info
             )
 
             if result == 'exit':
