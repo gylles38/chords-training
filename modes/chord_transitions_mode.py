@@ -2,11 +2,17 @@
 import random
 import time
 from typing import Callable, List, Optional
+
+from rich.panel import Panel
+from rich.live import Live
+
 from .chord_mode_base import ChordModeBase
 from data.chords import three_note_chords
 from music_theory import get_note_name, recognize_chord
 from midi_handler import play_progression_sequence
-from rich.panel import Panel
+from ui import get_colored_notes_string
+from stats_manager import update_chord_error, update_chord_success
+from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
 
 class ChordTransitionsMode(ChordModeBase):
     def __init__(self, inport, outport, chord_set):
