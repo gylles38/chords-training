@@ -5,6 +5,7 @@ from typing import Callable, List, Optional
 
 from rich.panel import Panel
 from rich.live import Live
+from rich.text import Text
 
 from .chord_mode_base import ChordModeBase
 from data.chords import three_note_chords
@@ -13,6 +14,7 @@ from midi_handler import play_progression_sequence
 from ui import get_colored_notes_string
 from stats_manager import update_chord_error, update_chord_success
 from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
+from screen_handler import clear_screen
 
 class ChordTransitionsMode(ChordModeBase):
     def __init__(self, inport, outport, chord_set):
@@ -152,10 +154,40 @@ class ChordTransitionsMode(ChordModeBase):
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
         # --- MODIFICATION START ---
-        # Clean up names for display
-        display_progression = [name.split(" #")[0] for name in progression_accords]
-        if play_mode == 'SHOW_AND_PLAY' and display_progression:
-            self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(display_progression)}[/bold yellow]")
+        # Build a rich Text object to display the progression with highlighted common notes
+        if play_mode == 'SHOW_AND_PLAY' and progression_accords:
+            voicings = [self.chord_set.get(name, set()) for name in progression_accords]
+            progression_text = Text("\nProgression à jouer : ", style="default")
+
+            for i, name in enumerate(progression_accords):
+                display_name = name.split(" #")[0]
+                current_notes = voicings[i]
+
+                # Determine common notes with the previous chord
+                common_notes = set()
+                if i > 0:
+                    previous_notes = voicings[i-1]
+                    common_notes = current_notes.intersection(previous_notes)
+
+                # Add chord name
+                progression_text.append(display_name, style="bold yellow")
+                progression_text.append(" (", style="default")
+
+                # Add notes with highlighting
+                note_names = sorted(list(current_notes), key=lambda n: n % 12)
+                for j, note_val in enumerate(note_names):
+                    note_name = get_note_name(note_val)
+                    style = "bold green" if note_val in common_notes else "cyan"
+                    progression_text.append(note_name, style=style)
+                    if j < len(note_names) - 1:
+                        progression_text.append(", ", style="default")
+
+                progression_text.append(")", style="default")
+
+                if i < len(progression_accords) - 1:
+                    progression_text.append(" -> ", style="default")
+
+            self.console.print(progression_text)
         # --- MODIFICATION END ---
         elif play_mode == 'PLAY_ONLY' and progression_accords:
             self.console.print("\nÉcoutez la progression...")
