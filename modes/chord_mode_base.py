@@ -210,6 +210,7 @@ class ChordModeBase:
         header_name: str,
         border_style: str,
         pre_display: Optional[Callable[[], None]] = None,
+        debug_info: Optional[str] = None,
     ) -> str:
         """
         Exécute une progression complète (boucle commune aux modes Cadence/Progression/Degrees).
@@ -220,6 +221,10 @@ class ChordModeBase:
 
         self.clear_midi_buffer()
         self.display_header(header_title, header_name, border_style)
+
+        # Affichage des informations de débogage si fournies
+        if debug_info:
+            self.console.print(debug_info)
 
         # Réinitialiser last_played_notes au début de chaque progression
         self.last_played_notes = None
