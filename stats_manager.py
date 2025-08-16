@@ -151,3 +151,19 @@ def update_timer_remaining_record(mode_key: str, remaining_seconds: float, attem
         return True, prev_best_time, float(remaining_seconds)
 
     return False, prev_best_time, float(prev_best_time) if prev_best_time is not None else float(remaining_seconds)
+
+
+def get_chord_errors() -> Dict[str, int]:
+    """Charge les statistiques d'erreurs par accord."""
+    stats = load_stats()
+    return stats.get("chord_errors", {})
+
+
+def update_chord_error(chord_name: str) -> None:
+    """Met à jour le compteur d'erreurs pour un accord spécifique."""
+    stats = load_stats()
+    if "chord_errors" not in stats:
+        stats["chord_errors"] = {}
+
+    stats["chord_errors"][chord_name] = stats["chord_errors"].get(chord_name, 0) + 1
+    save_stats(stats)

@@ -2,6 +2,7 @@
 import random
 import time
 from .chord_mode_base import ChordModeBase
+from stats_manager import update_chord_error
 from data.chords import three_note_chords, all_chords
 from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent
 from ui import get_colored_notes_string
@@ -112,6 +113,7 @@ class ReversedChordsMode(ChordModeBase):
                         time.sleep(1.5)
                         break # Move to the next inversion
                     else:
+                        update_chord_error(chord_name)
                         feedback = f"[bold red]Incorrect.[/bold red]"
                         if rec_name and are_chord_names_enharmonically_equivalent(rec_name, chord_name):
                              feedback += f" Bon accord ([bold yellow]{rec_name}[/bold yellow]), mais mauvais renversement."

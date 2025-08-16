@@ -3,6 +3,7 @@ import random
 from rich.table import Table
 
 from .chord_mode_base import ChordModeBase
+from stats_manager import get_chord_errors
 from screen_handler import int_to_roman
 from data.chords import gammes_majeures, cadences, DEGREE_MAP
 
@@ -34,37 +35,49 @@ class CadenceMode(ChordModeBase):
 
         self.console.print(table)
 
-    def select_valid_cadence(self):
-        """Sélectionne une cadence valide avec les accords disponibles, différente de la précédente."""
-        while True:
-            tonalite, accords_de_la_gamme = random.choice(list(gammes_majeures.items()))
-            nom_cadence, degres_cadence = random.choice(list(cadences.items()))
-
-            # Éviter la répétition exacte de la tonalité ET de la cadence
-            if self.last_cadence_info and self.last_cadence_info == (tonalite, nom_cadence):
-                continue
-
-            try:
-                progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
-            except (KeyError, IndexError):
-                continue
-
-            if all(accord in self.chord_set for accord in progression_accords):
-                gammes_filtrees = [g for g in accords_de_la_gamme if g in self.chord_set]
-
-                # Mettre à jour la dernière cadence jouée
-                self.last_cadence_info = (tonalite, nom_cadence)
-
-                return tonalite, nom_cadence, degres_cadence, progression_accords, gammes_filtrees
-
     def run(self):
+        chord_errors = get_chord_errors()
+
+        # Pre-calculate all valid cadences and their weights
+        valid_cadences = []
+        for tonalite, accords_de_la_gamme in gammes_majeures.items():
+            for nom_cadence, degres_cadence in cadences.items():
+                try:
+                    progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
+                    if all(accord in self.chord_set for accord in progression_accords):
+                        weight = 1 + sum(chord_errors.get(chord, 0) for chord in progression_accords)
+                        gammes_filtrees = [g for g in accords_de_la_gamme if g in self.chord_set]
+                        valid_cadences.append({
+                            "tonalite": tonalite,
+                            "nom_cadence": nom_cadence,
+                            "degres": degres_cadence,
+                            "progression": progression_accords,
+                            "gammes_filtrees": gammes_filtrees,
+                            "weight": weight
+                        })
+                except (KeyError, IndexError):
+                    continue
+
+        if not valid_cadences:
+            self.console.print("[bold red]Aucune cadence valide trouvée pour le set d'accords sélectionné.[/bold red]")
+            return
+
+        last_cadence_info = None
         while not self.exit_flag:
-            # Choisir une cadence valide
-            (self.current_tonalite,
-             self.current_cadence_name,
-             self.current_degres,
-             self.current_progression,
-             self.gammes_filtrees) = self.select_valid_cadence()
+            # Select a weighted random cadence
+            cadence_weights = [c['weight'] for c in valid_cadences]
+            selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
+
+            while (selected_cadence['tonalite'], selected_cadence['nom_cadence']) == last_cadence_info:
+                selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
+
+            last_cadence_info = (selected_cadence['tonalite'], selected_cadence['nom_cadence'])
+
+            self.current_tonalite = selected_cadence['tonalite']
+            self.current_cadence_name = selected_cadence['nom_cadence']
+            self.current_degres = selected_cadence['degres']
+            self.current_progression = selected_cadence['progression']
+            self.gammes_filtrees = selected_cadence['gammes_filtrees']
 
             degres_str = ' -> '.join(self.current_degres)
             progression_str = ' -> '.join(self.current_progression)

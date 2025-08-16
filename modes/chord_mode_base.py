@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.live import Live
 
 from ui import get_colored_notes_string, display_stats, display_stats_fixed
-from stats_manager import update_mode_record, update_stopwatch_record, update_timer_remaining_record
+from stats_manager import update_mode_record, update_stopwatch_record, update_timer_remaining_record, update_chord_error
 from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_chord, play_progression_sequence
@@ -353,6 +353,7 @@ class ChordModeBase:
                                 self.last_played_notes = attempt_notes
                                 break
                             else:
+                                update_chord_error(chord_name)
                                 error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name if recognized_name else 'Accord non reconnu'}\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)

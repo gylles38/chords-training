@@ -4,6 +4,7 @@ import random
 from rich.prompt import Prompt
 
 from .chord_mode_base import ChordModeBase
+from stats_manager import update_chord_error
 
 from midi_handler import play_chord
 from screen_handler import clear_screen
@@ -119,6 +120,7 @@ class ListenAndRevealMode(ChordModeBase):
                     time.sleep(1.5)
                     break
                 else:
+                    update_chord_error(self.current_chord_name)
                     incorrect_attempts += 1
                     self.display_feedback(False, attempt_notes, self.current_chord_notes, recognized_name, recognized_inversion)
 

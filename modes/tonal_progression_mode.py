@@ -1,6 +1,7 @@
 # modes/tonal_progression_mode.py
 import random
 from .chord_mode_base import ChordModeBase
+from stats_manager import get_chord_errors
 from data.chords import gammes_majeures, tonal_progressions, DEGREE_MAP
 
 class TonalProgressionMode(ChordModeBase):
@@ -8,52 +9,8 @@ class TonalProgressionMode(ChordModeBase):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
-        self.progression_selection_mode = progression_selection_mode  # conservé pour compat
+        self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
-        
-        # État de la progression courante
-        self.current_tonalite = None
-        self.current_progression_name = None
-        self.current_progression_accords = None
-        self.current_progression_description = None
-        self.last_progression_info = None
-
-    def generate_new_tonal_progression(self):
-        """Génère une nouvelle progression tonale aléatoire, différente de la précédente."""
-        while True:
-            # Choisir une tonalité aléatoire
-            tonalite, gammes = random.choice(list(gammes_majeures.items()))
-
-            # Choisir une progression aléatoire
-            progression_name, progression_data = random.choice(list(tonal_progressions.items()))
-
-            # Éviter la répétition exacte de la tonalité ET de la progression
-            if self.last_progression_info and self.last_progression_info == (tonalite, progression_name):
-                continue
-
-            # Filtrer les gammes pour ne garder que les accords disponibles
-            gammes_filtrees = [g for g in gammes if g in self.chord_set]
-
-            degres_progression = progression_data["progression"]
-
-            # Construire la liste des accords à partir des degrés
-            progression_accords = []
-            valid_progression = True
-            for degre in degres_progression:
-                index = DEGREE_MAP.get(degre)
-                if index is not None and index < len(gammes_filtrees):
-                    progression_accords.append(gammes_filtrees[index])
-                else:
-                    valid_progression = False
-                    break
-
-            if valid_progression:
-                self.current_tonalite = tonalite
-                self.current_progression_name = progression_name
-                self.current_progression_accords = progression_accords
-                self.current_progression_description = progression_data["description"]
-                self.last_progression_info = (tonalite, progression_name)
-                break
 
     def display_tonal_info(self):
         """Affiche les informations tonales spécifiques."""
@@ -64,25 +21,61 @@ class TonalProgressionMode(ChordModeBase):
 
     def run(self):
         """Boucle principale du mode progression tonale."""
-        while not self.exit_flag:
-            # Générer une nouvelle progression si nécessaire
-            if self.current_progression_accords is None:
-                self.generate_new_tonal_progression()
+        chord_errors = get_chord_errors()
 
-            # Exécuter la progression avec la méthode commune
+        valid_progressions = []
+        for tonalite, gammes in gammes_majeures.items():
+            gammes_filtrees = [g for g in gammes if g in self.chord_set]
+            for prog_name, prog_data in tonal_progressions.items():
+                degres = prog_data["progression"]
+                prog_accords = []
+                is_valid = True
+                for degre in degres:
+                    index = DEGREE_MAP.get(degre)
+                    if index is not None and index < len(gammes_filtrees):
+                        prog_accords.append(gammes_filtrees[index])
+                    else:
+                        is_valid = False
+                        break
+                if is_valid:
+                    weight = 1 + sum(chord_errors.get(chord, 0) for chord in prog_accords)
+                    valid_progressions.append({
+                        "tonalite": tonalite,
+                        "prog_name": prog_name,
+                        "description": prog_data["description"],
+                        "progression": prog_accords,
+                        "weight": weight
+                    })
+
+        if not valid_progressions:
+            self.console.print("[bold red]Aucune progression tonale valide trouvée pour le set d'accords.[/bold red]")
+            return
+
+        last_prog_info = None
+        while not self.exit_flag:
+            prog_weights = [p['weight'] for p in valid_progressions]
+            selected_prog = random.choices(valid_progressions, weights=prog_weights, k=1)[0]
+
+            while (selected_prog['tonalite'], selected_prog['prog_name']) == last_prog_info:
+                selected_prog = random.choices(valid_progressions, weights=prog_weights, k=1)[0]
+
+            last_prog_info = (selected_prog['tonalite'], selected_prog['prog_name'])
+
+            self.current_tonalite = selected_prog['tonalite']
+            self.current_progression_name = selected_prog['prog_name']
+            self.current_progression_accords = selected_prog['progression']
+            self.current_progression_description = selected_prog['description']
+
             result = self.run_progression(
                 progression_accords=self.current_progression_accords,
                 header_title="Progression Tonale",
                 header_name="Mode Progression Tonale",
                 border_style="bright_magenta",
-                pre_display=self.display_tonal_info,  # Affichage des infos tonales
+                pre_display=self.display_tonal_info,
             )
 
             if result == 'exit':
                 break
-            elif result in ['done', 'skipped']:
-                # Préparer une nouvelle progression pour la prochaine itération
-                self.generate_new_tonal_progression()
 
         # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()

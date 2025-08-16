@@ -4,6 +4,7 @@ import random
 from rich.table import Table
 
 from .chord_mode_base import ChordModeBase
+from stats_manager import get_chord_errors
 from data.chords import gammes_majeures
 from screen_handler import int_to_roman
 
@@ -31,13 +32,19 @@ class DegreesMode(ChordModeBase):
     def run(self):
         active_degree_pos = None  # 0-based dans la liste filtrée
         last_tonalite = None
+        chord_errors = get_chord_errors()
+
         while not self.exit_flag:
-            # Choisir une tonalité aléatoire et filtrer selon les accords disponibles
-            tonalite, gammes = random.choice(list(gammes_majeures.items()))
+            # Choisir une tonalité de manière pondérée
+            tonalites = list(gammes_majeures.keys())
+            weights = [1 + sum(chord_errors.get(chord, 0) for chord in gammes_majeures[t]) for t in tonalites]
+
+            tonalite = random.choices(tonalites, weights=weights, k=1)[0]
             while tonalite == last_tonalite:
-                tonalite, gammes = random.choice(list(gammes_majeures.items()))
+                tonalite = random.choices(tonalites, weights=weights, k=1)[0]
             last_tonalite = tonalite
 
+            gammes = gammes_majeures[tonalite]
             gammes_filtrees = [g for g in gammes if g in self.chord_set]
 
             # Besoin d'au moins quelques accords pour que le tableau soit pertinent
