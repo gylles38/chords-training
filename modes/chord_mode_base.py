@@ -161,10 +161,18 @@ class ChordModeBase:
         # Affichage principal
         display_stats_fixed(self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
 
+        base_mode_key = self.__class__.__name__
+        play_mode = getattr(self, "play_progression_before_start", None)
+
+        # Créer une clé de stat unique pour les modes de progression basés sur la difficulté
+        if play_mode:
+            mode_key = f"{base_mode_key}_{play_mode}"
+        else:
+            mode_key = base_mode_key
+
         # Mise à jour du record de précision pour ce mode (si des tentatives existent)
         if self.session_total_attempts > 0:
             accuracy = (self.session_correct_count / self.session_total_attempts) * 100.0
-            mode_key = self.__class__.__name__
             is_new_record, prev_best, new_best = update_mode_record(mode_key, accuracy, self.session_total_attempts)
             if is_new_record:
                 if prev_best is not None:
@@ -173,7 +181,6 @@ class ChordModeBase:
                     self.console.print(f"\n[bold bright_green]Premier record enregistré ![/bold bright_green] Précision {accuracy:.2f}%.")
 
         # Record de temps: soit chronomètre (moins de temps), soit minuteur (plus de temps restant)
-        mode_key = self.__class__.__name__
         if getattr(self, "use_timer", False):
             if getattr(self, "session_max_remaining_time", None) is not None:
                 is_new_time, prev_time, new_time = update_timer_remaining_record(mode_key, float(self.session_max_remaining_time), int(self.session_total_attempts))
