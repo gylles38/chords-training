@@ -9,7 +9,7 @@ from rich.text import Text
 
 from .chord_mode_base import ChordModeBase
 from data.chords import three_note_chords
-from music_theory import get_note_name, recognize_chord, get_inversion_name
+from music_theory import get_note_name, recognize_chord, get_inversion_name, get_note_name_with_octave
 from midi_handler import play_progression_sequence
 from ui import get_colored_notes_string
 from stats_manager import update_chord_error, update_chord_success
@@ -137,7 +137,7 @@ class ChordTransitionsMode(ChordModeBase):
         for i, name in enumerate(progression_accords):
             display_name = name.split(" #")[0]
             root_notes = three_note_chords.get(display_name, set())
-            note_names = ", ".join([get_note_name(n) for n in sorted(list(root_notes), key=lambda n: n % 12)])
+            note_names = ", ".join([get_note_name_with_octave(n) for n in sorted(list(root_notes))])
             root_pos_text.append(f"{display_name} ({note_names})", style="bold yellow")
             if i < len(progression_accords) - 1:
                 root_pos_text.append(" -> ", style="default")
@@ -150,9 +150,9 @@ class ChordTransitionsMode(ChordModeBase):
             common_notes = current_notes.intersection(voicings[i-1]) if i > 0 else set()
 
             transitions_text.append(f"{display_name} (", style="bold yellow")
-            note_list = sorted(list(current_notes), key=lambda n: n % 12)
+            note_list = sorted(list(current_notes))
             for j, note_val in enumerate(note_list):
-                note_name = get_note_name(note_val)
+                note_name = get_note_name_with_octave(note_val)
                 style = "bold green" if note_val in common_notes else "cyan"
                 transitions_text.append(note_name, style=style)
                 if j < len(note_list) - 1:

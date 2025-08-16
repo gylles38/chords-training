@@ -1,5 +1,12 @@
 # music_theory.py
 
+def get_note_name_with_octave(midi_note):
+    """Convertit un numéro de note MIDI en son nom avec l'octave."""
+    notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
+    octave = (midi_note // 12) - 1
+    note_name = notes[midi_note % 12]
+    return f"{note_name}{octave}"
+
 def get_note_name(midi_note):
     """Convertit un numéro de note MIDI en son nom."""
     notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
