@@ -43,9 +43,9 @@ class ProgressionMode(ChordModeBase):
 
     def run(self):
         last_progression = []
-        chord_errors = get_chord_errors()
 
         while not self.exit_flag:
+            chord_errors = get_chord_errors()
             # Générer une progression aléatoire, différente de la précédente
             prog_len = random.randint(3, 5)
 

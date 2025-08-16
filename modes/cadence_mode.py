@@ -36,16 +36,13 @@ class CadenceMode(ChordModeBase):
         self.console.print(table)
 
     def run(self):
-        chord_errors = get_chord_errors()
-
-        # Pre-calculate all valid cadences and their weights
+        # Pre-calculate all valid cadences once
         valid_cadences = []
         for tonalite, accords_de_la_gamme in gammes_majeures.items():
             for nom_cadence, degres_cadence in cadences.items():
                 try:
                     progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
                     if all(accord in self.chord_set for accord in progression_accords):
-                        weight = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in progression_accords)
                         gammes_filtrees = [g for g in accords_de_la_gamme if g in self.chord_set]
                         valid_cadences.append({
                             "tonalite": tonalite,
@@ -53,7 +50,7 @@ class CadenceMode(ChordModeBase):
                             "degres": degres_cadence,
                             "progression": progression_accords,
                             "gammes_filtrees": gammes_filtrees,
-                            "weight": weight
+                            # Weight will be calculated in the loop
                         })
                 except (KeyError, IndexError):
                     continue
@@ -64,6 +61,12 @@ class CadenceMode(ChordModeBase):
 
         last_cadence_info = None
         while not self.exit_flag:
+            chord_errors = get_chord_errors()
+
+            # Recalculate weights in each iteration
+            for cadence in valid_cadences:
+                cadence['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in cadence['progression'])
+
             # Select a weighted random cadence
             cadence_weights = [c['weight'] for c in valid_cadences]
 

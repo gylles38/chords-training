@@ -32,9 +32,9 @@ class DegreesMode(ChordModeBase):
     def run(self):
         active_degree_pos = None  # 0-based dans la liste filtrée
         last_tonalite = None
-        chord_errors = get_chord_errors()
 
         while not self.exit_flag:
+            chord_errors = get_chord_errors()
             # Choisir une tonalité de manière pondérée
             tonalites = list(gammes_majeures.keys())
             weights = [1 + sum(chord_errors.get(chord, 0) ** 2 for chord in gammes_majeures[t]) for t in tonalites]

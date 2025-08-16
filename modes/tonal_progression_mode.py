@@ -21,8 +21,6 @@ class TonalProgressionMode(ChordModeBase):
 
     def run(self):
         """Boucle principale du mode progression tonale."""
-        chord_errors = get_chord_errors()
-
         valid_progressions = []
         for tonalite, gammes in gammes_majeures.items():
             gammes_filtrees = [g for g in gammes if g in self.chord_set]
@@ -38,13 +36,11 @@ class TonalProgressionMode(ChordModeBase):
                         is_valid = False
                         break
                 if is_valid:
-                    weight = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in prog_accords)
                     valid_progressions.append({
                         "tonalite": tonalite,
                         "prog_name": prog_name,
                         "description": prog_data["description"],
                         "progression": prog_accords,
-                        "weight": weight
                     })
 
         if not valid_progressions:
@@ -53,6 +49,11 @@ class TonalProgressionMode(ChordModeBase):
 
         last_prog_info = None
         while not self.exit_flag:
+            chord_errors = get_chord_errors()
+
+            for prog in valid_progressions:
+                prog['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in prog['progression'])
+
             prog_weights = [p['weight'] for p in valid_progressions]
 
             # --- DEBUG DISPLAY ---
