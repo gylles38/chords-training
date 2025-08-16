@@ -125,6 +125,40 @@ class ChordTransitionsMode(ChordModeBase):
 
         return is_correct, recognized_name, recognized_inversion
 
+    def _build_progression_summary_text(self, progression_accords, voicings):
+        """Builds the two Text objects for the progression summary."""
+        # Line 1: Root positions
+        root_pos_text = Text("Progression à jouer : ", style="default")
+        for i, name in enumerate(progression_accords):
+            display_name = name.split(" #")[0]
+            root_notes = three_note_chords.get(display_name, set())
+            note_names = ", ".join([get_note_name(n) for n in sorted(list(root_notes), key=lambda n: n % 12)])
+            root_pos_text.append(f"{display_name} ({note_names})", style="bold yellow")
+            if i < len(progression_accords) - 1:
+                root_pos_text.append(" -> ", style="default")
+
+        # Line 2: Transitions with highlighting
+        transitions_text = Text("Progression des transitions : ", style="default")
+        for i, name in enumerate(progression_accords):
+            display_name = name.split(" #")[0]
+            current_notes = voicings[i]
+            common_notes = current_notes.intersection(voicings[i-1]) if i > 0 else set()
+
+            transitions_text.append(f"{display_name} (", style="bold yellow")
+            note_list = sorted(list(current_notes), key=lambda n: n % 12)
+            for j, note_val in enumerate(note_list):
+                note_name = get_note_name(note_val)
+                style = "bold green" if note_val in common_notes else "cyan"
+                transitions_text.append(note_name, style=style)
+                if j < len(note_list) - 1:
+                    transitions_text.append(", ", style="default")
+            transitions_text.append(")", style="bold yellow")
+
+            if i < len(progression_accords) - 1:
+                transitions_text.append(" -> ", style="default")
+
+        return root_pos_text, transitions_text
+
     def run_progression(
         self,
         progression_accords: List[str],
@@ -157,40 +191,12 @@ class ChordTransitionsMode(ChordModeBase):
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
         # --- MODIFICATION START ---
-        # Build a rich Text object to display the progression with highlighted common notes
+        # Display the two-line progression summary
         if play_mode == 'SHOW_AND_PLAY' and progression_accords:
             voicings = [self.chord_set.get(name, set()) for name in progression_accords]
-            progression_text = Text("\nProgression à jouer : ", style="default")
-
-            for i, name in enumerate(progression_accords):
-                display_name = name.split(" #")[0]
-                current_notes = voicings[i]
-
-                # Determine common notes with the previous chord
-                common_notes = set()
-                if i > 0:
-                    previous_notes = voicings[i-1]
-                    common_notes = current_notes.intersection(previous_notes)
-
-                # Add chord name
-                progression_text.append(display_name, style="bold yellow")
-                progression_text.append(" (", style="default")
-
-                # Add notes with highlighting
-                note_names = sorted(list(current_notes), key=lambda n: n % 12)
-                for j, note_val in enumerate(note_names):
-                    note_name = get_note_name(note_val)
-                    style = "bold green" if note_val in common_notes else "cyan"
-                    progression_text.append(note_name, style=style)
-                    if j < len(note_names) - 1:
-                        progression_text.append(", ", style="default")
-
-                progression_text.append(")", style="default")
-
-                if i < len(progression_accords) - 1:
-                    progression_text.append(" -> ", style="default")
-
-            self.console.print(progression_text)
+            root_pos_text, transitions_text = self._build_progression_summary_text(progression_accords, voicings)
+            self.console.print(root_pos_text)
+            self.console.print(transitions_text)
         # --- MODIFICATION END ---
         elif play_mode == 'PLAY_ONLY' and progression_accords:
             self.console.print("\nÉcoutez la progression...")
