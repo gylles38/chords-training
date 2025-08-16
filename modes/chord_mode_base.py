@@ -76,7 +76,12 @@ class ChordModeBase:
         return False
     
     def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
-        content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{chord_name}[/bold yellow]"
+        play_mode = getattr(self, "play_progression_before_start", "NONE")
+        if play_mode == 'PLAY_ONLY':
+            content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
+        else:
+            content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{chord_name}[/bold yellow]"
+
         if time_info:
             content += f"\n{time_info}"
         return Panel(content, title="Progression en cours", border_style="green")
