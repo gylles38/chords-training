@@ -118,31 +118,36 @@ def update_stopwatch_record(mode_key: str, elapsed_seconds: float, attempts: int
     return False, prev_best, float(prev_best) if prev_best is not None else float(elapsed_seconds)
 
 
-def update_timer_remaining_record(mode_key: str, remaining_seconds: float):
+def update_timer_remaining_record(mode_key: str, remaining_seconds: float, attempts: int):
     """
     Met à jour le record de temps restant (minuteur) pour un mode donné.
-    Amélioration = plus de temps restant.
-
-    Retourne (is_new_record, previous_best_seconds_or_None, new_best_seconds)
+    Amélioration = plus de temps restant. Si temps égal, plus de tentatives est mieux.
     """
     stats = load_stats()
     mode_stats = stats.get(mode_key, {})
 
-    prev_best = mode_stats.get("best_timer_remaining_seconds")
+    prev_best_time = mode_stats.get("best_timer_remaining_seconds")
+    prev_best_attempts = mode_stats.get("best_timer_remaining_attempts", 0)
 
     is_better = False
-    if prev_best is None:
+    if prev_best_time is None:
         is_better = True
-    elif remaining_seconds > float(prev_best):
-        is_better = True
+    else:
+        # Priorité 1: Améliorer le temps restant
+        if remaining_seconds > float(prev_best_time):
+            is_better = True
+        # Priorité 2: Si temps égal, plus de tentatives est une meilleure performance
+        elif remaining_seconds == float(prev_best_time) and attempts > int(prev_best_attempts):
+            is_better = True
 
     if is_better:
         mode_stats.update({
             "best_timer_remaining_seconds": float(remaining_seconds),
+            "best_timer_remaining_attempts": int(attempts),
             "best_timer_remaining_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
         })
         stats[mode_key] = mode_stats
         save_stats(stats)
-        return True, prev_best, float(remaining_seconds)
+        return True, prev_best_time, float(remaining_seconds)
 
-    return False, prev_best, float(prev_best) if prev_best is not None else float(remaining_seconds)
+    return False, prev_best_time, float(prev_best_time) if prev_best_time is not None else float(remaining_seconds)
