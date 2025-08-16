@@ -76,7 +76,7 @@ class ChordTransitionsMode(ChordModeBase):
 
                 cost = self._calculate_voice_leading_cost(previous_voicing, shifted_inv)
 
-                if cost < min_cost:
+                if cost <= min_cost:
                     min_cost = cost
                     best_voicing = shifted_inv
 
