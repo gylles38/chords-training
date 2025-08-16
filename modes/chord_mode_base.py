@@ -152,9 +152,6 @@ class ChordModeBase:
     def show_overall_stats_and_wait(self):
         """Affiche les stats globales de la session et attend une touche."""
         self.console.print("\nAffichage des statistiques.")
-        # Calculer le temps écoulé juste avant l'affichage si le chronomètre est actif (sans compte à rebours)
-        if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is not None:
-            self.elapsed_time = time.time() - self.session_stopwatch_start_time
 
         # Affichage principal
         display_stats_fixed(self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
@@ -311,9 +308,6 @@ class ChordModeBase:
                         # MIDI
                         for msg in self.inport.iter_pending():
                             if msg.type == 'note_on' and msg.velocity > 0:
-                                # Démarrer le chronomètre de session si pas de compte à rebours
-                                if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is None:
-                                    self.session_stopwatch_start_time = time.time()
                                 notes_currently_on.add(msg.note)
                                 attempt_notes.add(msg.note)
                             elif msg.type == 'note_off':
@@ -324,7 +318,7 @@ class ChordModeBase:
                             chord_attempts += 1
                             progression_total_attempts += 1
 
-                            if getattr(self, "use_timer", False) and not is_progression_started:
+                            if not is_progression_started:
                                 is_progression_started = True
                                 start_time = time.time()
 
@@ -384,14 +378,19 @@ class ChordModeBase:
                 accuracy = (progression_correct_count / progression_total_attempts) * 100
                 self.console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
 
-            if getattr(self, "use_timer", False) and is_progression_started:
+            if is_progression_started:
                 end_time = time.time()
-                self.elapsed_time = end_time - start_time
-                self.console.print(f"\nTemps pour la progression : [bold cyan]{self.elapsed_time:.2f} secondes[/bold cyan]")
-                # Mettre à jour le meilleur temps restant de la session si minuteur actif
-                remaining_time = max(0.0, self.timer_duration - self.elapsed_time)
-                if getattr(self, "session_max_remaining_time", None) is None or remaining_time > self.session_max_remaining_time:
-                    self.session_max_remaining_time = remaining_time
+                progression_elapsed = end_time - start_time
+                if getattr(self, "use_timer", False):
+                    self.elapsed_time = progression_elapsed
+                    self.console.print(f"\nTemps pour la progression : [bold cyan]{self.elapsed_time:.2f} secondes[/bold cyan]")
+                    # Mettre à jour le meilleur temps restant de la session si minuteur actif
+                    remaining_time = max(0.0, self.timer_duration - self.elapsed_time)
+                    if getattr(self, "session_max_remaining_time", None) is None or remaining_time > self.session_max_remaining_time:
+                        self.session_max_remaining_time = remaining_time
+                else:  # Stopwatch mode
+                    self.elapsed_time += progression_elapsed
+                    self.console.print(f"\nTemps pour la progression : [bold cyan]{progression_elapsed:.2f} secondes[/bold cyan]")
 
             # Pause fin progression
             self.wait_for_end_choice()
