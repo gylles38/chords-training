@@ -16,26 +16,44 @@ class TonalProgressionMode(ChordModeBase):
         self.current_progression_name = None
         self.current_progression_accords = None
         self.current_progression_description = None
+        self.last_progression_info = None
 
     def generate_new_tonal_progression(self):
-        """Génère une nouvelle progression tonale aléatoire."""
-        # Choisir une tonalité aléatoire
-        self.current_tonalite, gammes = random.choice(list(gammes_majeures.items()))
-        
-        # Filtrer les gammes pour ne garder que les accords disponibles
-        gammes_filtrees = [g for g in gammes if g in self.chord_set]
-        
-        # Choisir une progression aléatoire
-        self.current_progression_name, progression_data = random.choice(list(tonal_progressions.items()))
-        degres_progression = progression_data["progression"]
-        self.current_progression_description = progression_data["description"]
-        
-        # Construire la liste des accords à partir des degrés
-        self.current_progression_accords = []
-        for degre in degres_progression:
-            index = DEGREE_MAP.get(degre)
-            if index is not None and index < len(gammes_filtrees):
-                self.current_progression_accords.append(gammes_filtrees[index])
+        """Génère une nouvelle progression tonale aléatoire, différente de la précédente."""
+        while True:
+            # Choisir une tonalité aléatoire
+            tonalite, gammes = random.choice(list(gammes_majeures.items()))
+
+            # Choisir une progression aléatoire
+            progression_name, progression_data = random.choice(list(tonal_progressions.items()))
+
+            # Éviter la répétition exacte de la tonalité ET de la progression
+            if self.last_progression_info and self.last_progression_info == (tonalite, progression_name):
+                continue
+
+            # Filtrer les gammes pour ne garder que les accords disponibles
+            gammes_filtrees = [g for g in gammes if g in self.chord_set]
+
+            degres_progression = progression_data["progression"]
+
+            # Construire la liste des accords à partir des degrés
+            progression_accords = []
+            valid_progression = True
+            for degre in degres_progression:
+                index = DEGREE_MAP.get(degre)
+                if index is not None and index < len(gammes_filtrees):
+                    progression_accords.append(gammes_filtrees[index])
+                else:
+                    valid_progression = False
+                    break
+
+            if valid_progression:
+                self.current_tonalite = tonalite
+                self.current_progression_name = progression_name
+                self.current_progression_accords = progression_accords
+                self.current_progression_description = progression_data["description"]
+                self.last_progression_info = (tonalite, progression_name)
+                break
 
     def display_tonal_info(self):
         """Affiche les informations tonales spécifiques."""

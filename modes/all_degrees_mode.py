@@ -30,7 +30,7 @@ class AllDegreesMode(ChordModeBase):
         last_tonalite = None
         while not self.exit_flag:
             tonalite, gammes = random.choice(list(gammes_majeures.items()))
-            if tonalite == last_tonalite:
+            while tonalite == last_tonalite:
                 tonalite, gammes = random.choice(list(gammes_majeures.items()))
             last_tonalite = tonalite
 

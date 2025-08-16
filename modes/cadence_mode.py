@@ -19,6 +19,7 @@ class CadenceMode(ChordModeBase):
         self.current_degres = None
         self.current_progression = None
         self.gammes_filtrees = None
+        self.last_cadence_info = None
 
     # ---------- Spécifique Cadence ----------
     def display_degrees_table(self, tonalite, gammes_filtrees):
@@ -34,10 +35,15 @@ class CadenceMode(ChordModeBase):
         self.console.print(table)
 
     def select_valid_cadence(self):
-        """Sélectionne une cadence valide avec les accords disponibles"""
+        """Sélectionne une cadence valide avec les accords disponibles, différente de la précédente."""
         while True:
             tonalite, accords_de_la_gamme = random.choice(list(gammes_majeures.items()))
             nom_cadence, degres_cadence = random.choice(list(cadences.items()))
+
+            # Éviter la répétition exacte de la tonalité ET de la cadence
+            if self.last_cadence_info and self.last_cadence_info == (tonalite, nom_cadence):
+                continue
+
             try:
                 progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
             except (KeyError, IndexError):
@@ -45,6 +51,10 @@ class CadenceMode(ChordModeBase):
 
             if all(accord in self.chord_set for accord in progression_accords):
                 gammes_filtrees = [g for g in accords_de_la_gamme if g in self.chord_set]
+
+                # Mettre à jour la dernière cadence jouée
+                self.last_cadence_info = (tonalite, nom_cadence)
+
                 return tonalite, nom_cadence, degres_cadence, progression_accords, gammes_filtrees
 
     def run(self):

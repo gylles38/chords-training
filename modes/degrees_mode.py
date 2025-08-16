@@ -29,10 +29,15 @@ class DegreesMode(ChordModeBase):
         self.console.print(table)
 
     def run(self):
-        active_degree_pos = None  # 0-based dans la liste filtrée        
+        active_degree_pos = None  # 0-based dans la liste filtrée
+        last_tonalite = None
         while not self.exit_flag:
             # Choisir une tonalité aléatoire et filtrer selon les accords disponibles
             tonalite, gammes = random.choice(list(gammes_majeures.items()))
+            while tonalite == last_tonalite:
+                tonalite, gammes = random.choice(list(gammes_majeures.items()))
+            last_tonalite = tonalite
+
             gammes_filtrees = [g for g in gammes if g in self.chord_set]
 
             # Besoin d'au moins quelques accords pour que le tableau soit pertinent
