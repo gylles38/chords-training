@@ -3,3 +3,5 @@
 
 # Ignorer le dossier __pycache__
 __pycache__/
+
+venv/
