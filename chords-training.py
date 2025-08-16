@@ -110,7 +110,7 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
         panel_content.append(f"Avant de commencer\n" if play_progression_before_start else f"Non\n", style="bold green" if play_progression_before_start else "bold red")
         panel_content.append("[5] Accords autorisés: ", style="bold white")
         panel_content.append(f"{'Tous les accords' if chord_set_choice == 'all' else 'Majeurs/Mineurs'}\n", style="bold green")
-        panel_content.append("[6] Retour au menu principal", style="bold white")
+        panel_content.append("[q] Retour au menu principal", style="bold white")
         
         panel = Panel(
             panel_content,
@@ -119,7 +119,7 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
         )
         console.print(panel)
         
-        choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6'], show_choices=False, console=console)
+        choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', 'q'], show_choices=False, console=console)
         
         if choice == '1':
             use_timer = not use_timer
@@ -143,9 +143,9 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
             play_progression_before_start = not play_progression_before_start
         elif choice == '5':
             chord_set_choice = 'all' if chord_set_choice == 'basic' else 'basic'
-        elif choice == '6':
+        elif choice == 'q':
             return use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice
-    return use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice
+    #return use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice
 
 def main():
     """Fonction principale du programme."""
@@ -200,7 +200,7 @@ def main():
                 menu_options.append("[11] Renversements d'accords (aléatoires)\n", style="bold blue_violet") # NOUVEAU MODE
                 menu_options.append("--- Configuration ---\n", style="dim")
                 menu_options.append("[12] Options\n", style="bold white")
-                menu_options.append("[13] Quitter", style="bold white")
+                menu_options.append("[q] Quitter", style="bold white")
                 menu_panel = Panel(
                     menu_options,
                     title="Menu Principal",
@@ -209,7 +209,7 @@ def main():
                 console.print(menu_panel)
                 
                 # MODIFIÉ: Mise à jour des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'], show_choices=False, console=console)
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'q'], show_choices=False, console=console)
                 
                 if mode_choice == '1':
                     chord_explorer_mode(outport)
@@ -235,7 +235,7 @@ def main():
                     reversed_chords_mode(inport, outport, current_chord_set)
                 elif mode_choice == '12':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
-                elif mode_choice == '13':
+                elif mode_choice == 'q':
                     console.print("Arrêt du programme.", style="bold red")
                     break
                 else:
