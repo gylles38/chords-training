@@ -11,6 +11,10 @@ from music_theory import get_note_name, get_chord_type_from_name
 from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
 
 class ListenAndRevealMode(ChordModeBase):
+    def __init__(self, inport, outport, chord_set):
+        super().__init__(inport, outport, chord_set)
+        self.last_chord_name = None
+
     def _handle_repeat(self):
         """Redéfinition pour rejouer l'accord en cours dans ce mode"""
         if hasattr(self, "current_chord_notes") and self.current_chord_notes is not None:
@@ -77,7 +81,13 @@ class ListenAndRevealMode(ChordModeBase):
         while not self.exit_flag:
             self.clear_midi_buffer()
             # Tirage d'un accord pour ce cycle
-            self.current_chord_name, self.current_chord_notes = random.choice(list(self.chord_set.items()))
+            new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
+            while new_chord_name == self.last_chord_name:
+                new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
+            self.current_chord_name = new_chord_name
+            self.current_chord_notes = new_chord_notes
+            self.last_chord_name = new_chord_name
+
             self.console.print(f"\n[bold yellow]Lecture de l'accord...[/bold yellow]")
             play_chord(self.outport, self.current_chord_notes)
             self.console.print("Jouez l'accord que vous venez d'entendre.")

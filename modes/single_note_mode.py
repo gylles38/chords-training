@@ -14,6 +14,7 @@ class SingleNoteMode(ChordModeBase):
         # Le chord_set n'est pas utilisé ici, mais est gardé pour la compatibilité
         super().__init__(inport, outport, chord_set)
         self.current_note = None
+        self.last_note = None
 
     def _handle_repeat(self):
         """Redéfinition pour rejouer la note en cours dans ce mode"""
@@ -73,7 +74,11 @@ class SingleNoteMode(ChordModeBase):
         while not self.exit_flag:
             self.clear_midi_buffer()
             # On choisit une note aléatoire entre C3 (48) et C5 (72)
-            self.current_note = random.randint(48, 72)
+            new_note = random.randint(48, 72)
+            while new_note == self.last_note:
+                new_note = random.randint(48, 72)
+            self.current_note = new_note
+            self.last_note = new_note
 
             self.console.print(f"\n[bold yellow]Lecture de la note...[/bold yellow]")
             play_chord(self.outport, [self.current_note])
