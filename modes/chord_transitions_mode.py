@@ -85,11 +85,20 @@ class ChordTransitionsMode(ChordModeBase):
     def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
         # Override to remove the unique identifier from the chord name for display
         display_name = chord_name.split(" #")[0]
+
+        # Get the target notes for display
+        target_notes = self.chord_set.get(chord_name, set())
+        note_names = [get_note_name(n) for n in sorted(list(target_notes))]
+        notes_display = ", ".join(note_names)
+
         play_mode = getattr(self, "play_progression_before_start", "NONE")
         if play_mode == 'PLAY_ONLY':
             content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
         else:
-            content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]"
+            content = (
+                f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]\n"
+                f"Notes attendues : [cyan]{notes_display}[/cyan]"
+            )
 
         if time_info:
             content += f"\n{time_info}"
