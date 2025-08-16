@@ -50,8 +50,8 @@ class ProgressionMode(ChordModeBase):
             prog_len = random.randint(3, 5)
 
             all_chords = list(self.chord_set.keys())
-            # Poids de base de 1 pour chaque accord, plus le nombre d'erreurs
-            weights = [1 + chord_errors.get(chord, 0) for chord in all_chords]
+            # Poids de base de 1 pour chaque accord, plus le carré du nombre d'erreurs
+            weights = [1 + (chord_errors.get(chord, 0) ** 2) for chord in all_chords]
 
             # --- DEBUG DISPLAY ---
             self.console.print("\n[bold dim]-- Debug: Top 5 Weighted Chords --[/bold dim]")

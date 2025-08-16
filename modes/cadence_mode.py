@@ -45,7 +45,7 @@ class CadenceMode(ChordModeBase):
                 try:
                     progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
                     if all(accord in self.chord_set for accord in progression_accords):
-                        weight = 1 + sum(chord_errors.get(chord, 0) for chord in progression_accords)
+                        weight = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in progression_accords)
                         gammes_filtrees = [g for g in accords_de_la_gamme if g in self.chord_set]
                         valid_cadences.append({
                             "tonalite": tonalite,

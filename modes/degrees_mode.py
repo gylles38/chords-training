@@ -37,7 +37,7 @@ class DegreesMode(ChordModeBase):
         while not self.exit_flag:
             # Choisir une tonalité de manière pondérée
             tonalites = list(gammes_majeures.keys())
-            weights = [1 + sum(chord_errors.get(chord, 0) for chord in gammes_majeures[t]) for t in tonalites]
+            weights = [1 + sum(chord_errors.get(chord, 0) ** 2 for chord in gammes_majeures[t]) for t in tonalites]
 
             # --- DEBUG DISPLAY ---
             self.console.print("\n[bold dim]-- Debug: Top 5 Weighted Tonalites --[/bold dim]")

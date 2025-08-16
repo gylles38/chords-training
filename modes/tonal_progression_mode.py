@@ -38,7 +38,7 @@ class TonalProgressionMode(ChordModeBase):
                         is_valid = False
                         break
                 if is_valid:
-                    weight = 1 + sum(chord_errors.get(chord, 0) for chord in prog_accords)
+                    weight = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in prog_accords)
                     valid_progressions.append({
                         "tonalite": tonalite,
                         "prog_name": prog_name,
