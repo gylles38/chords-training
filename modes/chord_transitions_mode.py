@@ -9,7 +9,7 @@ from rich.text import Text
 
 from .chord_mode_base import ChordModeBase
 from data.chords import three_note_chords
-from music_theory import get_note_name, recognize_chord
+from music_theory import get_note_name, recognize_chord, get_inversion_name
 from midi_handler import play_progression_sequence
 from ui import get_colored_notes_string
 from stats_manager import update_chord_error, update_chord_success
@@ -88,8 +88,10 @@ class ChordTransitionsMode(ChordModeBase):
         # Override to remove the unique identifier from the chord name for display
         display_name = chord_name.split(" #")[0]
 
-        # Get the target notes for display
+        # Get the target notes and inversion name for display
         target_notes = self.chord_set.get(chord_name, set())
+        inversion_text = get_inversion_name(display_name, target_notes)
+
         note_names = [get_note_name(n) for n in sorted(list(target_notes))]
         notes_display = ", ".join(note_names)
 
@@ -97,8 +99,9 @@ class ChordTransitionsMode(ChordModeBase):
         if play_mode == 'PLAY_ONLY':
             content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
         else:
+            inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
             content = (
-                f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]\n"
+                f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}{inversion_display}[/bold yellow]\n"
                 f"Notes attendues : [cyan]{notes_display}[/cyan]"
             )
 
