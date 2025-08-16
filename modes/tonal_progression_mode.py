@@ -15,6 +15,7 @@ class TonalProgressionMode(ChordModeBase):
         self.current_tonalite = None
         self.current_progression_name = None
         self.current_progression_accords = None
+        self.current_progression_description = None
 
     def generate_new_tonal_progression(self):
         """Génère une nouvelle progression tonale aléatoire."""
@@ -25,7 +26,9 @@ class TonalProgressionMode(ChordModeBase):
         gammes_filtrees = [g for g in gammes if g in self.chord_set]
         
         # Choisir une progression aléatoire
-        self.current_progression_name, degres_progression = random.choice(list(tonal_progressions.items()))
+        self.current_progression_name, progression_data = random.choice(list(tonal_progressions.items()))
+        degres_progression = progression_data["progression"]
+        self.current_progression_description = progression_data["description"]
         
         # Construire la liste des accords à partir des degrés
         self.current_progression_accords = []
@@ -38,6 +41,8 @@ class TonalProgressionMode(ChordModeBase):
         """Affiche les informations tonales spécifiques."""
         self.console.print(f"Tonalité : [bold yellow]{self.current_tonalite}[/bold yellow]")
         self.console.print(f"Progression : [bold cyan]{self.current_progression_name}[/bold cyan]")
+        if self.current_progression_description:
+            self.console.print(f"[italic]{self.current_progression_description}[/italic]")
 
     def run(self):
         """Boucle principale du mode progression tonale."""
