@@ -5,6 +5,7 @@ from typing import Callable, List, Optional
 from .chord_mode_base import ChordModeBase
 from data.chords import three_note_chords
 from music_theory import get_note_name, recognize_chord
+from midi_handler import play_progression_sequence
 from rich.panel import Panel
 
 class ChordTransitionsMode(ChordModeBase):
