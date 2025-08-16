@@ -274,9 +274,24 @@ pop_rock_progressions = {
 }
 
 tonal_progressions = {
-    "Cadence Parfaite": ["I", "V", "I"],
-    "Cadence Plagale": ["IV", "I"],
-    "Progression I-IV-V-I": ["I", "IV", "V", "I"],
-    "Progression ii-V-I": ["ii", "V", "I"],
-    "Progression I-V-vi-IV": ["I", "V", "vi", "IV"]  # Très courante en pop
+    "Cadence Parfaite": {
+        "progression": ["I", "V", "I"],
+        "description": "Très conclusive, donne un sentiment de résolution. Souvent utilisée à la fin des phrases musicales."
+    },
+    "Cadence Plagale": {
+        "progression": ["IV", "I"],
+        "description": "Aussi conclusive, mais plus douce et moins dramatique. Connue comme la cadence 'Amen'."
+    },
+    "Progression I-IV-V-I": {
+        "progression": ["I", "IV", "V", "I"],
+        "description": "Une progression très stable et fréquente dans la musique occidentale, évoquant la clarté et la joie."
+    },
+    "Progression ii-V-I": {
+        "progression": ["ii", "V", "I"],
+        "description": "La pierre angulaire de l'harmonie jazz. Crée une forte tension puis une résolution vers la tonique."
+    },
+    "Progression I-V-vi-IV": {
+        "progression": ["I", "V", "vi", "IV"],
+        "description": "La progression 'quatre accords magiques', omniprésente en pop et rock. Peut sonner joyeuse ou mélancolique."
+    }
 }
