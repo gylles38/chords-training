@@ -127,8 +127,13 @@ class ChordTransitionsMode(ChordModeBase):
 
     def _build_progression_summary_text(self, progression_accords, voicings):
         """Builds the two Text objects for the progression summary."""
+        # Pad labels for alignment
+        label1 = "Progression à jouer : "
+        label2 = "Progression des transitions : "
+        max_len = max(len(label1), len(label2))
+
         # Line 1: Root positions
-        root_pos_text = Text("Progression à jouer : ", style="default")
+        root_pos_text = Text(label1.ljust(max_len), style="default")
         for i, name in enumerate(progression_accords):
             display_name = name.split(" #")[0]
             root_notes = three_note_chords.get(display_name, set())
@@ -138,7 +143,7 @@ class ChordTransitionsMode(ChordModeBase):
                 root_pos_text.append(" -> ", style="default")
 
         # Line 2: Transitions with highlighting
-        transitions_text = Text("Progression des transitions : ", style="default")
+        transitions_text = Text(label2.ljust(max_len), style="default")
         for i, name in enumerate(progression_accords):
             display_name = name.split(" #")[0]
             current_notes = voicings[i]
