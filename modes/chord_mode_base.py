@@ -219,12 +219,16 @@ class ChordModeBase:
             # Ligne d'aide commune, affichée seulement si pas de pre_display
             self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
             
+        play_mode = getattr(self, "play_progression_before_start", "NONE")
+
         # Affichage progression
-        if progression_accords:
+        if play_mode == 'SHOW_AND_PLAY' and progression_accords:
             self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
+        elif play_mode == 'PLAY_ONLY' and progression_accords:
+            self.console.print("\nÉcoutez la progression...")
 
         # Lecture de la progression avant départ si demandé
-        if getattr(self, "play_progression_before_start", False) and progression_accords:
+        if (play_mode == 'SHOW_AND_PLAY' or play_mode == 'PLAY_ONLY') and progression_accords:
             play_progression_sequence(self.outport, progression_accords, self.chord_set)
 
         # ----- Traitement de la progression -----
