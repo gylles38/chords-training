@@ -48,7 +48,9 @@ class PopRockMode(ChordModeBase):
             examples_str = "\n".join(selected_data.get("examples", []))
 
             def pre_display():
-                self.console.print(f"Progression sélectionnée: [bold yellow]{progression_str}[/bold yellow]")
+                play_mode = getattr(self, "play_progression_before_start", "NONE")
+                if play_mode != 'PLAY_ONLY':
+                    self.console.print(f"Progression sélectionnée: [bold yellow]{progression_str}[/bold yellow]")
                 if examples_str:
                     self.console.print("Exemples:")
                     self.console.print(examples_str)

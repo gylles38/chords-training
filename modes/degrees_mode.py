@@ -55,7 +55,9 @@ class DegreesMode(ChordModeBase):
                 self.console.print(
                     f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez le degré actif [bold cyan]{degree_number}[/bold cyan] :"
                 )
-                self.console.print(f"[bold yellow]{chord_name}[/bold yellow]")
+                play_mode = getattr(self, "play_progression_before_start", "NONE")
+                if play_mode != 'PLAY_ONLY':
+                    self.console.print(f"[bold yellow]{chord_name}[/bold yellow]")
                 self.display_degrees_table(tonalite, gammes_filtrees)
 
             result = self.run_progression(

@@ -42,7 +42,9 @@ class AllDegreesMode(ChordModeBase):
 
             def pre_display():
                 self.console.print(f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la gamme complète :")
-                self.console.print(f"[bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
+                play_mode = getattr(self, "play_progression_before_start", "NONE")
+                if play_mode != 'PLAY_ONLY':
+                    self.console.print(f"[bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
                 self.display_degrees_table(tonalite, gammes_filtrees)
 
             result = self.run_progression(
