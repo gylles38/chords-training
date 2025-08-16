@@ -68,8 +68,7 @@ class CadenceMode(ChordModeBase):
                 play_mode = getattr(self, "play_progression_before_start", "NONE")
                 if play_mode != 'PLAY_ONLY':
                     self.console.print(f"[bold yellow]{progression_str}[/bold yellow]")
-
-                self.display_degrees_table(self.current_tonalite, self.gammes_filtrees)
+                    self.display_degrees_table(self.current_tonalite, self.gammes_filtrees)
 
             result = self.run_progression(
                 progression_accords=self.current_progression,
