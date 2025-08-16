@@ -167,3 +167,14 @@ def update_chord_error(chord_name: str) -> None:
 
     stats["chord_errors"][chord_name] = stats["chord_errors"].get(chord_name, 0) + 1
     save_stats(stats)
+
+
+def update_chord_success(chord_name: str) -> None:
+    """Diminue le compteur d'erreurs pour un accord spécifique après une réussite."""
+    stats = load_stats()
+    if "chord_errors" in stats and chord_name in stats["chord_errors"]:
+        stats["chord_errors"][chord_name] = max(0, stats["chord_errors"][chord_name] - 1)
+        # Optionnel : supprimer la clé si le score d'erreur est à 0
+        if stats["chord_errors"][chord_name] == 0:
+            del stats["chord_errors"][chord_name]
+        save_stats(stats)

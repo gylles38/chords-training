@@ -2,7 +2,7 @@
 import random
 import time
 from .chord_mode_base import ChordModeBase
-from stats_manager import update_chord_error
+from stats_manager import update_chord_error, update_chord_success
 from data.chords import three_note_chords, all_chords
 from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent
 from ui import get_colored_notes_string
@@ -107,6 +107,7 @@ class ReversedChordsMode(ChordModeBase):
                     self.console.print(f"Notes jouées : [{colored_notes}]")
 
                     if is_correct:
+                        update_chord_success(chord_name)
                         self.console.print(f"[bold green]Correct ! ({rec_name} - {rec_inv})[/bold green]\n")
                         if inversion_attempts == 1:
                             self.session_correct_count += 1
