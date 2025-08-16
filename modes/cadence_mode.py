@@ -66,6 +66,15 @@ class CadenceMode(ChordModeBase):
         while not self.exit_flag:
             # Select a weighted random cadence
             cadence_weights = [c['weight'] for c in valid_cadences]
+
+            # --- DEBUG DISPLAY ---
+            self.console.print("\n[bold dim]-- Debug: Top 5 Weighted Cadences --[/bold dim]")
+            weighted_cadences = sorted(valid_cadences, key=lambda x: x['weight'], reverse=True)
+            for c in weighted_cadences[:5]:
+                if c['weight'] > 1:
+                    self.console.print(f"[dim] - {c['tonalite']} {c['nom_cadence']}: {c['weight']}[/dim]")
+            # --- END DEBUG ---
+
             selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
 
             while (selected_cadence['tonalite'], selected_cadence['nom_cadence']) == last_cadence_info:

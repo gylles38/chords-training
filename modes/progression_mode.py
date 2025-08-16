@@ -53,6 +53,13 @@ class ProgressionMode(ChordModeBase):
             # Poids de base de 1 pour chaque accord, plus le nombre d'erreurs
             weights = [1 + chord_errors.get(chord, 0) for chord in all_chords]
 
+            # --- DEBUG DISPLAY ---
+            self.console.print("\n[bold dim]-- Debug: Top 5 Weighted Chords --[/bold dim]")
+            weighted_chords = sorted(zip(all_chords, weights), key=lambda x: x[1], reverse=True)
+            for chord, weight in weighted_chords[:5]:
+                self.console.print(f"[dim] - {chord}: {weight}[/dim]")
+            # --- END DEBUG ---
+
             progression_accords = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
 
             while progression_accords == last_progression:

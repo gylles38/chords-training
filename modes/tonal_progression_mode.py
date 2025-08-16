@@ -54,6 +54,15 @@ class TonalProgressionMode(ChordModeBase):
         last_prog_info = None
         while not self.exit_flag:
             prog_weights = [p['weight'] for p in valid_progressions]
+
+            # --- DEBUG DISPLAY ---
+            self.console.print("\n[bold dim]-- Debug: Top 5 Weighted Tonal Progressions --[/bold dim]")
+            weighted_progs = sorted(valid_progressions, key=lambda x: x['weight'], reverse=True)
+            for p in weighted_progs[:5]:
+                if p['weight'] > 1:
+                    self.console.print(f"[dim] - {p['tonalite']} {p['prog_name']}: {p['weight']}[/dim]")
+            # --- END DEBUG ---
+
             selected_prog = random.choices(valid_progressions, weights=prog_weights, k=1)[0]
 
             while (selected_prog['tonalite'], selected_prog['prog_name']) == last_prog_info:

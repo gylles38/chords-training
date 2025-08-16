@@ -39,6 +39,14 @@ class DegreesMode(ChordModeBase):
             tonalites = list(gammes_majeures.keys())
             weights = [1 + sum(chord_errors.get(chord, 0) for chord in gammes_majeures[t]) for t in tonalites]
 
+            # --- DEBUG DISPLAY ---
+            self.console.print("\n[bold dim]-- Debug: Top 5 Weighted Tonalites --[/bold dim]")
+            weighted_tonalites = sorted(zip(tonalites, weights), key=lambda x: x[1], reverse=True)
+            for t, w in weighted_tonalites[:5]:
+                if w > 1:
+                    self.console.print(f"[dim] - {t}: {w}[/dim]")
+            # --- END DEBUG ---
+
             tonalite = random.choices(tonalites, weights=weights, k=1)[0]
             while tonalite == last_tonalite:
                 tonalite = random.choices(tonalites, weights=weights, k=1)[0]
