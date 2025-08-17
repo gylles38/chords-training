@@ -100,6 +100,9 @@ class SingleNoteMode(ChordModeBase):
                             break
                     break
 
+                if attempt_note is None:
+                    continue
+
                 self.total_attempts += 1
 
                 # Comparaison des classes de hauteur (note % 12)
