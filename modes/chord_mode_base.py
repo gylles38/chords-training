@@ -234,7 +234,7 @@ class ChordModeBase:
             pre_display()
         else:
             # Ligne d'aide commune, affichée seulement si pas de pre_display
-            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
+            self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
             
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 

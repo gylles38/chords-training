@@ -211,9 +211,9 @@ class ChordTransitionsMode(ChordModeBase):
         header_title: str,
         header_name: str,
         border_style: str,
-        key_name: str,
         pre_display: Optional[Callable] = None,
         debug_info: Optional[str] = None,
+        key_name: str = "", # Add as optional parameter
     ) -> str:
         """
         Overrides the base class method to display cleaned-up chord names in the
@@ -224,9 +224,7 @@ class ChordTransitionsMode(ChordModeBase):
 
         self.clear_midi_buffer()
 
-        # Add the key name to the header
-        full_header_name = f"{header_name} (en {key_name})"
-        self.display_header(header_title, full_header_name, border_style)
+        self.display_header(header_title, header_name, border_style)
 
         if debug_info:
             self.console.print(debug_info)
@@ -243,6 +241,8 @@ class ChordTransitionsMode(ChordModeBase):
         # --- MODIFICATION START ---
         # Display the two-line progression summary
         if play_mode == 'SHOW_AND_PLAY' and progression_accords:
+            if key_name:
+                self.console.print(f"Tonalité : [bold cyan]{key_name}[/bold cyan]")
             voicings = [self.chord_set.get(name, set()) for name in progression_accords]
             root_pos_text, transitions_text = self._build_progression_summary_text(progression_accords, voicings)
             self.console.print(root_pos_text)
@@ -449,7 +449,7 @@ class ChordTransitionsMode(ChordModeBase):
                     header_title="Passage d'Accords",
                     header_name="Mode Passage d'Accords",
                     border_style="purple",
-                    key_name=key_name
+                    key_name=key_name,
                 )
 
                 self.chord_set = original_chord_set
