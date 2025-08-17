@@ -1,7 +1,7 @@
 # Base class for chord modes
 import random
 import time
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Literal
 
 from rich.console import Console
 from rich.text import Text
@@ -67,7 +67,7 @@ class ChordModeBase:
         # Appelle la méthode des classes filles pour gérer leurs entrées spécifiques
         return self._handle_custom_input(char)
 
-    def _handle_repeat(self):
+    def _handle_repeat(self) -> Literal['repeat', False]:
         """Méthode par défaut pour la répétition - peut être redéfinie par les classes filles"""
         return 'repeat'
     
@@ -391,6 +391,8 @@ class ChordModeBase:
         # ajouter la taille de la progression.
         self.session_total_count += len(progression_accords)
 
+        # Initialiser 'choice' avec une valeur par défaut
+        choice = 'continue'
 
         # Affichage et pause de fin optionnels (peuvent être supprimés par une classe fille)
         if not getattr(self, "suppress_progression_summary", False):

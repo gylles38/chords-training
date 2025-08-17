@@ -1,6 +1,7 @@
 # modes/listen_and_reveal_mode.py
 import time
 import random
+from typing import Literal
 from rich.prompt import Prompt
 
 from .chord_mode_base import ChordModeBase
@@ -16,7 +17,7 @@ class ListenAndRevealMode(ChordModeBase):
         super().__init__(inport, outport, chord_set)
         self.last_chord_name = None
 
-    def _handle_repeat(self):
+    def _handle_repeat(self) -> Literal['repeat', False]:
         """Redéfinition pour rejouer l'accord en cours dans ce mode"""
         if hasattr(self, "current_chord_notes") and self.current_chord_notes is not None:
             play_chord(self.outport, self.current_chord_notes)
