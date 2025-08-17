@@ -141,8 +141,9 @@ class SingleNoteMode(ChordModeBase):
                 self.console.print("Écoutez la note jouée et essayez de la reproduire.")
                 self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter la note, 'n' pour passer à la suivante.")
 
-        # Utiliser la méthode de la classe de base pour des stats cohérentes
-        self.show_overall_stats_and_wait(extra_stats_callback=self._display_top_note_errors)
+        # Afficher les stats spécifiques à ce mode, puis les stats générales
+        self._display_top_note_errors()
+        self.show_overall_stats_and_wait()
 
 
 def single_note_mode(inport, outport):
