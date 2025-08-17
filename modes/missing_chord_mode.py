@@ -132,7 +132,7 @@ class MissingChordMode(ChordModeBase):
         elif source_type == "Progression Diatonique":
             comment = "Voilà une progression d'accords très courante en musique tonale. L'enchaînement d'accords appartenant à la même gamme crée une sonorité cohérente et agréable."
 
-        return f"\n[italic bright_black]{comment}[/italic bright_black]" if comment else ""
+        return f"\n[italic]{comment}[/italic]" if comment else ""
 
 
     def _play_gapped_progression(self, progression_chords: List[str], chord_set: Dict, missing_index: int):
@@ -169,7 +169,7 @@ class MissingChordMode(ChordModeBase):
         pause_duration = 0.5
 
         display_prog = [f"({i+1}) {name.split(' #')[0]}" for i, name in enumerate(progression_chords)]
-        self.console.print(" -> ".join(display_prog))
+        self.console.print(f"[bold yellow]{' -> '.join(display_prog)}[/bold yellow]")
 
         for chord_name in progression_chords:
             notes = chord_set.get(chord_name)
