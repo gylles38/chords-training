@@ -178,3 +178,29 @@ def update_chord_success(chord_name: str) -> None:
         if stats["chord_errors"][chord_name] == 0:
             del stats["chord_errors"][chord_name]
         save_stats(stats)
+
+
+def get_note_errors() -> Dict[str, int]:
+    """Charge les statistiques d'erreurs par note."""
+    stats = load_stats()
+    return stats.get("note_errors", {})
+
+
+def update_note_error(note_name: str) -> None:
+    """Met à jour le compteur d'erreurs pour une note spécifique."""
+    stats = load_stats()
+    if "note_errors" not in stats:
+        stats["note_errors"] = {}
+
+    stats["note_errors"][note_name] = stats["note_errors"].get(note_name, 0) + 1
+    save_stats(stats)
+
+
+def update_note_success(note_name: str) -> None:
+    """Diminue le compteur d'erreurs pour une note spécifique après une réussite."""
+    stats = load_stats()
+    if "note_errors" in stats and note_name in stats["note_errors"]:
+        stats["note_errors"][note_name] = max(0, stats["note_errors"][note_name] - 1)
+        if stats["note_errors"][note_name] == 0:
+            del stats["note_errors"][note_name]
+        save_stats(stats)
