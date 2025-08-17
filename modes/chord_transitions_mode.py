@@ -41,6 +41,10 @@ class ChordTransitionsMode(ChordModeBase):
     def __init__(self, inport, outport, chord_set):
         super().__init__(inport, outport, chord_set)
         self.progression_length = (2, 4)
+        # Declare attributes for type checker
+        self.use_timer: bool = False
+        self.timer_duration: float = 30.0
+        self.play_progression_before_start: str = 'SHOW_AND_PLAY'
 
     def _get_inversions(self, notes):
         """Generates all inversions for a set of notes."""
@@ -264,8 +268,9 @@ class ChordTransitionsMode(ChordModeBase):
         progression_correct_count = 0
         progression_total_attempts = 0
         is_progression_started = False
-        start_time = None
+        start_time: Optional[float] = None
         skip_progression = False
+        choice = 'continue' # Default value
 
         with Live(console=self.console, screen=False, auto_refresh=False) as live:
             prog_index = 0
@@ -275,7 +280,7 @@ class ChordTransitionsMode(ChordModeBase):
                 chord_attempts = 0
 
                 time_info = ""
-                if getattr(self, "use_timer", False) and is_progression_started:
+                if getattr(self, "use_timer", False) and is_progression_started and start_time is not None:
                     remaining_time = self.timer_duration - (time.time() - start_time)
                     time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
 
@@ -287,7 +292,7 @@ class ChordTransitionsMode(ChordModeBase):
                 enable_raw_mode()
                 try:
                     while not self.exit_flag and not skip_progression:
-                        if getattr(self, "use_timer", False) and is_progression_started:
+                        if getattr(self, "use_timer", False) and is_progression_started and start_time is not None:
                             remaining_time = self.timer_duration - (time.time() - start_time)
                             time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
                             disable_raw_mode()
@@ -382,7 +387,7 @@ class ChordTransitionsMode(ChordModeBase):
             if progression_total_attempts > 0:
                 accuracy = (progression_correct_count / progression_total_attempts) * 100
                 self.console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
-            if is_progression_started:
+            if is_progression_started and start_time is not None:
                 end_time = time.time()
                 progression_elapsed = end_time - start_time
                 if getattr(self, "use_timer", False):
