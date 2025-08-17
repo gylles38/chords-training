@@ -42,8 +42,7 @@ class MissingChordMode(ChordModeBase):
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = use_transitions
 
-    # --- Progression Generation Methods ---
-
+    # --- Progression Generation Methods (unchanged) ---
     def _gen_from_all_degrees(self) -> Tuple[List[str], str, str]:
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         prog = [g for g in gammes if g in self.chord_set]
@@ -104,6 +103,7 @@ class MissingChordMode(ChordModeBase):
         result = generation_methods[source_name]()
         return result
 
+
     # --- Gameplay Methods ---
 
     def _play_gapped_progression(self, progression_chords: List[str], chord_set: Dict, missing_index: int):
@@ -144,6 +144,9 @@ class MissingChordMode(ChordModeBase):
                 if char:
                     if char.lower() == 'r':
                         disable_raw_mode()
+                        # Clear screen and replay
+                        clear_screen()
+                        self.display_header("Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan")
                         self._play_gapped_progression(prog_to_play, chord_set_to_use, missing_index)
                         self.console.print("Quel était l'accord manquant ?")
                         enable_raw_mode()
@@ -208,14 +211,14 @@ class MissingChordMode(ChordModeBase):
             self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('n' pour passer, 'q' pour quitter)")
 
             wrong_attempts = 0
+            last_incorrect_chord = None
             while not self.exit_flag:
                 attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, missing_index)
 
                 if action in ['next', 'quit']:
                     if action == 'next':
-                        # Break inner loop to go to the next puzzle in the outer loop
                         break
-                    else: # quit
+                    else:
                         self.exit_flag = True
                         break
 
@@ -228,16 +231,21 @@ class MissingChordMode(ChordModeBase):
                     else:
                         wrong_attempts += 1
                         update_chord_error(missing_chord_name.split(" #")[0])
-                        played_chord_str = f"{recognized_name}" if recognized_name else "ce que vous avez joué"
-                        self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {played_chord_str}. Réessayez !")
 
-                        if wrong_attempts == 5:
+                        if recognized_name and recognized_name == last_incorrect_chord:
+                            self.console.print("[bold red]Vous avez joué le même accord. Réessayez ![/bold red]")
+                        else:
+                            played_chord_str = f"{recognized_name}" if recognized_name else "ce que vous avez joué"
+                            self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {played_chord_str}. Réessayez !")
+
+                        last_incorrect_chord = recognized_name
+
+                        # DEBUG: Reveal after 3 attempts
+                        if wrong_attempts == 3:
                             base_chord_name = missing_chord_name.split(" #")[0]
-                            root_note_midi = min(all_chords[base_chord_name])
-                            root_note_name = get_note_name(root_note_midi)
-                            self.console.print(f"[bold yellow]Indice :[/bold yellow] La note fondamentale de l'accord est [bold cyan]{root_note_name}[/bold cyan].")
+                            self.console.print(f"[bold yellow]Indice (Debug) :[/bold yellow] L'accord était [bold cyan]{base_chord_name}[/bold cyan].")
+                            play_chord(self.outport, missing_chord_notes, duration=1.5)
 
-            # After puzzle is solved or skipped
             if not self.exit_flag:
                 self.console.print("\nAppuyez sur 'n' pour la suite, 'q' pour quitter...")
                 enable_raw_mode()
