@@ -76,6 +76,18 @@ class SingleNoteMode(ChordModeBase):
             disable_raw_mode()
         return None, None
 
+    def _display_top_note_errors(self):
+        """Affiche les 3 notes avec le plus d'erreurs."""
+        note_errors = get_note_errors()
+        if not note_errors:
+            return
+
+        sorted_errors = sorted(note_errors.items(), key=lambda item: item[1], reverse=True)
+
+        self.console.print("\n[bold]Notes à travailler :[/bold]")
+        for note, count in sorted_errors[:3]:
+            self.console.print(f"- [bold cyan]{note}[/bold cyan]: {count} erreur{'s' if count > 1 else ''}")
+
     def run(self):
         self.display_header("Écoute et Devine la note", "Mode Note Unique", "bright_blue")
         self.console.print("Écoutez la note jouée et essayez de la reproduire.")
@@ -130,7 +142,7 @@ class SingleNoteMode(ChordModeBase):
                 self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter la note, 'n' pour passer à la suivante.")
 
         # Utiliser la méthode de la classe de base pour des stats cohérentes
-        self.show_overall_stats_and_wait()
+        self.show_overall_stats_and_wait(extra_stats_callback=self._display_top_note_errors)
 
 
 def single_note_mode(inport, outport):
