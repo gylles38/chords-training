@@ -91,7 +91,7 @@ class SingleNoteMode(ChordModeBase):
     def run(self):
         self.display_header("Écoute et Devine la note", "Mode Note Unique", "bright_blue")
         self.console.print("Écoutez la note jouée et essayez de la reproduire.")
-        self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
+        self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter la note, 'n' pour passer à la suivante.")
 
         while not self.exit_flag:
             self.clear_midi_buffer()
@@ -141,9 +141,8 @@ class SingleNoteMode(ChordModeBase):
                 self.console.print("Écoutez la note jouée et essayez de la reproduire.")
                 self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter la note, 'n' pour passer à la suivante.")
 
-        # Afficher les stats spécifiques à ce mode, puis les stats générales
-        self._display_top_note_errors()
-        self.show_overall_stats_and_wait()
+        # Utiliser la méthode de la classe de base pour des stats cohérentes
+        self.show_overall_stats_and_wait(extra_stats_callback=self._display_top_note_errors)
 
 
 def single_note_mode(inport, outport):

@@ -182,7 +182,7 @@ class ChordModeBase:
             self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
             return False, None, None
         
-    def show_overall_stats_and_wait(self):
+    def show_overall_stats_and_wait(self, extra_stats_callback: Optional[Callable] = None):
         """Affiche les stats globales de la session et attend une touche."""
         self.console.print("\nAffichage des statistiques.")
 
@@ -225,6 +225,9 @@ class ChordModeBase:
                         self.console.print(f"[bold bright_green]Nouveau record de temps ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")
                     else:
                         self.console.print(f"[bold bright_green]Premier record de temps ![/bold bright_green] {new_time:.2f}s.")
+
+        if extra_stats_callback:
+            extra_stats_callback()
 
         self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
         self.clear_midi_buffer()
