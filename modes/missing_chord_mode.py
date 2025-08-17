@@ -253,9 +253,15 @@ class MissingChordMode(ChordModeBase):
 
             self.session_total_count += 1
 
+            # --- Progression Generation Loop ---
             prog_data = None
-            while not prog_data or not prog_data[0] or len(prog_data[0]) < 3:
+            while True:
                 prog_data = self._get_random_progression()
+                if prog_data and prog_data[0] and len(prog_data[0]) >= 3:
+                    # We have a valid progression, break the generation loop
+                    break
+                # Optional: Add a small sleep to prevent a tight loop if generation consistently fails
+                time.sleep(0.01)
 
             progression, source_type, source_detail = prog_data
 
