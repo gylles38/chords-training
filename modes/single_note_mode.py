@@ -8,7 +8,7 @@ from .chord_mode_base import ChordModeBase
 from midi_handler import play_chord
 from screen_handler import clear_screen
 from music_theory import get_note_name
-from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
+from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode, wait_for_any_key
 
 class SingleNoteMode(ChordModeBase):
     def __init__(self, inport, outport, chord_set=None):
@@ -119,7 +119,7 @@ class SingleNoteMode(ChordModeBase):
                     played_note_name = get_note_name(attempt_note)
                     self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué un {played_note_name}.")
 
-                    if incorrect_attempts >= 5:
+                    if incorrect_attempts == 5:
                         correct_note_name = get_note_name(self.current_note)
                         hint = ""
                         if "#" in correct_note_name or "b" in correct_note_name:
@@ -127,9 +127,6 @@ class SingleNoteMode(ChordModeBase):
                         else:
                             hint = "C'est une note naturelle (sans dièse ni bémol)."
                         self.console.print(f"Indice : {hint}")
-                        self.console.print(f"[bold magenta]La réponse était : {correct_note_name}[/bold magenta]")
-                        time.sleep(2)
-                        break
 
             # Réinitialisation pour le prochain tour
             self.current_note = None
