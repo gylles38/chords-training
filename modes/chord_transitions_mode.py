@@ -211,6 +211,7 @@ class ChordTransitionsMode(ChordModeBase):
         header_title: str,
         header_name: str,
         border_style: str,
+        key_name: str,
         pre_display: Optional[Callable] = None,
         debug_info: Optional[str] = None,
     ) -> str:
@@ -222,7 +223,10 @@ class ChordTransitionsMode(ChordModeBase):
             return 'exit'
 
         self.clear_midi_buffer()
-        self.display_header(header_title, header_name, border_style)
+
+        # Add the key name to the header
+        full_header_name = f"{header_name} (en {key_name})"
+        self.display_header(header_title, full_header_name, border_style)
 
         if debug_info:
             self.console.print(debug_info)
@@ -414,7 +418,7 @@ class ChordTransitionsMode(ChordModeBase):
         # 4. Ensure the generated chords exist in the current chord set
         progression_names = [name for name in progression_names if name in chord_set]
 
-        return progression_names
+        return progression_names, random_key
 
     def run(self):
         """Main loop for the chord transitions mode."""
@@ -422,7 +426,7 @@ class ChordTransitionsMode(ChordModeBase):
 
         while not self.exit_flag:
             # Generate a new progression for the outer loop
-            progression_names = self._generate_progression(original_chord_set)
+            progression_names, key_name = self._generate_progression(original_chord_set)
 
             if len(progression_names) < 2:
                 continue
@@ -445,6 +449,7 @@ class ChordTransitionsMode(ChordModeBase):
                     header_title="Passage d'Accords",
                     header_name="Mode Passage d'Accords",
                     border_style="purple",
+                    key_name=key_name
                 )
 
                 self.chord_set = original_chord_set
