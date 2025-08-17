@@ -291,7 +291,10 @@ class MissingChordMode(ChordModeBase):
                     if is_correct:
                         update_chord_success(missing_chord_name.split(" #")[0])
 
-                        success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{missing_chord_name.split(' #')[0]}[/bold yellow]."
+                        # Use the recognized name for consistent feedback
+                        display_name = recognized_name if recognized_name else missing_chord_name.split(' #')[0]
+
+                        success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{display_name}[/bold yellow]."
 
                         if not self.use_voice_leading and attempt_notes != missing_chord_notes:
                             target_notes_str = ", ".join(sorted([get_note_name_with_octave(n) for n in missing_chord_notes]))
@@ -301,9 +304,12 @@ class MissingChordMode(ChordModeBase):
 
                         self.console.print(success_message)
 
-                        user_chord_name = f"{recognized_name} #user"
-                        chord_set_to_use[user_chord_name] = attempt_notes
-                        prog_to_play_with_answer[missing_index] = user_chord_name
+                        # Update the display name for the final playthrough for consistency
+                        prog_to_play_with_answer[missing_index] = display_name
+
+                        # Also update the chord set for playback if the user played a different octave
+                        # The key for playback should be the one in the list.
+                        chord_set_to_use[display_name] = attempt_notes
 
                         self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
 
