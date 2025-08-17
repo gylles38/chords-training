@@ -146,7 +146,7 @@ class ChordTransitionsMode(ChordModeBase):
 
         return is_correct, recognized_name, recognized_inversion
 
-    def wait_for_end_choice(self):
+    def wait_for_end_choice(self) -> str:
         """Overrides base method to add a 'replay' option."""
         self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour rejouer, 'q' pour quitter, ou une autre touche pour continuer...")
         enable_raw_mode()
