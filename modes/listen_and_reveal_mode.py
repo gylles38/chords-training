@@ -86,11 +86,11 @@ class ListenAndRevealMode(ChordModeBase):
 
                         if incorrect_attempts >= 3:
                             tonic_name = get_note_name(sorted(list(self.current_chord_notes))[0])
-                            feedback_text.append(f"\nIndice : La tonique est [bold cyan]{tonic_name}[/bold cyan].")
+                            feedback_text.append(Text.from_markup(f"\nIndice : La tonique est [bold cyan]{tonic_name}[/bold cyan]."))
 
                         if incorrect_attempts >= 7:
                             revealed_type = get_chord_type_from_name(self.current_chord_name)
-                            feedback_text.append(f"\n[bold magenta]La réponse était : {self.current_chord_name}[/bold magenta]")
+                            feedback_text.append(Text.from_markup(f"\n[bold magenta]La réponse était : {self.current_chord_name}[/bold magenta]"))
                             live.update(Panel(feedback_text, title="Réponse", border_style="magenta"), refresh=True)
                             time.sleep(2.5)
                             break
