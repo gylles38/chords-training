@@ -142,14 +142,21 @@ class MissingChordMode(ChordModeBase):
         chord_duration = 0.8
         pause_duration = 0.5
 
-        display_prog = []
+        display_parts = []
         for i, chord_name in enumerate(progression_chords):
-            if i == missing_index:
-                display_prog.append(f"({i+1}) [bold yellow]... ? ...[/bold yellow]")
-            else:
-                display_prog.append(f"({i+1}) {chord_name.split(' #')[0]}")
+            text = Text()
+            text.append("(")
+            text.append(str(i + 1), style="blue")
+            text.append(") ")
 
-        self.console.print(" -> ".join(display_prog))
+            if i == missing_index:
+                text.append("... ? ...", style="bold yellow")
+            else:
+                text.append(chord_name.split(' #')[0])
+            display_parts.append(text)
+
+        full_display_text = Text(" -> ").join(display_parts)
+        self.console.print(full_display_text)
 
         for i, chord_name in enumerate(progression_chords):
             if i == missing_index:
@@ -161,15 +168,29 @@ class MissingChordMode(ChordModeBase):
                     time.sleep(pause_duration)
         self.console.print()
 
-    def _play_full_progression(self, progression_chords: List[str], chord_set: Dict):
+    def _play_full_progression(self, progression_chords: List[str], chord_set: Dict, missing_index: int):
         self.console.print("\nVoici la progression complète :")
         time.sleep(1)
 
         chord_duration = 0.8
         pause_duration = 0.5
 
-        display_prog = [f"({i+1}) {name.split(' #')[0]}" for i, name in enumerate(progression_chords)]
-        self.console.print(f"[bold yellow]{' -> '.join(display_prog)}[/bold yellow]")
+        display_parts = []
+        for i, name in enumerate(progression_chords):
+            text = Text()
+            text.append("(")
+            text.append(str(i + 1), style="blue")
+            text.append(") ")
+
+            chord_name_part = name.split(' #')[0]
+            if i == missing_index:
+                text.append(chord_name_part, style="bold yellow")
+            else:
+                text.append(chord_name_part)
+            display_parts.append(text)
+
+        full_display_text = Text(" -> ").join(display_parts)
+        self.console.print(full_display_text)
 
         for chord_name in progression_chords:
             notes = chord_set.get(chord_name)
@@ -284,7 +305,7 @@ class MissingChordMode(ChordModeBase):
                         chord_set_to_use[user_chord_name] = attempt_notes
                         prog_to_play_with_answer[missing_index] = user_chord_name
 
-                        self._play_full_progression(prog_to_play_with_answer, chord_set_to_use)
+                        self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
 
                         commentary = self._get_progression_commentary(source_type, source_detail)
                         if commentary:
