@@ -8,13 +8,34 @@ from rich.live import Live
 from rich.text import Text
 
 from .chord_mode_base import ChordModeBase
-from data.chords import three_note_chords
+from data.chords import three_note_chords, gammes_majeures
 from music_theory import get_note_name, recognize_chord, get_inversion_name, get_note_name_with_octave
 from midi_handler import play_progression_sequence
 from ui import get_colored_notes_string
-from stats_manager import update_chord_error, update_chord_success
+from stats_manager import update_chord_error, update_chord_success, get_chord_errors
 from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
 from screen_handler import clear_screen
+
+def weighted_sample_without_replacement(population, weights, k=1):
+    """
+    Performs weighted sampling without replacement.
+    """
+    population = list(population)
+    weights = list(weights)
+
+    if len(population) < k:
+        return random.sample(population, k)
+
+    result = []
+    for _ in range(k):
+        if not population:
+            break
+        chosen_element = random.choices(population, weights=weights, k=1)[0]
+        chosen_index = population.index(chosen_element)
+        population.pop(chosen_index)
+        weights.pop(chosen_index)
+        result.append(chosen_element)
+    return result
 
 class ChordTransitionsMode(ChordModeBase):
     def __init__(self, inport, outport, chord_set):
@@ -354,14 +375,34 @@ class ChordTransitionsMode(ChordModeBase):
                 clear_screen()
         return 'done'
 
+    def _generate_progression(self, chord_set):
+        """Generates a musically coherent, weighted random progression."""
+        # 1. Pick a random key and its diatonic chords
+        random_key = random.choice(list(gammes_majeures.keys()))
+        diatonic_chords = gammes_majeures[random_key]
+
+        # 2. Get user stats and calculate weights for these chords
+        chord_errors = get_chord_errors()
+        weights = [1 + (chord_errors.get(chord, 0) ** 2) for chord in diatonic_chords]
+
+        # 3. Generate a weighted random progression from the diatonic chords
+        prog_len = random.randint(self.progression_length[0], self.progression_length[1])
+        progression_names = weighted_sample_without_replacement(diatonic_chords, weights, k=prog_len)
+
+        # 4. Ensure the generated chords exist in the current chord set
+        progression_names = [name for name in progression_names if name in chord_set]
+
+        return progression_names
+
     def run(self):
         """Main loop for the chord transitions mode."""
-        # Store original chord_set and restore it later
         original_chord_set = self.chord_set
 
         while not self.exit_flag:
-            prog_len = random.randint(self.progression_length[0], self.progression_length[1])
-            progression_names = random.sample(list(original_chord_set.keys()), prog_len)
+            progression_names = self._generate_progression(original_chord_set)
+
+            if len(progression_names) < 2:
+                continue # Skip if not enough valid chords were generated
 
             voicings = self._calculate_best_voicings(progression_names)
 
