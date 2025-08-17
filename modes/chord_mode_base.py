@@ -86,8 +86,8 @@ class ChordModeBase:
             content += f"\n{time_info}"
         return Panel(content, title="Progression en cours", border_style="green")
     
-    def wait_for_end_choice(self):
-        """Attend une saisie instantanée pour continuer ou quitter"""
+    def wait_for_end_choice(self) -> str:
+        """Attend une saisie instantanée pour continuer ou quitter."""
         self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur une touche pour continuer ou 'q' pour quitter...")
         enable_raw_mode()
         try:
@@ -96,10 +96,12 @@ class ChordModeBase:
                 if char:
                     if char.lower() == 'q':
                         self.exit_flag = True
-                    return  # N'importe quelle autre touche continue
+                        return 'quit'
+                    return 'continue'
                 time.sleep(0.01)
         finally:
             disable_raw_mode()
+        return 'continue'
     
     def collect_notes(self):
         notes_currently_on = set()
@@ -234,7 +236,7 @@ class ChordModeBase:
             pre_display()
         else:
             # Ligne d'aide commune, affichée seulement si pas de pre_display
-            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
+            self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
             
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
@@ -416,11 +418,11 @@ class ChordModeBase:
                     self.console.print(f"\nTemps pour la progression : [bold cyan]{progression_elapsed:.2f} secondes[/bold cyan]")
 
             # Pause fin progression
-            self.wait_for_end_choice()
+            choice = self.wait_for_end_choice()
             if not self.exit_flag:
                 clear_screen()
 
-        return 'done'
+        return choice
 
     def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, specific = False):
         colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
