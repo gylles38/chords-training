@@ -1,7 +1,7 @@
 # Base class for chord modes
 import random
 import time
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Literal
 
 from rich.console import Console
 from rich.text import Text
@@ -67,7 +67,7 @@ class ChordModeBase:
         # Appelle la méthode des classes filles pour gérer leurs entrées spécifiques
         return self._handle_custom_input(char)
 
-    def _handle_repeat(self):
+    def _handle_repeat(self) -> Literal['repeat', False]:
         """Méthode par défaut pour la répétition - peut être redéfinie par les classes filles"""
         return 'repeat'
     

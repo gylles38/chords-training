@@ -1,6 +1,7 @@
 # modes/single_note_mode.py
 import time
 import random
+from typing import Literal
 from rich.prompt import Prompt
 
 from .chord_mode_base import ChordModeBase
@@ -16,7 +17,7 @@ class SingleNoteMode(ChordModeBase):
         self.current_note = None
         self.last_note = None
 
-    def _handle_repeat(self):
+    def _handle_repeat(self) -> Literal['repeat', False]:
         """Redéfinition pour rejouer la note en cours dans ce mode"""
         if self.current_note is not None:
             play_chord(self.outport, [self.current_note])
