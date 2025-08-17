@@ -40,6 +40,7 @@ from modes.chord_explorer_mode import chord_explorer_mode
 from modes.reverse_chord_mode import reverse_chord_mode
 from modes.tonal_progression_mode import tonal_progression_mode
 from modes.reversed_chords_mode import reversed_chords_mode
+from modes.chord_transitions_mode import chord_transitions_mode
 
 #TODO : voir si supprimable une fois tout refactorisé
 console = Console()
@@ -217,8 +218,9 @@ def main():
                 menu_options.append("[10] Reconnaissance Libre\n", style="bold green4")
                 menu_options.append("[11] Progression Tonale\n", style="bold bright_magenta")
                 menu_options.append("[12] Renversements d'accords (aléatoires)\n", style="bold blue_violet")
+                menu_options.append("[13] Passage d'accords\n", style="bold purple")
                 menu_options.append("--- Configuration ---\n", style="dim")
-                menu_options.append("[13] Options\n", style="bold white")
+                menu_options.append("[14] Options\n", style="bold white")
                 menu_options.append("[q] Quitter", style="bold white")
                 menu_panel = Panel(
                     menu_options,
@@ -228,7 +230,7 @@ def main():
                 console.print(menu_panel)
 
                 # MODIFIÉ: Mise à jour des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', 'q'], show_choices=False, console=console)
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', 'q'], show_choices=False, console=console)
 
                 if mode_choice == '1':
                     chord_explorer_mode(outport)
@@ -255,6 +257,8 @@ def main():
                 elif mode_choice == '12':
                     reversed_chords_mode(inport, outport, current_chord_set)
                 elif mode_choice == '13':
+                    chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                elif mode_choice == '14':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
                 elif mode_choice == 'q':
                     console.print("Arrêt du programme.", style="bold red")

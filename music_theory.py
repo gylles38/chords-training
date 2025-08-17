@@ -1,5 +1,12 @@
 # music_theory.py
 
+def get_note_name_with_octave(midi_note):
+    """Convertit un numéro de note MIDI en son nom avec l'octave."""
+    notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
+    octave = (midi_note // 12) - 1
+    note_name = notes[midi_note % 12]
+    return f"{note_name}{octave}"
+
 def get_note_name(midi_note):
     """Convertit un numéro de note MIDI en son nom."""
     notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
@@ -89,3 +96,36 @@ def get_chord_type_from_name(chord_name):
         if c_type in chord_name:
             return c_type
     return "Inconnu" # Fallback pour les types non listés
+
+def get_inversion_name(chord_name, chord_notes):
+    """
+    Détermine le nom du renversement pour un accord donné et un ensemble de notes.
+    """
+    from data.chords import all_chords
+    if chord_name not in all_chords or not chord_notes:
+        return ""
+
+    ref_notes = all_chords[chord_name]
+    ref_pitch_classes = {n % 12 for n in ref_notes}
+
+    # Trouver la classe de hauteur de la fondamentale
+    root_pc = min(ref_notes) % 12
+
+    # Créer une liste ordonnée des classes de hauteur de l'accord
+    sorted_ref_pcs = sorted(list(ref_pitch_classes))
+    root_index_in_sorted = sorted_ref_pcs.index(root_pc)
+    ordered_chord_pcs = sorted_ref_pcs[root_index_in_sorted:] + sorted_ref_pcs[:root_index_in_sorted]
+
+    # Trouver la note la plus basse du renversement joué
+    lowest_note_pc = min(chord_notes) % 12
+
+    try:
+        inversion_index = ordered_chord_pcs.index(lowest_note_pc)
+    except ValueError:
+        return "" # La note basse ne correspond pas à l'accord
+
+    inversion_labels = ["position fondamentale", "1er renversement", "2ème renversement", "3ème renversement", "4ème renversement"]
+    if 0 <= inversion_index < len(inversion_labels):
+        return inversion_labels[inversion_index]
+    else:
+        return f"{inversion_index + 1}ème renversement"
