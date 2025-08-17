@@ -1,7 +1,7 @@
 # modes/chord_transitions_mode.py
 import random
 import time
-from typing import List
+from typing import List, Tuple
 
 from .chord_mode_base import ChordModeBase
 from data.chords import three_note_chords, gammes_majeures
@@ -60,7 +60,7 @@ class ChordTransitionsMode(ChordModeBase):
             disable_raw_mode()
         return 'continue' # Default action
 
-    def _generate_progression(self) -> (List[str], str):
+    def _generate_progression(self) -> Tuple[List[str], str]:
         """Generates a musically coherent, weighted random progression."""
         # 1. Pick a random key and its diatonic chords
         random_key = random.choice(list(gammes_majeures.keys()))
