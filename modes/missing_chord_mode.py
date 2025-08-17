@@ -42,8 +42,7 @@ class MissingChordMode(ChordModeBase):
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = use_transitions
 
-    # --- Progression Generation Methods ---
-
+    # --- Progression Generation Methods (unchanged) ---
     def _gen_from_all_degrees(self) -> Tuple[List[str], str, str]:
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         prog = [g for g in gammes if g in self.chord_set]
@@ -253,6 +252,8 @@ class MissingChordMode(ChordModeBase):
             )
             self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !")
 
+            self.session_total_count += 1
+
             progression, source_type, source_detail = None, "", ""
             while not progression or len(progression) < 3:
                 prog_data = self._get_random_progression()
@@ -287,13 +288,16 @@ class MissingChordMode(ChordModeBase):
                     else: self.exit_flag = True; break
 
                 if action == 'attempt':
+                    self.session_total_attempts += 1
                     is_correct, recognized_name, _ = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
+
                     if is_correct:
+                        if wrong_attempts == 0:
+                            self.session_correct_count += 1
+
                         update_chord_success(missing_chord_name.split(" #")[0])
 
-                        # Use the recognized name for consistent feedback
                         display_name = recognized_name if recognized_name else missing_chord_name.split(' #')[0]
-
                         success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{display_name}[/bold yellow]."
 
                         if not self.use_voice_leading and attempt_notes != missing_chord_notes:
@@ -304,11 +308,7 @@ class MissingChordMode(ChordModeBase):
 
                         self.console.print(success_message)
 
-                        # Update the display name for the final playthrough for consistency
                         prog_to_play_with_answer[missing_index] = display_name
-
-                        # Also update the chord set for playback if the user played a different octave
-                        # The key for playback should be the one in the list.
                         chord_set_to_use[display_name] = attempt_notes
 
                         self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
