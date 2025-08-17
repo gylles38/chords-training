@@ -26,6 +26,7 @@ class ChordModeBase:
         self.correct_count = 0
         self.total_attempts = 0
         self.exit_flag = False
+        self.use_voice_leading = False
 
         self.wait_for_input = wait_for_input
 
@@ -76,11 +77,28 @@ class ChordModeBase:
         return False
     
     def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
+        from music_theory import get_inversion_name # Local import
+        display_name = chord_name.split(" #")[0]
+
         play_mode = getattr(self, "play_progression_before_start", "NONE")
-        if play_mode == 'PLAY_ONLY':
-            content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
+
+        # In voice leading mode, we always show the notes and inversion.
+        if self.use_voice_leading:
+            target_notes = self.chord_set.get(chord_name, set())
+            inversion_text = get_inversion_name(display_name, target_notes)
+            note_names = [get_note_name(n) for n in sorted(list(target_notes))]
+            notes_display = ", ".join(note_names)
+            inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
+            content = (
+                f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}{inversion_display}[/bold yellow]\n"
+                f"Notes attendues : [cyan]{notes_display}[/cyan]"
+            )
+        # For other modes, we keep the original behavior
         else:
-            content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{chord_name}[/bold yellow]"
+            if play_mode == 'PLAY_ONLY':
+                content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
+            else:
+                content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]"
 
         if time_info:
             content += f"\n{time_info}"
@@ -146,6 +164,14 @@ class ChordModeBase:
         if not attempt_notes:
             return False, None, None
 
+        # If voice leading is used, we need an exact note match.
+        if getattr(self, 'use_voice_leading', False):
+            is_correct = (attempt_notes == chord_notes)
+            # We can still use recognize_chord to provide helpful feedback
+            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+            return is_correct, recognized_name, recognized_inversion
+
+        # Original behavior: name-based recognition
         try:
             recognized_name, recognized_inversion = recognize_chord(attempt_notes)
             is_correct = (recognized_name and
@@ -204,6 +230,114 @@ class ChordModeBase:
         self.clear_midi_buffer()
         wait_for_any_key(self.inport)
 
+    # ---------- Méthodes pour le guidage vocal (transitions) ----------
+
+    def _get_inversions(self, notes):
+        """Generates all inversions for a set of notes."""
+        inversions = []
+        sorted_notes = sorted(list(notes))
+        for i in range(len(sorted_notes)):
+            inversion = set(sorted_notes[i:] + [n + 12 for n in sorted_notes[:i]])
+            inversions.append(inversion)
+        return inversions
+
+    def _calculate_voice_leading_cost(self, notes1, notes2):
+        """Calculates the voice leading cost between two chords."""
+        if not notes1 or not notes2 or len(notes1) != len(notes2):
+            return float('inf')
+
+        list1 = sorted(list(notes1))
+        list2 = sorted(list(notes2))
+
+        return sum(abs(n1 - n2) for n1, n2 in zip(list1, list2))
+
+    def _calculate_best_voicings(self, progression_names):
+        """
+        Calculates the best voicings for a progression to ensure smooth transitions.
+        """
+        if not progression_names:
+            return [], []
+
+        final_voicings = []
+        # Start with the root position of the first chord around middle C (60)
+        first_chord_notes = self.chord_set[progression_names[0]]
+        avg_midi = sum(first_chord_notes) / len(first_chord_notes)
+        octave_shift = round((60 - avg_midi) / 12) * 12
+        current_voicing = {note + octave_shift for note in first_chord_notes}
+        final_voicings.append(current_voicing)
+
+        for i in range(1, len(progression_names)):
+            previous_voicing = final_voicings[i-1]
+            next_chord_name = progression_names[i]
+            next_chord_notes_root = self.chord_set[next_chord_name]
+
+            # Generate all inversions of the next chord
+            inversions = self._get_inversions(next_chord_notes_root)
+
+            best_voicing = None
+            min_cost = float('inf')
+
+            # For each inversion, find the best octave to match the previous chord
+            for inv in inversions:
+                # Center the inversion around the previous chord's average MIDI value
+                avg_prev = sum(previous_voicing) / len(previous_voicing)
+                avg_inv = sum(inv) / len(inv)
+                octave_shift = round((avg_prev - avg_inv) / 12) * 12
+                shifted_inv = {note + octave_shift for note in inv}
+
+                cost = self._calculate_voice_leading_cost(previous_voicing, shifted_inv)
+
+                if cost <= min_cost:
+                    min_cost = cost
+                    best_voicing = shifted_inv
+
+            final_voicings.append(best_voicing)
+
+        return final_voicings
+
+    def _build_transition_summary_text(self, progression_accords, voicings, original_chord_set):
+        """Builds the two Text objects for the progression summary."""
+        from music_theory import get_note_name_with_octave # Local import
+
+        # Pad labels for alignment
+        label1 = "Progression à jouer : "
+        label2 = "Progression des transitions : "
+        max_len = max(len(label1), len(label2))
+
+        # Line 1: Root positions
+        root_pos_text = Text(label1.ljust(max_len), style="default")
+        for i, name in enumerate(progression_accords):
+            display_name = name.split(" #")[0]
+            # Use original_chord_set to get root position notes
+            root_notes = original_chord_set.get(display_name, set())
+            note_names = ", ".join([get_note_name_with_octave(n) for n in sorted(list(root_notes))])
+            root_pos_text.append(f"{display_name} ({note_names})", style="bold yellow")
+            if i < len(progression_accords) - 1:
+                root_pos_text.append(" -> ", style="default")
+
+        # Line 2: Transitions with highlighting
+        transitions_text = Text(label2.ljust(max_len), style="default")
+        for i, name in enumerate(progression_accords):
+            display_name = name.split(" #")[0]
+            current_notes = voicings[i]
+            common_notes = current_notes.intersection(voicings[i-1]) if i > 0 else set()
+
+            transitions_text.append(f"{display_name} (", style="bold yellow")
+            note_list = sorted(list(current_notes))
+            for j, note_val in enumerate(note_list):
+                note_name = get_note_name_with_octave(note_val)
+                style = "bold green" if note_val in common_notes else "cyan"
+                transitions_text.append(note_name, style=style)
+                if j < len(note_list) - 1:
+                    transitions_text.append(", ", style="default")
+            transitions_text.append(")", style="bold yellow")
+
+            if i < len(progression_accords) - 1:
+                transitions_text.append(" -> ", style="default")
+
+        return root_pos_text, transitions_text
+
+
     # ---------- Boucle commune pour les modes de progression ----------
     def run_progression(
         self,
@@ -213,65 +347,80 @@ class ChordModeBase:
         border_style: str,
         pre_display: Optional[Callable[[], None]] = None,
         debug_info: Optional[str] = None,
+        key_name: str = "",
     ) -> str:
-        """
-        Exécute une progression complète (boucle commune aux modes Cadence/Progression/Degrees).
-        Retourne : 'exit' | 'skipped' | 'done'
-        """
         if self.exit_flag:
             return 'exit'
 
         self.clear_midi_buffer()
         self.display_header(header_title, header_name, border_style)
 
-        # Affichage des informations de débogage si fournies
         if debug_info:
             self.console.print(debug_info)
 
-        # Réinitialiser last_played_notes au début de chaque progression
         self.last_played_notes = None
 
-        # Affichage optionnel spécifique (ex: tableau des degrés pour CadenceMode)
         if pre_display:
             pre_display()
         else:
-            # Ligne d'aide commune, affichée seulement si pas de pre_display
             self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
-            
+
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
-        # Affichage progression
-        if play_mode == 'SHOW_AND_PLAY' and progression_accords:
-            self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
-        elif play_mode == 'PLAY_ONLY' and progression_accords:
+        current_progression_chords = progression_accords
+        original_chord_set = self.chord_set
+        temp_chord_set = None
+        voicings = []
+
+        if self.use_voice_leading and progression_accords:
+            voicings = self._calculate_best_voicings(progression_accords)
+            temp_chord_set = {}
+            temp_progression_names = []
+            for i, (name, voicing) in enumerate(zip(progression_accords, voicings)):
+                unique_name = f"{name} #{i}"
+                temp_progression_names.append(unique_name)
+                temp_chord_set[unique_name] = voicing
+
+            current_progression_chords = temp_progression_names
+            self.chord_set = temp_chord_set
+
+            if play_mode == 'SHOW_AND_PLAY':
+                if key_name:
+                    self.console.print(f"Tonalité : [bold cyan]{key_name}[/bold cyan]")
+                root_pos_text, transitions_text = self._build_transition_summary_text(progression_accords, voicings, original_chord_set)
+                self.console.print(root_pos_text)
+                self.console.print(transitions_text)
+
+        elif play_mode == 'SHOW_AND_PLAY' and progression_accords:
+            display_names = [name.split(" #")[0] for name in progression_accords]
+            self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(display_names)}[/bold yellow]")
+
+        if play_mode == 'PLAY_ONLY' and progression_accords:
             self.console.print("\nÉcoutez la progression...")
 
-        # Lecture de la progression avant départ si demandé
-        if (play_mode == 'SHOW_AND_PLAY' or play_mode == 'PLAY_ONLY') and progression_accords:
-            play_progression_sequence(self.outport, progression_accords, self.chord_set)
+        if (play_mode == 'SHOW_AND_PLAY' or play_mode == 'PLAY_ONLY') and current_progression_chords:
+            play_progression_sequence(self.outport, current_progression_chords, self.chord_set)
 
-        # ----- Traitement de la progression -----
         progression_correct_count = 0
         progression_total_attempts = 0
         is_progression_started = False
         start_time = None
         skip_progression = False
+        choice = 'continue'
 
         with Live(console=self.console, screen=False, auto_refresh=False) as live:
             prog_index = 0
-            while prog_index < len(progression_accords) and not self.exit_flag and not skip_progression:
-                chord_name = progression_accords[prog_index]
+            while prog_index < len(current_progression_chords) and not self.exit_flag and not skip_progression:
+                chord_name = current_progression_chords[prog_index]
                 target_notes = self.chord_set[chord_name]
                 chord_attempts = 0
                 
-                # Correction du bug : On ne joue pas l'accord ici. On attend l'entrée utilisateur.
-                
                 time_info = ""
-                if getattr(self, "use_timer", False) and is_progression_started:
+                if getattr(self, "use_timer", False) and is_progression_started and start_time is not None:
                     remaining_time = self.timer_duration - (time.time() - start_time)
                     time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
 
-                live.update(self.create_live_display(chord_name, prog_index, len(progression_accords), time_info), refresh=True)
+                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info), refresh=True)
 
                 notes_currently_on = set()
                 attempt_notes = set()
@@ -279,15 +428,12 @@ class ChordModeBase:
                 enable_raw_mode()
                 try:
                     while not self.exit_flag and not skip_progression:
-                        # Gestion du timer (affichage + fin)
-                        if getattr(self, "use_timer", False) and is_progression_started:
+                        if getattr(self, "use_timer", False) and is_progression_started and start_time is not None:
                             remaining_time = self.timer_duration - (time.time() - start_time)
                             time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
-                            # On coupe le raw un instant pour rafraîchir correctement
                             disable_raw_mode()
-                            live.update(self.create_live_display(chord_name, prog_index, len(progression_accords), time_info), refresh=True)
+                            live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info), refresh=True)
                             enable_raw_mode()
-
                             if remaining_time <= 0:
                                 disable_raw_mode()
                                 live.update("[bold red]Temps écoulé ! Session terminée.[/bold red]", refresh=True)
@@ -296,39 +442,30 @@ class ChordModeBase:
                                 self.exit_flag = True
                                 break
 
-                        # Clavier
                         char = wait_for_input(timeout=0.01)
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'repeat':
-                                # vider le tampon clavier
-                                while wait_for_input(timeout=0.001):
-                                    pass
-                                # lecture progression
+                                while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
                                 live.update("[bold cyan]Lecture de la progression...[/bold cyan]", refresh=True)
-                                play_progression_sequence(self.outport, progression_accords, self.chord_set)
-
-                                # vider tampon puis repartir du début
+                                play_progression_sequence(self.outport, current_progression_chords, self.chord_set)
                                 enable_raw_mode()
-                                while wait_for_input(timeout=0.001):
-                                    pass
+                                while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
-
                                 prog_index = 0
-                                chord_name = progression_accords[prog_index]
+                                chord_name = current_progression_chords[prog_index]
                                 target_notes = self.chord_set[chord_name]
-                                live.update(self.create_live_display(chord_name, prog_index, len(progression_accords)), refresh=True)
+                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords)), refresh=True)
                                 enable_raw_mode()
-                                break  # on sort de la boucle interne pour relancer sur le 1er accord
-
+                                break
                             elif action == 'next':
                                 skip_progression = True
+                                choice = 'skipped'
                                 break
-                            elif action is True:  # 'q'
+                            elif action is True:
                                 break
 
-                        # MIDI
                         for msg in self.inport.iter_pending():
                             if msg.type == 'note_on' and msg.velocity > 0:
                                 notes_currently_on.add(msg.note)
@@ -336,20 +473,16 @@ class ChordModeBase:
                             elif msg.type == 'note_off':
                                 notes_currently_on.discard(msg.note)
 
-                        # Validation d'un essai
                         if not notes_currently_on and attempt_notes:
                             chord_attempts += 1
                             progression_total_attempts += 1
-
                             if not is_progression_started:
                                 is_progression_started = True
                                 start_time = time.time()
-
                             is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, chord_name, target_notes)
-
                             if is_correct:
-                                update_chord_success(chord_name)
-                                success_msg = f"[bold green]Correct ! {chord_name}[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
+                                update_chord_success(chord_name.split(" #")[0])
+                                success_msg = f"[bold green]Correct ! {chord_name.split(' #')[0]}[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)
                                 enable_raw_mode()
@@ -357,72 +490,61 @@ class ChordModeBase:
                                 if chord_attempts == 1:
                                     progression_correct_count += 1
                                 prog_index += 1
-                                # On met à jour l'accord précédent après une réponse correcte
                                 self.last_played_notes = attempt_notes
                                 break
                             else:
-                                update_chord_error(chord_name)
+                                update_chord_error(chord_name.split(" #")[0])
                                 error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name if recognized_name else 'Accord non reconnu'}\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)
                                 time.sleep(2)
-                                live.update(self.create_live_display(chord_name, prog_index, len(progression_accords)), refresh=True)
+                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords)), refresh=True)
                                 enable_raw_mode()
                                 attempt_notes.clear()
-
                         time.sleep(0.01)
                 finally:
                     disable_raw_mode()
-
             if self.exit_flag:
+                if temp_chord_set: self.chord_set = original_chord_set
                 return 'exit'
 
-        # ----- Après la boucle -----
         if skip_progression:
             self.console.print("\n[bold yellow]Passage à la progression suivante.[/bold yellow]")
             time.sleep(1)
+            if temp_chord_set: self.chord_set = original_chord_set
             return 'skipped'
 
-        # Progression terminée : mise à jour stats de session
         self.session_correct_count += progression_correct_count
         self.session_total_attempts += progression_total_attempts
-        # Correction du bug 7 accords: la boucle `while prog_index < len(progression_accords)`
-        # ne permet pas de boucler une fois de trop, donc on peut simplement
-        # ajouter la taille de la progression.
         self.session_total_count += len(progression_accords)
 
-        # Initialiser 'choice' avec une valeur par défaut
-        choice = 'continue'
-
-        # Affichage et pause de fin optionnels (peuvent être supprimés par une classe fille)
         if not getattr(self, "suppress_progression_summary", False):
             self.console.print(f"\n--- Statistiques de cette progression ---")
             self.console.print(f"Accords à jouer : [bold cyan]{len(progression_accords)}[/bold cyan]")
             self.console.print(f"Tentatives totales : [bold yellow]{progression_total_attempts}[/bold yellow]")
             self.console.print(f"Réussis du premier coup : [bold green]{progression_correct_count}[/bold green]")
-
             if progression_total_attempts > 0:
                 accuracy = (progression_correct_count / progression_total_attempts) * 100
                 self.console.print(f"Précision : [bold cyan]{accuracy:.1f}%[/bold cyan]")
-
-            if is_progression_started:
+            if is_progression_started and start_time is not None:
                 end_time = time.time()
                 progression_elapsed = end_time - start_time
                 if getattr(self, "use_timer", False):
                     self.elapsed_time = progression_elapsed
                     self.console.print(f"\nTemps pour la progression : [bold cyan]{self.elapsed_time:.2f} secondes[/bold cyan]")
-                    # Mettre à jour le meilleur temps restant de la session si minuteur actif
                     remaining_time = max(0.0, self.timer_duration - self.elapsed_time)
                     if getattr(self, "session_max_remaining_time", None) is None or remaining_time > self.session_max_remaining_time:
                         self.session_max_remaining_time = remaining_time
-                else:  # Stopwatch mode
+                else:
                     self.elapsed_time += progression_elapsed
                     self.console.print(f"\nTemps pour la progression : [bold cyan]{progression_elapsed:.2f} secondes[/bold cyan]")
 
-            # Pause fin progression
             choice = self.wait_for_end_choice()
             if not self.exit_flag:
                 clear_screen()
+
+        if temp_chord_set:
+            self.chord_set = original_chord_set
 
         return choice
 

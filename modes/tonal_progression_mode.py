@@ -5,12 +5,13 @@ from stats_manager import get_chord_errors
 from data.chords import gammes_majeures, tonal_progressions, DEGREE_MAP
 
 class TonalProgressionMode(ChordModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
+        self.use_voice_leading = use_transitions
 
     def display_tonal_info(self):
         """Affiche les informations tonales spécifiques."""
@@ -82,7 +83,8 @@ class TonalProgressionMode(ChordModeBase):
                 header_name="Mode Progression Tonale",
                 border_style="bright_magenta",
                 pre_display=self.display_tonal_info,
-                debug_info=debug_info
+                debug_info=debug_info,
+                key_name=self.current_tonalite
             )
 
             if result == 'exit':
@@ -91,6 +93,6 @@ class TonalProgressionMode(ChordModeBase):
         # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()
 
-def tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
-    mode = TonalProgressionMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set)
+def tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
+    mode = TonalProgressionMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions)
     mode.run()
