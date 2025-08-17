@@ -42,8 +42,9 @@ class MissingChordMode(ChordModeBase):
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = use_transitions
 
-    # --- Progression Generation Methods (unchanged) ---
-    def _gen_from_all_degrees(self) -> Tuple[List[str], str, str]:
+    # --- Progression Generation Methods ---
+
+    def _gen_from_all_degrees(self) -> Optional[Tuple[List[str], str, str]]:
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         prog = [g for g in gammes if g in self.chord_set]
         return prog, "Gamme Complète", tonalite
@@ -63,7 +64,7 @@ class MissingChordMode(ChordModeBase):
         prog, name, key = random.choice(valid_cadences)
         return prog, "Cadences", name
 
-    def _gen_from_pop_rock(self) -> Tuple[List[str], str, str]:
+    def _gen_from_pop_rock(self) -> Optional[Tuple[List[str], str, str]]:
         key, data = random.choice(list(pop_rock_progressions.items()))
         prog = data["progression"]
         return prog, "Pop/Rock", key
@@ -83,16 +84,17 @@ class MissingChordMode(ChordModeBase):
         prog, name, key = random.choice(valid_progs)
         return prog, "Progression Tonale", name
 
-    def _gen_from_transitions(self) -> Tuple[List[str], str, str]:
+    def _gen_from_transitions(self) -> Optional[Tuple[List[str], str, str]]:
         random_key = random.choice(list(gammes_majeures.keys()))
         diatonic_chords = [c for c in gammes_majeures[random_key] if c in self.chord_set]
         if not diatonic_chords:
-            return [], "Progression Diatonique", ""
+            return None
         prog_len = random.randint(3, 5)
         prog = random.choices(diatonic_chords, k=prog_len)
         return prog, "Progression Diatonique", random_key
 
     def _get_random_progression(self) -> Optional[Tuple[List[str], str, str]]:
+        """Selects a source and generates a progression. Returns (prog, source_type, source_detail)."""
         generation_methods = {
             "Gamme Complète": self._gen_from_all_degrees,
             "Cadences": self._gen_from_cadences,
@@ -100,12 +102,9 @@ class MissingChordMode(ChordModeBase):
             "Progression Tonale": self._gen_from_tonal,
             "Progression Diatonique": self._gen_from_transitions,
         }
-        source_name = random.choice(list(generation_methods.keys()))
-        result = generation_methods[source_name]()
-        if result:
-            prog, detail, key = result
-            return prog, source_name, detail
-        return None
+        source_type = random.choice(list(generation_methods.keys()))
+        result = generation_methods[source_type]()
+        return result
 
     # --- Gameplay Methods ---
 
@@ -254,11 +253,11 @@ class MissingChordMode(ChordModeBase):
 
             self.session_total_count += 1
 
-            progression, source_type, source_detail = None, "", ""
-            while not progression or len(progression) < 3:
+            prog_data = None
+            while not prog_data or not prog_data[0] or len(prog_data[0]) < 3:
                 prog_data = self._get_random_progression()
-                if prog_data:
-                    progression, source_type, source_detail = prog_data
+
+            progression, source_type, source_detail = prog_data
 
             voicings, prog_to_play, chord_set_to_use = [], progression, self.chord_set
             if self.use_voice_leading:
