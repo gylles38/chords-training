@@ -232,13 +232,15 @@ class MissingChordMode(ChordModeBase):
                         wrong_attempts += 1
                         update_chord_error(missing_chord_name.split(" #")[0])
 
-                        if recognized_name and recognized_name == last_incorrect_chord:
-                            self.console.print("[bold red]Vous avez joué le même accord. Réessayez ![/bold red]")
+                        if recognized_name:
+                            if recognized_name == last_incorrect_chord:
+                                self.console.print("[bold red]Vous avez joué le même accord incorrect. Réessayez ![/bold red]")
+                            else:
+                                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {recognized_name}. Réessayez !")
+                            last_incorrect_chord = recognized_name
                         else:
-                            played_chord_str = f"{recognized_name}" if recognized_name else "ce que vous avez joué"
-                            self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {played_chord_str}. Réessayez !")
-
-                        last_incorrect_chord = recognized_name
+                            self.console.print("[bold red]Incorrect.[/bold red] L'accord joué n'a pas été reconnu. Réessayez !")
+                            last_incorrect_chord = None
 
                         # DEBUG: Reveal after 3 attempts
                         if wrong_attempts == 3:
