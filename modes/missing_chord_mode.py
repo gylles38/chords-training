@@ -1,7 +1,7 @@
 # modes/missing_chord_mode.py
 import random
 import time
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any, Set
 
 from rich.panel import Panel
 from rich.text import Text
@@ -197,7 +197,7 @@ class MissingChordMode(ChordModeBase):
                 time.sleep(pause_duration)
         self.console.print()
 
-    def _collect_and_handle_input(self, prog_to_play, chord_set_to_use, missing_index):
+    def _collect_and_handle_input(self, prog_to_play, chord_set_to_use, missing_index) -> Tuple[Optional[Set[int]], str]:
         notes_currently_on = set()
         attempt_notes = set()
         last_note_off_time = None
