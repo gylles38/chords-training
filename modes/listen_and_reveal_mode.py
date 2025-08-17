@@ -30,28 +30,28 @@ class ListenAndRevealMode(ChordModeBase):
         self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer au suivant.")
 
         with Live(console=self.console, screen=False, auto_refresh=False) as live:
-            try:
-                enable_raw_mode()
-                while not self.exit_flag:
-                    self.clear_midi_buffer()
+            while not self.exit_flag:
+                self.clear_midi_buffer()
 
+                new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
+                while new_chord_name == self.last_chord_name:
                     new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
-                    while new_chord_name == self.last_chord_name:
-                        new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
 
-                    self.current_chord_name = new_chord_name
-                    self.current_chord_notes = new_chord_notes
-                    self.last_chord_name = new_chord_name
+                self.current_chord_name = new_chord_name
+                self.current_chord_notes = new_chord_notes
+                self.last_chord_name = new_chord_name
 
-                    live.update(Panel("Lecture de l'accord...", title="Action", border_style="yellow"), refresh=True)
-                    play_chord(self.outport, self.current_chord_notes)
+                live.update(Panel("Lecture de l'accord...", title="Action", border_style="yellow"), refresh=True)
+                play_chord(self.outport, self.current_chord_notes)
 
-                    incorrect_attempts = 0
-                    first_attempt = True
+                incorrect_attempts = 0
+                first_attempt = True
 
-                    main_display_text = "Jouez l'accord que vous venez d'entendre."
-                    live.update(Panel(main_display_text, title="Action", border_style="green"), refresh=True)
+                main_display_text = "Jouez l'accord que vous venez d'entendre."
+                live.update(Panel(main_display_text, title="Action", border_style="green"), refresh=True)
 
+                enable_raw_mode()
+                try:
                     while not self.exit_flag:
                         attempt_notes, ready = self.collect_notes()
 
@@ -61,6 +61,8 @@ class ListenAndRevealMode(ChordModeBase):
 
                         if not ready: continue
 
+                        disable_raw_mode() # Disable raw mode before printing feedback
+
                         self.session_total_attempts += 1
                         is_correct, recognized_name, recognized_inversion = self.check_chord(
                             attempt_notes, self.current_chord_name, self.current_chord_notes
@@ -69,7 +71,6 @@ class ListenAndRevealMode(ChordModeBase):
                         if is_correct:
                             if first_attempt: self.session_correct_count += 1
                             update_chord_success(self.current_chord_name)
-
                             feedback_text = Text.from_markup(f"[bold green]Correct ! C'était bien {self.current_chord_name}.[/bold green]")
                             live.update(Panel(feedback_text, title="Résultat", border_style="green"), refresh=True)
                             time.sleep(1.5)
@@ -96,21 +97,16 @@ class ListenAndRevealMode(ChordModeBase):
                                 break
 
                             live.update(Panel(main_display_text, title="Action", border_style="green"), refresh=True)
+                            enable_raw_mode() # Re-enable raw mode for the next attempt
+                finally:
+                    disable_raw_mode()
 
-                    self.session_total_count += 1
-                    if self.exit_flag:
-                        break
+                self.session_total_count += 1
+                if self.exit_flag: break
 
-                    self.current_chord_notes = None
-                    self.current_chord_name = None
+                self.current_chord_notes = None
+                self.current_chord_name = None
 
-                    # Instead of clearing the screen, we just go to the next loop iteration
-                    # where the live display will be updated with the new chord.
-            finally:
-                disable_raw_mode()
-
-        # Final cleanup before showing stats
-        disable_raw_mode()
         clear_screen()
         self.display_header("Écoute et Devine", "Mode Écoute et Devine", "orange3")
         self.console.print("Fin de la session.")
