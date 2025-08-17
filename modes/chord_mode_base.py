@@ -391,6 +391,8 @@ class ChordModeBase:
         # ajouter la taille de la progression.
         self.session_total_count += len(progression_accords)
 
+        # Initialiser 'choice' avec une valeur par défaut
+        choice = 'continue'
 
         # Affichage et pause de fin optionnels (peuvent être supprimés par une classe fille)
         if not getattr(self, "suppress_progression_summary", False):
