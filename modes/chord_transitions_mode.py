@@ -146,6 +146,26 @@ class ChordTransitionsMode(ChordModeBase):
 
         return is_correct, recognized_name, recognized_inversion
 
+    def wait_for_end_choice(self):
+        """Overrides base method to add a 'replay' option."""
+        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour rejouer, 'q' pour quitter, ou une autre touche pour continuer...")
+        enable_raw_mode()
+        try:
+            while not self.exit_flag:
+                char = wait_for_input(timeout=0.05)
+                if char:
+                    if char.lower() == 'q':
+                        self.exit_flag = True
+                        return 'quit'
+                    elif char.lower() == 'r':
+                        return 'repeat'
+                    else:
+                        return 'continue'
+                time.sleep(0.01)
+        finally:
+            disable_raw_mode()
+        return 'continue' # Default action
+
     def _build_progression_summary_text(self, progression_accords, voicings):
         """Builds the two Text objects for the progression summary."""
         # Pad labels for alignment
@@ -370,10 +390,12 @@ class ChordTransitionsMode(ChordModeBase):
                 else:
                     self.elapsed_time += progression_elapsed
                     self.console.print(f"\nTemps pour la progression : [bold cyan]{progression_elapsed:.2f} secondes[/bold cyan]")
-            self.wait_for_end_choice()
+
+            # Capture the user's choice and return it
+            choice = self.wait_for_end_choice()
             if not self.exit_flag:
                 clear_screen()
-        return 'done'
+        return choice
 
     def _generate_progression(self, chord_set):
         """Generates a musically coherent, weighted random progression."""
@@ -399,14 +421,14 @@ class ChordTransitionsMode(ChordModeBase):
         original_chord_set = self.chord_set
 
         while not self.exit_flag:
+            # Generate a new progression for the outer loop
             progression_names = self._generate_progression(original_chord_set)
 
             if len(progression_names) < 2:
-                continue # Skip if not enough valid chords were generated
+                continue
 
             voicings = self._calculate_best_voicings(progression_names)
 
-            # Create a temporary chord set and progression names for run_progression
             temp_chord_set = {}
             temp_progression_names = []
             for i, (name, voicing) in enumerate(zip(progression_names, voicings)):
@@ -414,20 +436,25 @@ class ChordTransitionsMode(ChordModeBase):
                 temp_progression_names.append(unique_name)
                 temp_chord_set[unique_name] = voicing
 
-            # Temporarily replace the chord set for run_progression
-            self.chord_set = temp_chord_set
+            # Inner loop for replaying the same progression
+            while not self.exit_flag:
+                self.chord_set = temp_chord_set
 
-            result = self.run_progression(
-                progression_accords=temp_progression_names,
-                header_title="Passage d'Accords",
-                header_name="Mode Passage d'Accords",
-                border_style="purple",
-            )
+                result = self.run_progression(
+                    progression_accords=temp_progression_names,
+                    header_title="Passage d'Accords",
+                    header_name="Mode Passage d'Accords",
+                    border_style="purple",
+                )
 
-            # Restore original chord set
-            self.chord_set = original_chord_set
+                self.chord_set = original_chord_set
 
-            if result == 'exit':
+                if result == 'repeat':
+                    continue # Repeat the inner loop
+                else: # 'continue' or 'quit'
+                    break # Break the inner loop
+
+            if self.exit_flag: # Handles the 'q' case
                 break
 
         self.show_overall_stats_and_wait()
