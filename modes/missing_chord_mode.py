@@ -42,7 +42,8 @@ class MissingChordMode(ChordModeBase):
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = use_transitions
 
-    # --- Progression Generation Methods (unchanged) ---
+    # --- Progression Generation Methods ---
+
     def _gen_from_all_degrees(self) -> Tuple[List[str], str, str]:
         tonalite, gammes = random.choice(list(gammes_majeures.items()))
         prog = [g for g in gammes if g in self.chord_set]
@@ -60,13 +61,13 @@ class MissingChordMode(ChordModeBase):
                     continue
         if not valid_cadences:
             return None
-        return random.choice(valid_cadences)
+        prog, name, key = random.choice(valid_cadences)
+        return prog, "Cadences", name
 
     def _gen_from_pop_rock(self) -> Tuple[List[str], str, str]:
         key, data = random.choice(list(pop_rock_progressions.items()))
         prog = data["progression"]
-        name = f"Pop/Rock: {key}"
-        return prog, name, ""
+        return prog, "Pop/Rock", key
 
     def _gen_from_tonal(self) -> Optional[Tuple[List[str], str, str]]:
         valid_progs = []
@@ -80,7 +81,8 @@ class MissingChordMode(ChordModeBase):
                     continue
         if not valid_progs:
             return None
-        return random.choice(valid_progs)
+        prog, name, key = random.choice(valid_progs)
+        return prog, "Progression Tonale", name
 
     def _gen_from_transitions(self) -> Tuple[List[str], str, str]:
         random_key = random.choice(list(gammes_majeures.keys()))
@@ -101,10 +103,37 @@ class MissingChordMode(ChordModeBase):
         }
         source_name = random.choice(list(generation_methods.keys()))
         result = generation_methods[source_name]()
-        return result
-
+        if result:
+            prog, detail, key = result
+            return prog, source_name, detail
+        return None
 
     # --- Gameplay Methods ---
+
+    def _get_progression_commentary(self, source_type: str, source_detail: str) -> str:
+        comment = ""
+        if source_type == "Gamme Complète":
+            comment = "Jouer tous les accords d'une gamme est un excellent moyen de s'imprégner de sa couleur et de sa sonorité. C'est la base de la composition dans une tonalité donnée."
+        elif source_type == "Cadences":
+            if source_detail == "Cadence Parfaite":
+                comment = "La cadence parfaite (V-I) est la plus conclusive en musique tonale. Elle donne un sentiment de résolution et de fin très fort, un peu comme un point à la fin d'une phrase."
+            elif source_detail == "Cadence Plagale":
+                comment = "La cadence plagale (IV-I), souvent appelée 'Amen Cadence', a une sonorité plus douce et moins conclusive que la cadence parfaite. Elle apporte une sensation de tranquillité et de solennité."
+            elif source_detail == "Demi-Cadence":
+                comment = "La demi-cadence se termine sur l'accord de dominante (V) et laisse une sensation de suspension, d'attente. C'est comme une virgule dans une phrase musicale, elle appelle une suite."
+            elif source_detail == "Progression II-V-I":
+                comment = "La progression II-V-I est la pierre angulaire de l'harmonie jazz. Elle crée une forte tension (II-V) puis une résolution satisfaisante (V-I)."
+            else:
+                 comment = "Les cadences sont des enchaînements d'accords qui ponctuent le discours musical, créant des effets de tension et de résolution."
+        elif source_type == "Pop/Rock":
+            comment = pop_rock_progressions.get(source_detail, {}).get("commentary", "")
+        elif source_type == "Progression Tonale":
+            comment = tonal_progressions.get(source_detail, {}).get("description", "")
+        elif source_type == "Progression Diatonique":
+            comment = "Voilà une progression d'accords très courante en musique tonale. L'enchaînement d'accords appartenant à la même gamme crée une sonorité cohérente et agréable."
+
+        return f"\n[italic bright_black]{comment}[/italic bright_black]" if comment else ""
+
 
     def _play_gapped_progression(self, progression_chords: List[str], chord_set: Dict, missing_index: int):
         self.console.print("\nÉcoutez bien la progression ('r' pour réécouter)...")
@@ -148,7 +177,6 @@ class MissingChordMode(ChordModeBase):
                 play_chord(self.outport, notes, duration=chord_duration)
                 time.sleep(pause_duration)
         self.console.print()
-
 
     def _collect_and_handle_input(self, prog_to_play, chord_set_to_use, missing_index):
         notes_currently_on = set()
@@ -204,11 +232,11 @@ class MissingChordMode(ChordModeBase):
             )
             self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !")
 
-            progression, source, key = None, "", ""
+            progression, source_type, source_detail = None, "", ""
             while not progression or len(progression) < 3:
                 prog_data = self._get_random_progression()
                 if prog_data:
-                    progression, source, key = prog_data
+                    progression, source_type, source_detail = prog_data
 
             voicings, prog_to_play, chord_set_to_use = [], progression, self.chord_set
             if self.use_voice_leading:
@@ -223,8 +251,6 @@ class MissingChordMode(ChordModeBase):
             missing_index = random.randint(1, len(progression) - 2)
             missing_chord_name = prog_to_play[missing_index]
             missing_chord_notes = chord_set_to_use[missing_chord_name]
-
-            # Replace the missing chord in the progression to play with the user's attempt later
             prog_to_play_with_answer = list(prog_to_play)
 
             self._play_gapped_progression(prog_to_play, chord_set_to_use, missing_index)
@@ -236,11 +262,8 @@ class MissingChordMode(ChordModeBase):
                 attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, missing_index)
 
                 if action in ['next', 'quit']:
-                    if action == 'next':
-                        break
-                    else:
-                        self.exit_flag = True
-                        break
+                    if action == 'next': break
+                    else: self.exit_flag = True; break
 
                 if action == 'attempt':
                     is_correct, recognized_name, _ = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
@@ -249,7 +272,6 @@ class MissingChordMode(ChordModeBase):
 
                         success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{missing_chord_name.split(' #')[0]}[/bold yellow]."
 
-                        # Compare octaves if not in voice leading mode
                         if not self.use_voice_leading and attempt_notes != missing_chord_notes:
                             target_notes_str = ", ".join(sorted([get_note_name_with_octave(n) for n in missing_chord_notes]))
                             played_notes_str = ", ".join(sorted([get_note_name_with_octave(n) for n in attempt_notes]))
@@ -258,13 +280,15 @@ class MissingChordMode(ChordModeBase):
 
                         self.console.print(success_message)
 
-                        # Replace the missing chord with a unique name for the user's correct attempt before replaying
-                        # This ensures the correct octave is played in the final playthrough
                         user_chord_name = f"{recognized_name} #user"
                         chord_set_to_use[user_chord_name] = attempt_notes
                         prog_to_play_with_answer[missing_index] = user_chord_name
 
                         self._play_full_progression(prog_to_play_with_answer, chord_set_to_use)
+
+                        commentary = self._get_progression_commentary(source_type, source_detail)
+                        if commentary:
+                            self.console.print(commentary)
 
                         break
                     else:
@@ -292,11 +316,8 @@ class MissingChordMode(ChordModeBase):
                 try:
                     while True:
                         char = wait_for_input()
-                        if char and char.lower() == 'n':
-                            break
-                        if char and char.lower() == 'q':
-                            self.exit_flag = True
-                            break
+                        if char and char.lower() == 'n': break
+                        if char and char.lower() == 'q': self.exit_flag = True; break
                 finally:
                     disable_raw_mode()
 

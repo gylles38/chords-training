@@ -256,20 +256,28 @@ progression_examples = {
 # Nouvelles progressions pour le mode Pop/Rock
 pop_rock_progressions = {
     "1": {
+        "name": "Progression 'Pop-Punk'",
         "progression": ["Do Majeur", "Sol Majeur", "La Mineur", "Fa Majeur"],
-        "examples": ["'Let It Be' - The Beatles", "'Don't Stop Believin'' - Journey", "'Take On Me' - a-ha"]
+        "examples": ["'Let It Be' - The Beatles", "'Don't Stop Believin'' - Journey", "'Take On Me' - a-ha"],
+        "commentary": "Aussi connue sous le nom de I-V-vi-IV, c'est sans doute la progression la plus utilisée dans la musique pop occidentale de ces dernières décennies."
     },
     "2": {
+        "name": "Progression 'Doo-Wop'",
         "progression": ["Do Majeur", "La Mineur", "Fa Majeur", "Sol Majeur"],
-        "examples": ["'No Woman, No Cry' - Bob Marley", "'Stand By Me' - Ben E. King", "'I'm Yours' - Jason Mraz"]
+        "examples": ["'No Woman, No Cry' - Bob Marley", "'Stand By Me' - Ben E. King", "'I'm Yours' - Jason Mraz"],
+        "commentary": "Cette progression I-vi-IV-V, très populaire dans les années 50 et 60, évoque une certaine nostalgie et est toujours très utilisée aujourd'hui."
     },
     "3": {
+        "name": "Progression 'Canon de Pachelbel'",
         "progression": ["Sol Majeur", "Ré Majeur", "Mi Mineur", "Do Majeur"],
-        "examples": ["'With or Without You' - U2", "'Wake Me Up When September Ends' - Green Day"]
+        "examples": ["'With or Without You' - U2", "'Wake Me Up When September Ends' - Green Day", "'Canon in D' - Pachelbel"],
+        "commentary": "Basée sur le célèbre Canon de Pachelbel, cette progression a une sonorité épique et ascendante, souvent utilisée dans les hymnes rock."
     },
     "4": {
+        "name": "Progression 'Sensible'",
         "progression": ["Mi Mineur", "Do Majeur", "Sol Majeur", "Ré Majeur"],
-        "examples": ["'All of Me' - John Legend", "'Apologize' - OneRepublic"]
+        "examples": ["'All of Me' - John Legend", "'Apologize' - OneRepublic", "'Someone Like You' - Adele"],
+        "commentary": "Cette progression vi-IV-I-V est très expressive et est souvent utilisée pour les ballades et les chansons émouvantes."
     },
 }
 
