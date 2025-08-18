@@ -14,7 +14,7 @@ class AllDegreesMode(ChordModeBase):
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = True
+        self.use_voice_leading = False
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
         table = Table(title=f"\nTableau des degrés pour {tonalite}", border_style="purple")
