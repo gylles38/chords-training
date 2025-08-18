@@ -17,7 +17,7 @@ class AllDegreesMode(ChordModeBase):
         self.use_voice_leading = False
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
-        table = Table(title=f"\nTableau des degrés pour {tonalite}", border_style="purple")
+        table = Table(border_style="purple")
         table.add_column("Degré", justify="center", style="bold cyan")
         table.add_column("Accord", justify="center", style="bold yellow")
 

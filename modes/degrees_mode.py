@@ -19,7 +19,7 @@ class DegreesMode(ChordModeBase):
         self.suppress_progression_summary = True
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
-        table = Table(title=f"\nTableau des degrés pour \n[bold yellow]{tonalite}[/bold yellow]", border_style="green")
+        table = Table(border_style="green")
         table.add_column("Degré", justify="center", style="bold cyan")
         table.add_column("Accord", justify="center", style="bold yellow")
 
