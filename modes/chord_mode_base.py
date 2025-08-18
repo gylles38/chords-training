@@ -107,12 +107,6 @@ class ChordModeBase:
             else:
                 content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]"
 
-            if self.answer_revealed:
-                target_notes = self.chord_set.get(chord_name, set())
-                note_names = [get_note_name(n) for n in sorted(list(target_notes))]
-                notes_display = ", ".join(note_names)
-                content += f"\n[cyan]Solution : {notes_display}[/cyan]"
-
         if time_info:
             content += f"\n{time_info}"
         return Panel(content, title="Progression en cours", border_style="green")
@@ -466,7 +460,21 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
-                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info), refresh=True)
+                                # Calculate the ideal path from the last played chord
+                                start_notes = self.last_played_notes if self.last_played_notes else None
+                                remaining_progression = progression_accords[prog_index:]
+
+                                # If we are revealing the very first chord, we need to add it to the list for calculation
+                                if not self.last_played_notes:
+                                    ideal_voicings = self._calculate_best_voicings(remaining_progression, start_notes=None)
+                                else:
+                                    # Calculate voicings for the rest of the progression based on the last played chord
+                                    ideal_voicings = self._calculate_best_voicings(remaining_progression, start_notes=self.last_played_notes)
+
+                                solution_summary = self._build_transition_summary_text(
+                                    remaining_progression, ideal_voicings, original_chord_set, title="Solution possible : "
+                                )
+                                self.console.print(solution_summary)
                                 continue
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
