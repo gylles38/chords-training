@@ -89,7 +89,7 @@ class ChordModeBase:
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
-        main_content = Text()
+        main_content = Text(justify="left")
         if progression_text:
             main_content.append(progression_text)
             main_content.append("\n\n")
