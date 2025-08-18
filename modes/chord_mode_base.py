@@ -383,8 +383,25 @@ class ChordModeBase:
                 self.console.print(summary_text)
 
         elif play_mode == 'SHOW_AND_PLAY' and progression_accords:
-            display_names = [name.split(" #")[0] for name in progression_accords]
-            self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(display_names)}[/bold yellow]")
+            progression_text = Text("\nProgression à jouer : ", style="default")
+
+            for i, chord_name in enumerate(progression_accords):
+                display_name = chord_name.split(" #")[0]
+                progression_text.append(display_name, style="bold yellow")
+
+                if i < len(progression_accords) - 1:
+                    # Calculate common notes with the next chord
+                    notes1 = original_chord_set.get(display_name, set())
+                    next_display_name = progression_accords[i+1].split(" #")[0]
+                    notes2 = original_chord_set.get(next_display_name, set())
+
+                    pitch_classes1 = {n % 12 for n in notes1}
+                    pitch_classes2 = {n % 12 for n in notes2}
+                    common_notes_count = len(pitch_classes1.intersection(pitch_classes2))
+
+                    progression_text.append(f" -({common_notes_count})-> ", style="default")
+
+            self.console.print(progression_text)
 
         if play_mode == 'PLAY_ONLY' and progression_accords:
             self.console.print("\nÉcoutez la progression...")
