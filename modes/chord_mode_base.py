@@ -36,6 +36,7 @@ class ChordModeBase:
         self.session_total_attempts = 0
         self.elapsed_time = 0.0
         self.last_played_notes = None  # Ajout de la variable ici pour la persistance
+        self.played_voicings_in_progression = []
         # Chronomètre de session (actif quand le compte à rebours n'est pas utilisé)
         self.session_stopwatch_start_time = None
         self.session_max_remaining_time = None
@@ -298,28 +299,11 @@ class ChordModeBase:
 
         return final_voicings
 
-    def _build_transition_summary_text(self, progression_accords, voicings, original_chord_set):
-        """Builds the two Text objects for the progression summary."""
+    def _build_transition_summary_text(self, progression_accords, voicings, title: str):
+        """Builds a single Text object for a transition summary line."""
         from music_theory import get_note_name_with_octave # Local import
 
-        # Pad labels for alignment
-        label1 = "Progression à jouer : "
-        label2 = "Progression des transitions : "
-        max_len = max(len(label1), len(label2))
-
-        # Line 1: Root positions
-        root_pos_text = Text(label1.ljust(max_len), style="default")
-        for i, name in enumerate(progression_accords):
-            display_name = name.split(" #")[0]
-            # Use original_chord_set to get root position notes
-            root_notes = original_chord_set.get(display_name, set())
-            note_names = ", ".join([get_note_name_with_octave(n) for n in sorted(list(root_notes))])
-            root_pos_text.append(f"{display_name} ({note_names})", style="bold yellow")
-            if i < len(progression_accords) - 1:
-                root_pos_text.append(" -> ", style="default")
-
-        # Line 2: Transitions with highlighting
-        transitions_text = Text(label2.ljust(max_len), style="default")
+        transitions_text = Text(title, style="default")
         for i, name in enumerate(progression_accords):
             display_name = name.split(" #")[0]
             current_notes = voicings[i]
@@ -338,7 +322,7 @@ class ChordModeBase:
             if i < len(progression_accords) - 1:
                 transitions_text.append(" -> ", style="default")
 
-        return root_pos_text, transitions_text
+        return transitions_text
 
 
     # ---------- Boucle commune pour les modes de progression ----------
@@ -362,6 +346,7 @@ class ChordModeBase:
             self.console.print(debug_info)
 
         self.last_played_notes = None
+        self.played_voicings_in_progression.clear()
 
         if pre_display:
             pre_display()
@@ -390,8 +375,9 @@ class ChordModeBase:
             if play_mode == 'SHOW_AND_PLAY':
                 if key_name:
                     self.console.print(f"Tonalité : [bold cyan]{key_name}[/bold cyan]")
-                root_pos_text, transitions_text = self._build_transition_summary_text(progression_accords, voicings, original_chord_set)
-                self.console.print(root_pos_text)
+
+                title = "Progression avec transitions : "
+                transitions_text = self._build_transition_summary_text(progression_accords, voicings, title)
                 self.console.print(transitions_text)
 
         elif play_mode == 'SHOW_AND_PLAY' and progression_accords:
@@ -484,6 +470,7 @@ class ChordModeBase:
                                 start_time = time.time()
                             is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, chord_name, target_notes)
                             if is_correct:
+                                self.played_voicings_in_progression.append(attempt_notes.copy())
                                 update_chord_success(chord_name.split(" #")[0])
                                 success_msg = f"[bold green]Correct ! {chord_name.split(' #')[0]}[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
@@ -542,12 +529,31 @@ class ChordModeBase:
                     self.elapsed_time += progression_elapsed
                     self.console.print(f"\nTemps pour la progression : [bold cyan]{progression_elapsed:.2f} secondes[/bold cyan]")
 
+            # Restore the original chord set before the summary analysis
+            if temp_chord_set:
+                self.chord_set = original_chord_set
+
+            # Display the new end-of-progression summary if transitions are being used.
+            if self.use_voice_leading and self.played_voicings_in_progression:
+                self.console.print("\n--- Analyse des transitions ---")
+
+                # Line 1: User's played progression (only if fully completed)
+                if len(self.played_voicings_in_progression) == len(progression_accords):
+                    user_summary = self._build_transition_summary_text(
+                        progression_accords, self.played_voicings_in_progression, "Votre parcours : "
+                    )
+                    self.console.print(user_summary)
+
+                # Line 2: Ideal progression
+                ideal_voicings = self._calculate_best_voicings(progression_accords)
+                ideal_summary = self._build_transition_summary_text(
+                    progression_accords, ideal_voicings, "Suggestion     : "
+                )
+                self.console.print(ideal_summary)
+
             choice = self.wait_for_end_choice()
             if not self.exit_flag:
                 clear_screen()
-
-        if temp_chord_set:
-            self.chord_set = original_chord_set
 
         return choice
 

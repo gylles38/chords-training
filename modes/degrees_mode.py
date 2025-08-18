@@ -16,7 +16,7 @@ class DegreesMode(ChordModeBase):
         self.progression_selection_mode = progression_selection_mode  # conservé pour compat
         self.play_progression_before_start = play_progression_before_start
         # Supprime l'affichage/pause de fin de progression (un seul accord)
-        self.suppress_progression_summary = True        
+        self.suppress_progression_summary = True
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
         table = Table(title=f"\nTableau des degrés pour \n[bold yellow]{tonalite}[/bold yellow]", border_style="green")
@@ -91,7 +91,7 @@ class DegreesMode(ChordModeBase):
 
             if result == 'exit':
                 break
-            # Sinon, on continue la boucle pour demander un nouvel accord du même degré actif dans une nouvelle tonalité            
+            # Sinon, on continue la boucle pour demander un nouvel accord du même degré actif dans une nouvelle tonalité
 
         # Fin de session : afficher les stats globales uniquement à la sortie
         self.show_overall_stats_and_wait()
