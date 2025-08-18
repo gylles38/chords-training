@@ -465,25 +465,25 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
-                                live.stop()
-                                clear_screen()
-                                self.display_header(header_title, header_name, border_style)
-
+                                # When revealing, update the live display with the solution instead of stopping it.
+                                # This prevents screen clearing/redrawing issues and keeps the display clean.
                                 solution_text = Text(justify="left")
                                 if progression_to_play_text:
                                     solution_text.append(progression_to_play_text)
                                     solution_text.append("\n\n")
 
-                                start_notes = self.last_played_notes if prog_index > 0 else None
-                                ideal_voicings = self._calculate_best_voicings(progression_accords, start_notes=start_notes)
+                                # Calculate the ideal voicings from the start of the progression.
+                                ideal_voicings = self._calculate_best_voicings(progression_accords, start_notes=None)
 
                                 solution_summary = self._build_transition_summary_text(
                                     progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
                                 )
                                 solution_text.append(solution_summary)
-                                self.console.print(solution_text)
 
-                                # Wait for next action
+                                # Update the live panel with the solution text, which is not a Panel object.
+                                live.update(solution_text, refresh=True)
+
+                                # Wait for next action from the user ('n' for next, 'q' for quit).
                                 while not self.exit_flag:
                                     char = wait_for_input(timeout=0.05)
                                     if char:
@@ -494,9 +494,10 @@ class ChordModeBase:
                                         elif action is True: # Quit
                                             skip_progression = True
                                         break # Exit reveal loop
-                                # After reveal, we must skip the progression
+
+                                # After revealing the answer, always skip to the next progression.
                                 skip_progression = True
-                                break # Exit the inner input loop
+                                break # Exit the main input loop for the current chord.
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
