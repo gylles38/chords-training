@@ -460,21 +460,37 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
-                                # Calculate the ideal path from the last played chord
-                                start_notes = self.last_played_notes if self.last_played_notes else None
-                                remaining_progression = progression_accords[prog_index:]
+                                # --- Build the solution text ---
+                                solution_text = Text()
 
-                                # If we are revealing the very first chord, we need to add it to the list for calculation
-                                if not self.last_played_notes:
-                                    ideal_voicings = self._calculate_best_voicings(remaining_progression, start_notes=None)
-                                else:
-                                    # Calculate voicings for the rest of the progression based on the last played chord
-                                    ideal_voicings = self._calculate_best_voicings(remaining_progression, start_notes=self.last_played_notes)
+                                # 1. The progression to play (with common notes)
+                                progression_to_play_text = Text("Progression à jouer : ", style="default")
+                                for i, name in enumerate(progression_accords):
+                                    display_name = name.split(" #")[0]
+                                    progression_to_play_text.append(display_name, style="bold yellow")
+                                    if i < len(progression_accords) - 1:
+                                        notes1 = original_chord_set.get(display_name, set())
+                                        next_display_name = progression_accords[i+1].split(" #")[0]
+                                        notes2 = original_chord_set.get(next_display_name, set())
+                                        pitch_classes1 = {n % 12 for n in notes1}
+                                        pitch_classes2 = {n % 12 for n in notes2}
+                                        common_notes_count = len(pitch_classes1.intersection(pitch_classes2))
+                                        progression_to_play_text.append(f" -({common_notes_count})-> ", style="default")
+
+                                solution_text.append(progression_to_play_text)
+                                solution_text.append("\n\n")
+
+                                # 2. The suggested voice leading
+                                start_notes = self.last_played_notes if prog_index > 0 else None
+                                ideal_voicings = self._calculate_best_voicings(progression_accords, start_notes=start_notes)
 
                                 solution_summary = self._build_transition_summary_text(
-                                    remaining_progression, ideal_voicings, original_chord_set, title="Solution possible : "
+                                    progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
                                 )
-                                self.console.print(solution_summary)
+                                solution_text.append(solution_summary)
+
+                                # Update the live display with the solution text
+                                live.update(solution_text, refresh=True)
                                 continue
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
