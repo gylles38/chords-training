@@ -27,6 +27,7 @@ class ChordModeBase:
         self.total_attempts = 0
         self.exit_flag = False
         self.use_voice_leading = False
+        self.display_voice_leading = False
 
         self.wait_for_input = wait_for_input
 
@@ -76,7 +77,7 @@ class ChordModeBase:
         # Cette méthode est un "placeholder" qui sera redéfini par les classes filles
         return False
     
-    def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
+    def create_live_display(self, chord_name, prog_index, total_chords, time_info="", voice_leading_hint=None):
         from music_theory import get_inversion_name # Local import
         display_name = chord_name.split(" #")[0]
 
@@ -99,6 +100,9 @@ class ChordModeBase:
                 content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
             else:
                 content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]"
+
+            if voice_leading_hint:
+                content += f"\n[dim]{voice_leading_hint}[/dim]"
 
         if time_info:
             content += f"\n{time_info}"
@@ -298,6 +302,33 @@ class ChordModeBase:
 
         return final_voicings
 
+    def _calculate_single_best_voicing(self, previous_notes, next_chord_root_notes):
+        """
+        Calculates the best voicing for a single next chord based on the previous notes played.
+        """
+        if not previous_notes or not next_chord_root_notes:
+            return next_chord_root_notes # Return root position as a fallback
+
+        inversions = self._get_inversions(next_chord_root_notes)
+        best_voicing = None
+        min_cost = float('inf')
+
+        # For each inversion, find the best octave to match the previous chord
+        for inv in inversions:
+            # Center the inversion around the previous chord's average MIDI value
+            avg_prev = sum(previous_notes) / len(previous_notes)
+            avg_inv = sum(inv) / len(inv)
+            octave_shift = round((avg_prev - avg_inv) / 12) * 12
+            shifted_inv = {note + octave_shift for note in inv}
+
+            cost = self._calculate_voice_leading_cost(previous_notes, shifted_inv)
+
+            if cost < min_cost: # Use < to not favor higher octaves in case of a tie
+                min_cost = cost
+                best_voicing = shifted_inv
+
+        return best_voicing if best_voicing is not None else next_chord_root_notes
+
     def _build_transition_summary_text(self, progression_accords, voicings, original_chord_set):
         """Builds the two Text objects for the progression summary."""
         from music_theory import get_note_name_with_octave # Local import
@@ -375,6 +406,7 @@ class ChordModeBase:
         temp_chord_set = None
         voicings = []
 
+        # If strict voice leading is enabled, calculate voicings and replace the chord set for validation
         if self.use_voice_leading and progression_accords:
             voicings = self._calculate_best_voicings(progression_accords)
             temp_chord_set = {}
@@ -387,6 +419,7 @@ class ChordModeBase:
             current_progression_chords = temp_progression_names
             self.chord_set = temp_chord_set
 
+            # Display the pre-calculated transition summary
             if play_mode == 'SHOW_AND_PLAY':
                 if key_name:
                     self.console.print(f"Tonalité : [bold cyan]{key_name}[/bold cyan]")
@@ -401,6 +434,7 @@ class ChordModeBase:
         if play_mode == 'PLAY_ONLY' and progression_accords:
             self.console.print("\nÉcoutez la progression...")
 
+        # Playback logic
         if (play_mode == 'SHOW_AND_PLAY' or play_mode == 'PLAY_ONLY') and current_progression_chords:
             play_progression_sequence(self.outport, current_progression_chords, self.chord_set)
 
@@ -423,7 +457,18 @@ class ChordModeBase:
                     remaining_time = self.timer_duration - (time.time() - start_time)
                     time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
 
-                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info), refresh=True)
+                # --- New dynamic voice leading hint ---
+                voice_leading_hint = None
+                if self.display_voice_leading and not self.use_voice_leading and self.last_played_notes:
+                    clean_chord_name = chord_name.split(" #")[0]
+                    next_chord_root_notes = original_chord_set.get(clean_chord_name)
+                    if next_chord_root_notes:
+                        best_voicing = self._calculate_single_best_voicing(self.last_played_notes, next_chord_root_notes)
+                        note_names = [get_note_name(n) for n in sorted(list(best_voicing))]
+                        voice_leading_hint = f"Suggestion: {', '.join(note_names)}"
+                # --- End new logic ---
+
+                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info, voice_leading_hint), refresh=True)
 
                 notes_currently_on = set()
                 attempt_notes = set()
@@ -435,7 +480,7 @@ class ChordModeBase:
                             remaining_time = self.timer_duration - (time.time() - start_time)
                             time_info = f"Temps restant : [bold magenta]{remaining_time:.1f}s[/bold magenta]"
                             disable_raw_mode()
-                            live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info), refresh=True)
+                            live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info, voice_leading_hint), refresh=True)
                             enable_raw_mode()
                             if remaining_time <= 0:
                                 disable_raw_mode()
@@ -459,7 +504,7 @@ class ChordModeBase:
                                 prog_index = 0
                                 chord_name = current_progression_chords[prog_index]
                                 target_notes = self.chord_set[chord_name]
-                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords)), refresh=True)
+                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info, voice_leading_hint), refresh=True)
                                 enable_raw_mode()
                                 break
                             elif action == 'next':
@@ -501,7 +546,7 @@ class ChordModeBase:
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)
                                 time.sleep(2)
-                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords)), refresh=True)
+                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info, voice_leading_hint), refresh=True)
                                 enable_raw_mode()
                                 attempt_notes.clear()
                         time.sleep(0.01)

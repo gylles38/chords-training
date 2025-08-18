@@ -8,8 +8,8 @@ from data.chords import gammes_majeures
 from screen_handler import int_to_roman
 
 class DegreesMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
+        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
         self.suppress_progression_summary = True
         self.active_degree_pos = None
         self.last_tonalite = None
@@ -80,6 +80,6 @@ class DegreesMode(ProgressionModeBase):
             "key_name": tonalite
         }
 
-def degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
-    mode = DegreesMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+def degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False, use_voice_leading_display=False):
+    mode = DegreesMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
     mode.run()

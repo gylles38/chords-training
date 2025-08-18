@@ -34,9 +34,9 @@ def weighted_sample_without_replacement(population, weights, k=1):
     return result
 
 class ProgressionMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
         # progression_selection_mode is not used, so it's removed.
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
         self.last_progression = []
 
     def _setup_progressions(self):
@@ -78,7 +78,7 @@ class ProgressionMode(ProgressionModeBase):
             "key_name": None
         }
 
-def progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
+def progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False, use_voice_leading_display=False):
     # The progression_selection_mode is kept here for compatibility with main.py, but it's not used in the class.
-    mode = ProgressionMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+    mode = ProgressionMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
     mode.run()
