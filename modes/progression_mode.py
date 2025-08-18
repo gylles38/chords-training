@@ -1,6 +1,6 @@
 # modes/progression_mode.py
 import random
-from .progression_mode_base import ProgressionModeBase
+from .chord_mode_base import ChordModeBase
 from stats_manager import get_chord_errors
 
 def weighted_sample_without_replacement(population, weights, k=1):
@@ -33,52 +33,57 @@ def weighted_sample_without_replacement(population, weights, k=1):
 
     return result
 
-class ProgressionMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
-        self.last_progression = []
-        self.show_vl_summary_at_end = True # Enable the new feature
+class ProgressionMode(ChordModeBase):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions):
+        super().__init__(inport, outport, chord_set)
+        self.use_timer = use_timer
+        self.timer_duration = timer_duration
+        self.progression_selection_mode = progression_selection_mode  # conservé pour compat
+        self.play_progression_before_start = play_progression_before_start
+        self.use_voice_leading = use_transitions
 
-    def _setup_progressions(self):
-        """
-        No setup needed for this mode as progressions are generated on the fly.
-        """
-        pass
+    def run(self):
+        last_progression = []
 
-    def _get_next_progression_info(self):
-        """
-        Generates a new random chord progression and returns its details.
-        """
-        chord_errors = get_chord_errors()
-        prog_len = random.randint(3, 5)
+        while not self.exit_flag:
+            chord_errors = get_chord_errors()
+            # Générer une progression aléatoire, différente de la précédente
+            prog_len = random.randint(3, 5)
 
-        all_chords = list(self.chord_set.keys())
-        weights = [1 + (chord_errors.get(chord, 0) ** 2) for chord in all_chords]
+            all_chords = list(self.chord_set.keys())
+            # Poids de base de 1 pour chaque accord, plus le carré du nombre d'erreurs
+            weights = [1 + (chord_errors.get(chord, 0) ** 2) for chord in all_chords]
 
-        debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Chords --[/bold dim]\n"
-        weighted_chords = sorted(zip(all_chords, weights), key=lambda x: x[1], reverse=True)
-        for chord, weight in weighted_chords[:5]:
-            if weight > 1:
-                debug_info += f"[dim] - {chord}: {weight}[/dim]\n"
+            # --- DEBUG DISPLAY ---
+            debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Chords --[/bold dim]\n"
+            weighted_chords = sorted(zip(all_chords, weights), key=lambda x: x[1], reverse=True)
+            for chord, weight in weighted_chords[:5]:
+                if weight > 1:
+                    debug_info += f"[dim] - {chord}: {weight}[/dim]\n"
+            # --- END DEBUG ---
 
-        progression_accords = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
-
-        while progression_accords == self.last_progression:
             progression_accords = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
 
-        self.last_progression = progression_accords
+            while progression_accords == last_progression:
+                progression_accords = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
 
-        return {
-            "progression_accords": progression_accords,
-            "header_title": "Progressions d'Accords",
-            "header_name": "Mode Progressions d'Accords",
-            "border_style": "blue",
-            "pre_display": None,
-            "debug_info": debug_info,
-            "key_name": None
-        }
+            last_progression = progression_accords
+
+            result = self.run_progression(
+                progression_accords=progression_accords,
+                header_title="Progressions d'Accords",
+                header_name="Mode Progressions d'Accords",
+                border_style="blue",
+                pre_display=None,
+                debug_info=debug_info
+            )
+
+            if result == 'exit':
+                break
+
+        # Fin de session : afficher les stats globales
+        self.show_overall_stats_and_wait()
 
 def progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
-    # The progression_selection_mode is kept here for compatibility with main.py, but it's not used in the class.
-    mode = ProgressionMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+    mode = ProgressionMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions)
     mode.run()

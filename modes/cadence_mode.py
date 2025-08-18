@@ -2,46 +2,28 @@
 import random
 from rich.table import Table
 
-from .progression_mode_base import ProgressionModeBase
+from .chord_mode_base import ChordModeBase
 from stats_manager import get_chord_errors
 from screen_handler import int_to_roman
 from data.chords import gammes_majeures, cadences, DEGREE_MAP
 
-class CadenceMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
-        self.valid_cadences = []
-        self.last_cadence_info = None
-        # These will be set in _get_next_progression_info
+class CadenceMode(ChordModeBase):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions):
+        super().__init__(inport, outport, chord_set)
+        self.use_timer = use_timer
+        self.timer_duration = timer_duration
+        self.progression_selection_mode = progression_selection_mode  # conservé pour compat
+        self.play_progression_before_start = play_progression_before_start
+        self.use_voice_leading = use_transitions
+
         self.current_tonalite = None
         self.current_cadence_name = None
         self.current_degres = None
+        self.current_progression = None
         self.gammes_filtrees = None
-        self.show_vl_summary_at_end = True
+        self.last_cadence_info = None
 
-    def _setup_progressions(self):
-        """
-        Pre-calculates all valid cadences based on the selected chord set.
-        """
-        for tonalite, accords_de_la_gamme in gammes_majeures.items():
-            for nom_cadence, degres_cadence in cadences.items():
-                try:
-                    progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
-                    if all(accord in self.chord_set for accord in progression_accords):
-                        gammes_filtrees = [g for g in accords_de_la_gamme if g in self.chord_set]
-                        self.valid_cadences.append({
-                            "tonalite": tonalite,
-                            "nom_cadence": nom_cadence,
-                            "degres": degres_cadence,
-                            "progression": progression_accords,
-                            "gammes_filtrees": gammes_filtrees,
-                        })
-                except (KeyError, IndexError):
-                    continue
-
-        if not self.valid_cadences:
-            self.console.print("[bold red]Aucune cadence valide trouvée pour le set d'accords sélectionné.[/bold red]")
-
+    # ---------- Spécifique Cadence ----------
     def display_degrees_table(self, tonalite, gammes_filtrees):
         """Affiche le tableau des degrés pour la tonalité donnée"""
         table = Table(title=f"\nTableau des degrés pour \n[bold yellow]{tonalite}[/bold yellow]", border_style="magenta")
@@ -51,61 +33,96 @@ class CadenceMode(ProgressionModeBase):
         for i, chord_name in enumerate(gammes_filtrees, 1):
             roman_degree = int_to_roman(i)
             table.add_row(roman_degree, chord_name)
+
         self.console.print(table)
 
-    def _get_next_progression_info(self):
-        """
-        Selects a weighted random cadence and returns its details.
-        """
-        if not self.valid_cadences:
-            return None
+    def run(self):
+        # Pre-calculate all valid cadences once
+        valid_cadences = []
+        for tonalite, accords_de_la_gamme in gammes_majeures.items():
+            for nom_cadence, degres_cadence in cadences.items():
+                try:
+                    progression_accords = [accords_de_la_gamme[DEGREE_MAP[d]] for d in degres_cadence]
+                    if all(accord in self.chord_set for accord in progression_accords):
+                        gammes_filtrees = [g for g in accords_de_la_gamme if g in self.chord_set]
+                        valid_cadences.append({
+                            "tonalite": tonalite,
+                            "nom_cadence": nom_cadence,
+                            "degres": degres_cadence,
+                            "progression": progression_accords,
+                            "gammes_filtrees": gammes_filtrees,
+                            # Weight will be calculated in the loop
+                        })
+                except (KeyError, IndexError):
+                    continue
 
-        chord_errors = get_chord_errors()
+        if not valid_cadences:
+            self.console.print("[bold red]Aucune cadence valide trouvée pour le set d'accords sélectionné.[/bold red]")
+            return
 
-        for cadence in self.valid_cadences:
-            cadence['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in cadence['progression'])
+        last_cadence_info = None
+        while not self.exit_flag:
+            chord_errors = get_chord_errors()
 
-        cadence_weights = [c['weight'] for c in self.valid_cadences]
+            # Recalculate weights in each iteration
+            for cadence in valid_cadences:
+                cadence['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in cadence['progression'])
 
-        debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Cadences --[/bold dim]\n"
-        weighted_cadences = sorted(self.valid_cadences, key=lambda x: x['weight'], reverse=True)
-        for c in weighted_cadences[:5]:
-            if c['weight'] > 1:
-                debug_info += f"[dim] - {c['tonalite']} {c['nom_cadence']}: {c['weight']}[/dim]\n"
+            # Select a weighted random cadence
+            cadence_weights = [c['weight'] for c in valid_cadences]
 
-        selected_cadence = random.choices(self.valid_cadences, weights=cadence_weights, k=1)[0]
+            # --- DEBUG DISPLAY ---
+            debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Cadences --[/bold dim]\n"
+            weighted_cadences = sorted(valid_cadences, key=lambda x: x['weight'], reverse=True)
+            for c in weighted_cadences[:5]:
+                if c['weight'] > 1:
+                    debug_info += f"[dim] - {c['tonalite']} {c['nom_cadence']}: {c['weight']}[/dim]\n"
+            # --- END DEBUG ---
 
-        while (selected_cadence['tonalite'], selected_cadence['nom_cadence']) == self.last_cadence_info:
-            selected_cadence = random.choices(self.valid_cadences, weights=cadence_weights, k=1)[0]
+            selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
 
-        self.last_cadence_info = (selected_cadence['tonalite'], selected_cadence['nom_cadence'])
-        self.current_tonalite = selected_cadence['tonalite']
-        self.current_cadence_name = selected_cadence['nom_cadence']
-        self.current_degres = selected_cadence['degres']
-        self.gammes_filtrees = selected_cadence['gammes_filtrees']
+            while (selected_cadence['tonalite'], selected_cadence['nom_cadence']) == last_cadence_info:
+                selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
 
-        def pre_display():
+            last_cadence_info = (selected_cadence['tonalite'], selected_cadence['nom_cadence'])
+
+            self.current_tonalite = selected_cadence['tonalite']
+            self.current_cadence_name = selected_cadence['nom_cadence']
+            self.current_degres = selected_cadence['degres']
+            self.current_progression = selected_cadence['progression']
+            self.gammes_filtrees = selected_cadence['gammes_filtrees']
+
             degres_str = ' -> '.join(self.current_degres)
-            progression_str = ' -> '.join(selected_cadence['progression'])
-            self.console.print(f"Dans la tonalité de [bold yellow]{self.current_tonalite}[/bold yellow], "
-                               f"jouez la [bold cyan]{self.current_cadence_name}[/bold cyan] "
-                               f"([bold cyan]{degres_str}[/bold cyan]) :")
+            progression_str = ' -> '.join(self.current_progression)
 
-            play_mode = getattr(self, "play_progression_before_start", "NONE")
-            if play_mode != 'PLAY_ONLY':
-                self.console.print(f"[bold yellow]{progression_str}[/bold yellow]")
-                self.display_degrees_table(self.current_tonalite, self.gammes_filtrees)
+            # Pré-affichage spécifique (tableau des degrés + descriptif)
+            def pre_display():
+                self.console.print(f"Dans la tonalité de [bold yellow]{self.current_tonalite}[/bold yellow], "
+                                   f"jouez la [bold cyan]{self.current_cadence_name}[/bold cyan] "
+                                   f"([bold cyan]{degres_str}[/bold cyan]) :")
 
-        return {
-            "progression_accords": selected_cadence['progression'],
-            "header_title": "Cadences",
-            "header_name": "Mode Cadences Musicales",
-            "border_style": "magenta",
-            "pre_display": pre_display,
-            "debug_info": debug_info,
-            "key_name": self.current_tonalite
-        }
+                play_mode = getattr(self, "play_progression_before_start", "NONE")
+                if play_mode != 'PLAY_ONLY':
+                    self.console.print(f"[bold yellow]{progression_str}[/bold yellow]")
+                    self.display_degrees_table(self.current_tonalite, self.gammes_filtrees)
+
+            result = self.run_progression(
+                progression_accords=self.current_progression,
+                header_title="Cadences",
+                header_name="Mode Cadences Musicales",
+                border_style="magenta",
+                pre_display=pre_display,
+                debug_info=debug_info,
+                key_name=self.current_tonalite
+            )
+
+            if result == 'exit':
+                break
+            # 'skipped' ou 'done' → simplement boucler vers une nouvelle cadence
+
+        # Fin de session : afficher les stats globales
+        self.show_overall_stats_and_wait()
 
 def cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
-    mode = CadenceMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+    mode = CadenceMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions)
     mode.run()
