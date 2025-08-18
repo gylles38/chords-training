@@ -1,20 +1,19 @@
 # modes/all_degrees_mode.py
 import random
-
 from rich.table import Table
 
-from .chord_mode_base import ChordModeBase
+from .progression_mode_base import ProgressionModeBase
 from data.chords import gammes_majeures
 from screen_handler import int_to_roman
 
-class AllDegreesMode(ChordModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions):
-        super().__init__(inport, outport, chord_set)
-        self.use_timer = use_timer
-        self.timer_duration = timer_duration
-        self.progression_selection_mode = progression_selection_mode
-        self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = use_transitions
+class AllDegreesMode(ProgressionModeBase):
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
+        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+        self.last_tonalite = None
+
+    def _setup_progressions(self):
+        """ No setup needed for this mode. """
+        pass
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
         table = Table(title=f"\nTableau des degrés pour {tonalite}", border_style="purple")
@@ -24,47 +23,41 @@ class AllDegreesMode(ChordModeBase):
         for i, chord_name in enumerate(gammes_filtrees, 1):
             roman_degree = int_to_roman(i)
             table.add_row(roman_degree, chord_name)
-
         self.console.print(table)
 
-    def run(self):
-        last_tonalite = None
-        while not self.exit_flag:
+    def _get_next_progression_info(self):
+        """
+        Selects a new key and builds a progression with all its degrees.
+        """
+        tonalite, gammes = random.choice(list(gammes_majeures.items()))
+        while tonalite == self.last_tonalite:
             tonalite, gammes = random.choice(list(gammes_majeures.items()))
-            while tonalite == last_tonalite:
-                tonalite, gammes = random.choice(list(gammes_majeures.items()))
-            last_tonalite = tonalite
+        self.last_tonalite = tonalite
 
-            gammes_filtrees = [g for g in gammes if g in self.chord_set]
-            if len(gammes_filtrees) < 3:
-                continue
+        gammes_filtrees = [g for g in gammes if g in self.chord_set]
+        if len(gammes_filtrees) < 3:
+            # Not enough chords to form a meaningful progression, try another key
+            return self._get_next_progression_info()
 
-            progression_accords = gammes_filtrees
+        progression_accords = gammes_filtrees
 
-            def pre_display():
-                self.console.print(f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la gamme complète :")
-                play_mode = getattr(self, "play_progression_before_start", "NONE")
-                if play_mode != 'PLAY_ONLY':
-                    self.console.print(f"[bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
-                    self.display_degrees_table(tonalite, gammes_filtrees)
+        def pre_display():
+            self.console.print(f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la gamme complète :")
+            play_mode = getattr(self, "play_progression_before_start", "NONE")
+            if play_mode != 'PLAY_ONLY':
+                self.console.print(f"[bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
+                self.display_degrees_table(tonalite, gammes_filtrees)
 
-            result = self.run_progression(
-                progression_accords=progression_accords,
-                header_title="Gamme Complète",
-                header_name="Mode Tous les Degrés",
-                border_style="purple",
-                pre_display=pre_display,
-                key_name=tonalite,
-            )
-
-            if result == 'exit':
-                break
-            # 'skipped' ou 'done' → on enchaîne sur une nouvelle tonalité
-
-        # Fin de session : afficher les stats globales
-        self.show_overall_stats_and_wait()
-
+        return {
+            "progression_accords": progression_accords,
+            "header_title": "Gamme Complète",
+            "header_name": "Mode Tous les Degrés",
+            "border_style": "purple",
+            "pre_display": pre_display,
+            "key_name": tonalite,
+            "debug_info": None
+        }
 
 def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
-    mode = AllDegreesMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions)
+    mode = AllDegreesMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
     mode.run()
