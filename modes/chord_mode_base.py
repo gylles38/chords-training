@@ -89,6 +89,11 @@ class ChordModeBase:
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
+        main_content = Text()
+        if progression_text:
+            main_content.append(progression_text)
+            main_content.append("\n\n")
+
         # In voice leading mode, we always show the notes and inversion.
         if self.use_voice_leading:
             target_notes = self.chord_set.get(chord_name, set())
@@ -96,28 +101,25 @@ class ChordModeBase:
             note_names = [get_note_name(n) for n in sorted(list(target_notes))]
             notes_display = ", ".join(note_names)
             inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
-            content = Text.from_markup(
+
+            markup = (
                 f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}{inversion_display}[/bold yellow]\n"
                 f"Notes attendues : [cyan]{notes_display}[/cyan]"
             )
+            main_content.append(Text.from_markup(markup))
+
         # For other modes, we keep the original behavior
         else:
-            main_content = Text()
-            if progression_text:
-                main_content.append(progression_text)
-                main_content.append("\n\n")
-
             if play_mode == 'PLAY_ONLY':
                 main_content.append(f"Jouez l'accord ({prog_index + 1}/{total_chords})")
             else:
                 main_content.append(f"Accord à jouer ({prog_index + 1}/{total_chords}): ")
                 main_content.append(display_name, style="bold yellow")
 
-            content = main_content
-
         if time_info:
-            content.append(f"\n{time_info}")
-        return Panel(content, title="Progression en cours", border_style="green")
+            main_content.append(f"\n{time_info}")
+
+        return Panel(main_content, title="Progression en cours", border_style="green")
     
     def wait_for_end_choice(self) -> str:
         """Attend une saisie instantanée pour continuer ou quitter."""
@@ -320,7 +322,7 @@ class ChordModeBase:
         """Builds the Text object for the progression summary."""
         from music_theory import get_note_name_with_octave # Local import
 
-        transitions_text = Text(title, style="default")
+        transitions_text = Text(title, style="default", justify="left")
         for i, name in enumerate(progression_accords):
             display_name = name.split(" #")[0]
             current_notes = voicings[i]
@@ -374,10 +376,6 @@ class ChordModeBase:
         original_chord_set = self.chord_set
         temp_chord_set = None
 
-        # This is now handled inside the Live context
-        # if play_mode == 'SHOW_AND_PLAY' and not self.use_voice_leading and progression_accords:
-        #     ...
-
         if self.use_voice_leading and progression_accords:
             voicings = self._calculate_best_voicings(progression_accords)
             temp_chord_set = {}
@@ -409,7 +407,7 @@ class ChordModeBase:
         skip_progression = False
         choice = 'continue'
 
-        # Build the progression display text once
+        # Build the progression display text once, to be used in the panel
         progression_to_play_text = None
         if play_mode == 'SHOW_AND_PLAY' and not self.use_voice_leading and progression_accords:
             progression_to_play_text = Text("Progression à jouer : ", style="default")
@@ -464,7 +462,7 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
-                                solution_text = Text()
+                                solution_text = Text(justify="left")
                                 if progression_to_play_text:
                                     solution_text.append(progression_to_play_text)
                                     solution_text.append("\n\n")
@@ -476,7 +474,7 @@ class ChordModeBase:
                                     progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
                                 )
                                 solution_text.append(solution_summary)
-                                live.update(Panel(solution_text, border_style="hidden"), refresh=True)
+                                live.update(Panel(solution_text, border_style="none"), refresh=True)
                                 continue
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
