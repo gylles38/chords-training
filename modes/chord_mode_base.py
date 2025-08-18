@@ -28,6 +28,7 @@ class ChordModeBase:
         self.exit_flag = False
         self.use_voice_leading = False
         self.show_vl_summary_at_end = False
+        self.answer_revealed = False
 
         self.wait_for_input = wait_for_input
 
@@ -65,7 +66,11 @@ class ChordModeBase:
             # Appeler la méthode spécialisée pour la répétition
             return self._handle_repeat()
         if char and char.lower() == 'n':
-            return 'next'
+            if not self.answer_revealed:
+                self.answer_revealed = True
+                return 'reveal'
+            else:
+                return 'next'
 
         # Appelle la méthode des classes filles pour gérer leurs entrées spécifiques
         return self._handle_custom_input(char)
@@ -101,6 +106,12 @@ class ChordModeBase:
                 content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
             else:
                 content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]"
+
+            if self.answer_revealed:
+                target_notes = self.chord_set.get(chord_name, set())
+                note_names = [get_note_name(n) for n in sorted(list(target_notes))]
+                notes_display = ", ".join(note_names)
+                content += f"\n[cyan]Solution : {notes_display}[/cyan]"
 
         if time_info:
             content += f"\n{time_info}"
@@ -419,6 +430,7 @@ class ChordModeBase:
         with Live(console=self.console, screen=False, auto_refresh=False) as live:
             prog_index = 0
             while prog_index < len(current_progression_chords) and not self.exit_flag and not skip_progression:
+                self.answer_revealed = False  # Reset for each new chord
                 chord_name = current_progression_chords[prog_index]
                 target_notes = self.chord_set[chord_name]
                 chord_attempts = 0
@@ -453,6 +465,8 @@ class ChordModeBase:
                         char = wait_for_input(timeout=0.01)
                         if char:
                             action = self.handle_keyboard_input(char)
+                            if action == 'reveal':
+                                continue
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
