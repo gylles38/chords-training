@@ -5,14 +5,14 @@ from stats_manager import get_chord_errors
 from data.chords import gammes_majeures, tonal_progressions, DEGREE_MAP
 
 class TonalProgressionMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
+        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
         self.valid_progressions = []
         self.last_prog_info = None
-        # These will be set in _get_next_progression_info
         self.current_tonalite = None
         self.current_progression_name = None
         self.current_progression_description = None
+        self.show_vl_summary_at_end = True
 
     def _setup_progressions(self):
         """
@@ -41,7 +41,6 @@ class TonalProgressionMode(ProgressionModeBase):
 
         if not self.valid_progressions:
             self.console.print("[bold red]Aucune progression tonale valide trouvée pour le set d'accords.[/bold red]")
-            # Returning None from _get_next_progression_info will stop the loop
 
     def display_tonal_info(self):
         """Affiche les informations tonales spécifiques."""
@@ -90,7 +89,6 @@ class TonalProgressionMode(ProgressionModeBase):
             "key_name": self.current_tonalite
         }
 
-def tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False, use_voice_leading_display=False):
-    # The progression_selection_mode is kept here for compatibility with main.py, but it's not used in the class.
-    mode = TonalProgressionMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+def tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
+    mode = TonalProgressionMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
     mode.run()

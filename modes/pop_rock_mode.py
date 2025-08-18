@@ -8,8 +8,9 @@ from data.chords import pop_rock_progressions
 
 
 class PopRockMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
+        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
+        self.show_vl_summary_at_end = True
 
     def _setup_progressions(self):
         """
@@ -68,6 +69,6 @@ class PopRockMode(ProgressionModeBase):
         }
 
 
-def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False, use_voice_leading_display=False):
-    mode = PopRockMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
+    mode = PopRockMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
     mode.run()

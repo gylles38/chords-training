@@ -8,8 +8,8 @@ from screen_handler import int_to_roman
 from data.chords import gammes_majeures, cadences, DEGREE_MAP
 
 class CadenceMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
+        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
         self.valid_cadences = []
         self.last_cadence_info = None
         # These will be set in _get_next_progression_info
@@ -17,6 +17,7 @@ class CadenceMode(ProgressionModeBase):
         self.current_cadence_name = None
         self.current_degres = None
         self.gammes_filtrees = None
+        self.show_vl_summary_at_end = True
 
     def _setup_progressions(self):
         """
@@ -105,6 +106,6 @@ class CadenceMode(ProgressionModeBase):
             "key_name": self.current_tonalite
         }
 
-def cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False, use_voice_leading_display=False):
-    mode = CadenceMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+def cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
+    mode = CadenceMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
     mode.run()

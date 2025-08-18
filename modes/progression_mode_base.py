@@ -4,13 +4,12 @@ from .chord_mode_base import ChordModeBase
 from screen_handler import clear_screen
 
 class ProgressionModeBase(ChordModeBase, ABC):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = use_transitions
-        self.display_voice_leading = use_voice_leading_display
         self._last_prog_info = None
 
     @abstractmethod

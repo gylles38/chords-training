@@ -7,9 +7,10 @@ from data.chords import gammes_majeures
 from screen_handler import int_to_roman
 
 class AllDegreesMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions):
+        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
         self.last_tonalite = None
+        self.show_vl_summary_at_end = True
 
     def _setup_progressions(self):
         """ No setup needed for this mode. """
@@ -58,6 +59,6 @@ class AllDegreesMode(ProgressionModeBase):
             "debug_info": None
         }
 
-def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False, use_voice_leading_display=False):
-    mode = AllDegreesMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
+    mode = AllDegreesMode(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions)
     mode.run()

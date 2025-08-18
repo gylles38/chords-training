@@ -3,10 +3,11 @@ import random
 import time
 from typing import List, Tuple
 
-from .progression_mode_base import ProgressionModeBase
+from .chord_mode_base import ChordModeBase
 from data.chords import three_note_chords, gammes_majeures
 from stats_manager import get_chord_errors
 from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
+from screen_handler import clear_screen
 
 def weighted_sample_without_replacement(population, weights, k=1):
     """
@@ -14,8 +15,10 @@ def weighted_sample_without_replacement(population, weights, k=1):
     """
     population = list(population)
     weights = list(weights)
+
     if len(population) < k:
         return random.sample(population, k)
+
     result = []
     for _ in range(k):
         if not population:
@@ -27,16 +30,15 @@ def weighted_sample_without_replacement(population, weights, k=1):
         result.append(chosen_element)
     return result
 
-class ChordTransitionsMode(ProgressionModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display=False):
-        super().__init__(inport, outport, use_timer, timer_duration, play_progression_before_start, chord_set, use_transitions, use_voice_leading_display)
+class ChordTransitionsMode(ChordModeBase):
+    def __init__(self, inport, outport, chord_set):
+        super().__init__(inport, outport, chord_set)
         self.progression_length = (2, 4)
-        # This mode inherently uses voice leading for validation
-        self.use_voice_leading = True
-
-    def _setup_progressions(self):
-        """ No setup needed for this mode. """
-        pass
+        self.use_voice_leading = True  # Enable voice leading in base class
+        # Declare attributes for type checker
+        self.use_timer: bool = False
+        self.timer_duration: float = 30.0
+        self.play_progression_before_start: str = 'SHOW_AND_PLAY'
 
     def wait_for_end_choice(self) -> str:
         """Overrides base method to add a 'replay' option."""
@@ -56,36 +58,63 @@ class ChordTransitionsMode(ProgressionModeBase):
                 time.sleep(0.01)
         finally:
             disable_raw_mode()
-        return 'continue'
+        return 'continue' # Default action
 
-    def _get_next_progression_info(self):
-        """
-        Generates a new musically coherent, weighted random progression.
-        """
+    def _generate_progression(self) -> Tuple[List[str], str]:
+        """Generates a musically coherent, weighted random progression."""
+        # 1. Pick a random key and its diatonic chords
         random_key = random.choice(list(gammes_majeures.keys()))
         diatonic_chords = gammes_majeures[random_key]
+
+        # 2. Get user stats and calculate weights for these chords
         chord_errors = get_chord_errors()
         weights = [1 + (chord_errors.get(chord, 0) ** 2) for chord in diatonic_chords]
+
+        # 3. Generate a weighted random progression from the diatonic chords
         prog_len = random.randint(self.progression_length[0], self.progression_length[1])
         progression_names = weighted_sample_without_replacement(diatonic_chords, weights, k=prog_len)
+
+        # 4. Ensure the generated chords exist in the current chord set
         progression_names = [name for name in progression_names if name in self.chord_set]
 
-        if len(progression_names) < 2:
-            return self._get_next_progression_info()
+        return progression_names, random_key
 
-        return {
-            "progression_accords": progression_names,
-            "header_title": "Passage d'Accords",
-            "header_name": "Mode Passage d'Accords",
-            "border_style": "purple",
-            "key_name": random_key,
-            "pre_display": None,
-            "debug_info": None,
-        }
+    def run(self):
+        """Main loop for the chord transitions mode."""
+        while not self.exit_flag:
+            # Generate a new progression for the outer loop
+            progression_names, key_name = self._generate_progression()
 
-def chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_voice_leading_display=False):
+            if len(progression_names) < 2:
+                continue
+
+            # Inner loop for replaying the same progression
+            while not self.exit_flag:
+                result = self.run_progression(
+                    progression_accords=progression_names,
+                    header_title="Passage d'Accords",
+                    header_name="Mode Passage d'Accords",
+                    border_style="purple",
+                    key_name=key_name,
+                )
+
+                if result == 'repeat':
+                    clear_screen()
+                    continue # Repeat the inner loop
+                else: # 'continue', 'quit', or 'skipped'
+                    break # Break the inner loop to generate a new progression
+
+            if self.exit_flag: # Handles the 'q' case from wait_for_end_choice
+                break
+
+        self.show_overall_stats_and_wait()
+
+
+def chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
     # This mode works best with three_note_chords
     mode_chord_set = three_note_chords
-    # This mode uses transitions by default, so we pass True for use_transitions, and False for display
-    mode = ChordTransitionsMode(inport, outport, use_timer, timer_duration, play_progression_before_start, mode_chord_set, True, False)
+    mode = ChordTransitionsMode(inport, outport, mode_chord_set)
+    mode.use_timer = use_timer
+    mode.timer_duration = timer_duration
+    mode.play_progression_before_start = play_progression_before_start
     mode.run()
