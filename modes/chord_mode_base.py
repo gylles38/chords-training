@@ -529,6 +529,10 @@ class ChordModeBase:
                     self.elapsed_time += progression_elapsed
                     self.console.print(f"\nTemps pour la progression : [bold cyan]{progression_elapsed:.2f} secondes[/bold cyan]")
 
+            # Restore the original chord set before the summary analysis
+            if temp_chord_set:
+                self.chord_set = original_chord_set
+
             # Display the new end-of-progression summary if transitions are being used.
             if self.use_voice_leading and self.played_voicings_in_progression:
                 self.console.print("\n--- Analyse des transitions ---")
@@ -550,9 +554,6 @@ class ChordModeBase:
             choice = self.wait_for_end_choice()
             if not self.exit_flag:
                 clear_screen()
-
-        if temp_chord_set:
-            self.chord_set = original_chord_set
 
         return choice
 
