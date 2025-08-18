@@ -466,6 +466,7 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
+                                live.update(self.create_live_display(chord_name, prog_index, len(current_progression_chords), time_info), refresh=True)
                                 continue
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
