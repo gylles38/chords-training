@@ -83,11 +83,16 @@ class ChordModeBase:
         # Cette méthode est un "placeholder" qui sera redéfini par les classes filles
         return False
     
-    def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
+    def create_live_display(self, chord_name, prog_index, total_chords, time_info="", progression_text=None):
         from music_theory import get_inversion_name # Local import
         display_name = chord_name.split(" #")[0]
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
+
+        main_content = Text(justify="left")
+        if progression_text:
+            main_content.append(progression_text)
+            main_content.append("\n\n")
 
         # In voice leading mode, we always show the notes and inversion.
         if self.use_voice_leading:
@@ -96,22 +101,25 @@ class ChordModeBase:
             note_names = [get_note_name(n) for n in sorted(list(target_notes))]
             notes_display = ", ".join(note_names)
             inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
-            content = Text.from_markup(
+
+            markup = (
                 f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}{inversion_display}[/bold yellow]\n"
                 f"Notes attendues : [cyan]{notes_display}[/cyan]"
             )
+            main_content.append(Text.from_markup(markup))
+
         # For other modes, we keep the original behavior
         else:
-            content = Text()
             if play_mode == 'PLAY_ONLY':
-                content.append(f"Jouez l'accord ({prog_index + 1}/{total_chords})")
+                main_content.append(f"Jouez l'accord ({prog_index + 1}/{total_chords})")
             else:
-                content.append(f"Accord à jouer ({prog_index + 1}/{total_chords}): ")
-                content.append(display_name, style="bold yellow")
+                main_content.append(f"Accord à jouer ({prog_index + 1}/{total_chords}): ")
+                main_content.append(display_name, style="bold yellow")
 
         if time_info:
-            content.append(f"\n{time_info}")
-        return Panel(content, title="Progression en cours", border_style="green")
+            main_content.append(f"\n{time_info}")
+
+        return Panel(main_content, title="Progression en cours", border_style="green")
     
     def wait_for_end_choice(self) -> str:
         """Attend une saisie instantanée pour continuer ou quitter."""
