@@ -537,7 +537,7 @@ class ChordModeBase:
                                 start_time = time.time()
                             is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, chord_name, target_notes)
                             if is_correct:
-                                self.played_voicings_in_progression.append(attempt_notes)
+                                self.played_voicings_in_progression.append(attempt_notes.copy())
                                 update_chord_success(chord_name.split(" #")[0])
                                 success_msg = f"[bold green]Correct ! {chord_name.split(' #')[0]}[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
