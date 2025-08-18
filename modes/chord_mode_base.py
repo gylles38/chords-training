@@ -465,26 +465,26 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
-                                # When revealing, update the live display with the solution instead of stopping it.
-                                # This prevents screen clearing/redrawing issues and keeps the display clean.
-                                solution_text = Text(justify="left")
+                                # When revealing, use Text.assemble() for a more robust way to build the display,
+                                # which should prevent the recurring formatting issues.
+                                components = []
                                 if progression_to_play_text:
-                                    solution_text.append(progression_to_play_text)
-                                    # Add a single newline. The second newline will come from the title of the summary.
-                                    solution_text.append("\n")
+                                    components.append(progression_to_play_text)
+                                    components.append("\n\n")  # This creates a single blank line.
 
                                 # Calculate the ideal voicings from the start of the progression.
                                 ideal_voicings = self._calculate_best_voicings(progression_accords, start_notes=None)
 
-                                # Prepending the title with \n ensures it starts on a new line, fixing wrapping issues.
-                                # This, combined with the \n above, creates the single blank line requested.
                                 solution_summary = self._build_transition_summary_text(
-                                    progression_accords, ideal_voicings, original_chord_set, title="\nSolution possible : "
+                                    progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
                                 )
-                                solution_text.append(solution_summary)
+                                components.append(solution_summary)
 
-                                # Update the live panel with the solution text, which is not a Panel object.
-                                live.update(solution_text, refresh=True)
+                                # Assemble all components into a single Text object.
+                                assembled_text = Text.assemble(*components, justify="left")
+
+                                # Update the live panel with the new, cleanly assembled text.
+                                live.update(assembled_text, refresh=True)
 
                                 # Wait for next action from the user ('n' for next, 'q' for quit).
                                 while not self.exit_flag:
