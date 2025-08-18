@@ -96,7 +96,7 @@ class ChordModeBase:
             note_names = [get_note_name(n) for n in sorted(list(target_notes))]
             notes_display = ", ".join(note_names)
             inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
-            content = (
+            content = Text.from_markup(
                 f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}{inversion_display}[/bold yellow]\n"
                 f"Notes attendues : [cyan]{notes_display}[/cyan]"
             )
@@ -110,7 +110,8 @@ class ChordModeBase:
             if play_mode == 'PLAY_ONLY':
                 main_content.append(f"Jouez l'accord ({prog_index + 1}/{total_chords})")
             else:
-                main_content.append(f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]")
+                main_content.append(f"Accord à jouer ({prog_index + 1}/{total_chords}): ")
+                main_content.append(display_name, style="bold yellow")
 
             content = main_content
 
@@ -475,7 +476,7 @@ class ChordModeBase:
                                     progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
                                 )
                                 solution_text.append(solution_summary)
-                                live.update(solution_text, refresh=True)
+                                live.update(Panel(solution_text, border_style="hidden"), refresh=True)
                                 continue
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
