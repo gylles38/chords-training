@@ -534,16 +534,20 @@ class ChordModeBase:
             if getattr(self, 'show_vl_summary_at_end', False) and self.played_voicings_in_progression:
                 self.console.print("\n--- Analyse des transitions ---")
 
+                title1 = "Votre progression : "
+                title2 = "Suggestion : "
+                max_len = max(len(title1), len(title2))
+
                 # Show what the user played
                 user_summary = self._build_transition_summary_text(
-                    progression_accords, self.played_voicings_in_progression, original_chord_set, title="Votre progression : "
+                    progression_accords, self.played_voicings_in_progression, original_chord_set, title=title1.ljust(max_len)
                 )
                 self.console.print(user_summary)
 
                 # Calculate and show the ideal voice leading based on the user's first chord
                 ideal_voicings = self._calculate_best_voicings(progression_accords, start_notes=self.played_voicings_in_progression[0])
                 ideal_summary = self._build_transition_summary_text(
-                    progression_accords, ideal_voicings, original_chord_set, title="Suggestion : "
+                    progression_accords, ideal_voicings, original_chord_set, title=title2.ljust(max_len)
                 )
                 self.console.print(ideal_summary)
 
