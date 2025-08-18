@@ -470,13 +470,16 @@ class ChordModeBase:
                                 solution_text = Text(justify="left")
                                 if progression_to_play_text:
                                     solution_text.append(progression_to_play_text)
-                                    solution_text.append("\n\n")
+                                    # Add a single newline. The second newline will come from the title of the summary.
+                                    solution_text.append("\n")
 
                                 # Calculate the ideal voicings from the start of the progression.
                                 ideal_voicings = self._calculate_best_voicings(progression_accords, start_notes=None)
 
+                                # Prepending the title with \n ensures it starts on a new line, fixing wrapping issues.
+                                # This, combined with the \n above, creates the single blank line requested.
                                 solution_summary = self._build_transition_summary_text(
-                                    progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
+                                    progression_accords, ideal_voicings, original_chord_set, title="\nSolution possible : "
                                 )
                                 solution_text.append(solution_summary)
 
