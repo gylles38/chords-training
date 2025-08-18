@@ -465,26 +465,27 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
-                                # When revealing, use Text.assemble() for a more robust way to build the display,
-                                # which should prevent the recurring formatting issues.
+                                # Stop the live display completely to avoid rendering state issues.
+                                live.stop()
+
+                                # Redisplay the header, which also clears the screen.
+                                self.display_header(header_title, header_name, border_style)
+
+                                # Assemble the text content for the solution.
                                 components = []
                                 if progression_to_play_text:
                                     components.append(progression_to_play_text)
-                                    components.append("\n\n")  # This creates a single blank line.
+                                    components.append("\n\n")
 
-                                # Calculate the ideal voicings from the start of the progression.
                                 ideal_voicings = self._calculate_best_voicings(progression_accords, start_notes=None)
-
                                 solution_summary = self._build_transition_summary_text(
                                     progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
                                 )
                                 components.append(solution_summary)
-
-                                # Assemble all components into a single Text object.
                                 assembled_text = Text.assemble(*components, justify="left")
 
-                                # Update the live panel with the new, cleanly assembled text.
-                                live.update(assembled_text, refresh=True)
+                                # Print the final text directly to the console.
+                                self.console.print(assembled_text)
 
                                 # Wait for next action from the user ('n' for next, 'q' for quit).
                                 while not self.exit_flag:
