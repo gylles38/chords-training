@@ -8,13 +8,13 @@ from data.chords import pop_rock_progressions
 
 
 class PopRockMode(ChordModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode  # conservé pour compat
         self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = use_transitions
+        self.use_voice_leading = True
 
     def run(self):
         while not self.exit_flag:
@@ -73,6 +73,6 @@ class PopRockMode(ChordModeBase):
 
 
 
-def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
-    mode = PopRockMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions)
+def pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+    mode = PopRockMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set)
     mode.run()

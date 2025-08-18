@@ -8,13 +8,13 @@ from screen_handler import int_to_roman
 from data.chords import gammes_majeures, cadences, DEGREE_MAP
 
 class CadenceMode(ChordModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode  # conservé pour compat
         self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = use_transitions
+        self.use_voice_leading = True
 
         self.current_tonalite = None
         self.current_cadence_name = None
@@ -123,6 +123,6 @@ class CadenceMode(ChordModeBase):
         # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()
 
-def cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
-    mode = CadenceMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions)
+def cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+    mode = CadenceMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set)
     mode.run()
