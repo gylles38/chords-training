@@ -83,16 +83,11 @@ class ChordModeBase:
         # Cette méthode est un "placeholder" qui sera redéfini par les classes filles
         return False
     
-    def create_live_display(self, chord_name, prog_index, total_chords, time_info="", progression_text=None):
+    def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
         from music_theory import get_inversion_name # Local import
         display_name = chord_name.split(" #")[0]
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
-
-        main_content = Text(justify="left")
-        if progression_text:
-            main_content.append(progression_text)
-            main_content.append("\n\n")
 
         # In voice leading mode, we always show the notes and inversion.
         if self.use_voice_leading:
@@ -101,25 +96,22 @@ class ChordModeBase:
             note_names = [get_note_name(n) for n in sorted(list(target_notes))]
             notes_display = ", ".join(note_names)
             inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
-
-            markup = (
+            content = Text.from_markup(
                 f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}{inversion_display}[/bold yellow]\n"
                 f"Notes attendues : [cyan]{notes_display}[/cyan]"
             )
-            main_content.append(Text.from_markup(markup))
-
         # For other modes, we keep the original behavior
         else:
+            content = Text()
             if play_mode == 'PLAY_ONLY':
-                main_content.append(f"Jouez l'accord ({prog_index + 1}/{total_chords})")
+                content.append(f"Jouez l'accord ({prog_index + 1}/{total_chords})")
             else:
-                main_content.append(f"Accord à jouer ({prog_index + 1}/{total_chords}): ")
-                main_content.append(display_name, style="bold yellow")
+                content.append(f"Accord à jouer ({prog_index + 1}/{total_chords}): ")
+                content.append(display_name, style="bold yellow")
 
         if time_info:
-            main_content.append(f"\n{time_info}")
-
-        return Panel(main_content, title="Progression en cours", border_style="green")
+            content.append(f"\n{time_info}")
+        return Panel(content, title="Progression en cours", border_style="green")
     
     def wait_for_end_choice(self) -> str:
         """Attend une saisie instantanée pour continuer ou quitter."""
@@ -153,6 +145,9 @@ class ChordModeBase:
                     return None, None  # stop total
                 if result == 'next':  # 'n' a été pressé
                     return None, None  # stop pour passer au suivant
+                if result == 'reveal':
+                    # We don't have the notes here, so we just pass a signal
+                    return 'reveal', 'reveal'
                 # Pour 'r' et autres touches, on continue la collecte
 
             # 2️⃣ Lecture MIDI
@@ -462,6 +457,10 @@ class ChordModeBase:
                         if char:
                             action = self.handle_keyboard_input(char)
                             if action == 'reveal':
+                                live.stop()
+                                clear_screen()
+                                self.display_header(header_title, header_name, border_style)
+
                                 solution_text = Text(justify="left")
                                 if progression_to_play_text:
                                     solution_text.append(progression_to_play_text)
@@ -474,8 +473,22 @@ class ChordModeBase:
                                     progression_accords, ideal_voicings, original_chord_set, title="Solution possible : "
                                 )
                                 solution_text.append(solution_summary)
-                                live.update(Panel(solution_text, border_style="none"), refresh=True)
-                                continue
+                                self.console.print(solution_text)
+
+                                # Wait for next action
+                                while not self.exit_flag:
+                                    char = wait_for_input(timeout=0.05)
+                                    if char:
+                                        action = self.handle_keyboard_input(char)
+                                        if action == 'next':
+                                            skip_progression = True
+                                            choice = 'skipped'
+                                        elif action is True: # Quit
+                                            skip_progression = True
+                                        break # Exit reveal loop
+                                # After reveal, we must skip the progression
+                                skip_progression = True
+                                break # Exit the inner input loop
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
