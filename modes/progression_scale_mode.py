@@ -109,12 +109,18 @@ class ProgressionScaleMode(ChordModeBase):
                 select_new_scale = True
                 continue
 
+            # --- Start of a scale attempt ---
+            clear_screen()
+            self.display_header("Les Gammes", "Mode Gammes", "green")
+            self.console.print("Le nom d'une gamme va s'afficher. Jouez la note attendue pour avancer.")
+            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
             self.console.print(f"\nÉcoutez la gamme de: [bold yellow]{self.current_scale_name}[/bold yellow]")
             play_note_sequence(self.outport, self.current_scale_notes)
             self.console.print("À vous de jouer !")
 
             scale_was_perfect = True
             skip_to_next = False
+            restart_scale_attempt = False
 
             i = 0
             while i < len(self.current_scale_notes):
@@ -125,10 +131,8 @@ class ProgressionScaleMode(ChordModeBase):
                     attempt_note, status = self.collect_user_input(collection_mode='single', release_timeout=0.1)
 
                     if status == 'repeat':
-                        self.console.print(f"\rRépétition de la gamme [bold cyan]{self.current_scale_name}[/bold cyan]")
-                        play_note_sequence(self.outport, self.current_scale_notes)
-                        self.console.print(f"\rJouez la note {i+1}/{len(self.current_scale_notes)} ({get_note_name(correct_note_for_step)})...")
-                        continue
+                        restart_scale_attempt = True
+                        break
 
                     if status == 'next':
                         skip_to_next = True
@@ -149,10 +153,14 @@ class ProgressionScaleMode(ChordModeBase):
                         scale_was_perfect = False
                         self.console.print(f"[red]Incorrect. Vous avez joué {get_note_name(attempt_note)}. Réessayez.[/red]")
 
-                if skip_to_next:
+                if skip_to_next or restart_scale_attempt:
                     break
 
                 i += 1
+
+            if restart_scale_attempt:
+                select_new_scale = False # To repeat the same scale
+                continue
 
             # --- End of scale playing ---
             self.session_total_count += 1
@@ -182,12 +190,6 @@ class ProgressionScaleMode(ChordModeBase):
                 select_new_scale = False
             elif choice == 'next':
                 select_new_scale = True
-
-            # Common logic for both 'repeat' and 'next' to refresh the screen
-            clear_screen()
-            self.display_header("Les Gammes", "Mode Gammes", "green")
-            self.console.print("Le nom d'une gamme va s'afficher. Jouez la note attendue pour avancer.")
-            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
 
         self.show_overall_stats_and_wait(extra_stats_callback=self._display_top_scale_errors)
 
