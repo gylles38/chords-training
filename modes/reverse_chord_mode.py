@@ -36,8 +36,8 @@ class ReverseChordMode(ChordModeBase):
             with Live(console=self.console, screen=False, auto_refresh=False) as live:
                 while not self.exit_flag:
                     self.clear_midi_buffer()
-                    attempt_notes, ready = self.collect_notes()
-                    if not ready:
+                    attempt_notes, status = self._collect_input_logic(collection_mode='chord')
+                    if status is not True:
                         break
 
                     # Met à jour l'affichage avec le résultat

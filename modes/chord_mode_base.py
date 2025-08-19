@@ -122,44 +122,61 @@ class ChordModeBase:
             disable_raw_mode()
         return 'continue'
     
-    def collect_notes(self):
+    def _collect_input_logic(self, collection_mode: Literal['single', 'chord'] = 'chord', release_timeout: float = 0.3):
         notes_currently_on = set()
         attempt_notes = set()
+        first_note = None
         last_note_off_time = None
 
         while not self.exit_flag:
-            # 1️⃣ Lecture clavier en priorité
-            char = wait_for_input(timeout=0.05)  # délai augmenté pour fiabilité
+            char = wait_for_input(timeout=0.01)
             if char:
-                # handle_keyboard_input gère 'q' et 'r'
-                result = self.handle_keyboard_input(char)
-                if result is True:  # 'q' a été pressé
-                    return None, None  # stop total
-                if result == 'next':  # 'n' a été pressé
-                    return None, None  # stop pour passer au suivant
-                # Pour 'r' et autres touches, on continue la collecte
+                action = self.handle_keyboard_input(char)
+                if action is True:  # 'q' was pressed and handled
+                    # self.exit_flag is now True
+                    return None, False
+                if action == 'next': # 'n'
+                    return None, 'next'
+                if action == 'repeat':
+                    return None, 'repeat'
+                # 'r' can also be handled by specific _handle_repeat, loop continues
 
-            # 2️⃣ Lecture MIDI
             for msg in self.inport.iter_pending():
                 if msg.type == 'note_on' and msg.velocity > 0:
-                    # Démarrer le chronomètre de session au premier appui MIDI si pas de compte à rebours
-                    if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is None:
-                        self.session_stopwatch_start_time = time.time()
+                    if not notes_currently_on: # First note of chord/sequence
+                        if not getattr(self, "use_timer", False) and self.session_stopwatch_start_time is None:
+                            self.session_stopwatch_start_time = time.time()
+
                     notes_currently_on.add(msg.note)
-                    attempt_notes.add(msg.note)
+                    if collection_mode == 'single':
+                        if first_note is None:
+                            first_note = msg.note
+                    else: # 'chord'
+                        attempt_notes.add(msg.note)
+
                     last_note_off_time = None
+
                 elif msg.type == 'note_off':
                     notes_currently_on.discard(msg.note)
                     if not notes_currently_on and not last_note_off_time:
                         last_note_off_time = time.time()
 
-            # 3️⃣ Validation si toutes les notes sont relâchées depuis un moment
-            if last_note_off_time and time.time() - last_note_off_time > 0.3:
-                return attempt_notes, True
+            if last_note_off_time and time.time() - last_note_off_time > release_timeout:
+                if collection_mode == 'single':
+                    return first_note, True
+                else:
+                    return attempt_notes, True
 
-            time.sleep(0.01)  # petite pause pour éviter 100% CPU
+            time.sleep(0.01)
 
-        return None, None
+        return None, False # Return if loop is exited by self.exit_flag
+
+    def collect_user_input(self, collection_mode: Literal['single', 'chord'] = 'chord', release_timeout: float = 0.3):
+        enable_raw_mode()
+        try:
+            return self._collect_input_logic(collection_mode, release_timeout)
+        finally:
+            disable_raw_mode()
 
     def check_chord(self, attempt_notes, chord_name, chord_notes):
         if not attempt_notes:

@@ -87,12 +87,12 @@ class ReversedChordsMode(ChordModeBase):
                 inversion_attempts = 0
                 while not self.exit_flag:
                     # Get user input (MIDI notes)
-                    attempt_notes, _ = self.collect_notes()
+                    attempt_notes, status = self.collect_user_input(collection_mode='chord')
 
                     if self.exit_flag: # User pressed 'q'
                         break
 
-                    if not attempt_notes: # User skipped or other issue
+                    if not attempt_notes: # User pressed 'n' or 'r', or other issue
                         continue
 
                     inversion_attempts += 1

@@ -56,14 +56,12 @@ class ListenAndRevealMode(ChordModeBase):
                     live.update(Panel(prompt_text, title="Action", border_style="green"), refresh=True)
 
                     enable_raw_mode()
-                    attempt_notes, ready = self.collect_notes()
+                    attempt_notes, status = self._collect_input_logic(collection_mode='chord')
                     disable_raw_mode()
 
-                    if attempt_notes is None and ready is None:
+                    if status is not True:
                         if self.exit_flag: break
-                        else: break
-
-                    if not ready: continue
+                        else: continue
 
                     self.session_total_attempts += 1
                     is_correct, recognized_name, recognized_inversion = self.check_chord(

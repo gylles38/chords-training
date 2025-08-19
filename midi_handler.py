@@ -106,3 +106,11 @@ def select_midi_port(port_type):
                 console.print(f"[bold red]Sélection invalide. Veuillez entrer un numéro valide.[/bold red]")
         except ValueError:
             console.print("[bold red]Sélection invalide. Veuillez entrer un numéro.[/bold red]")
+
+def play_note_sequence(outport, notes, velocity=64, duration=0.3, pause=0.1):
+    """Joue une séquence de notes individuellement."""
+    for note in notes:
+        outport.send(mido.Message('note_on', note=note, velocity=velocity))
+        time.sleep(duration)
+        outport.send(mido.Message('note_off', note=note, velocity=velocity))
+        time.sleep(pause)
