@@ -44,7 +44,7 @@ class ProgressionScaleMode(ChordModeBase):
 
     def _handle_repeat(self) -> Literal['repeat', False]:
         if self.current_scale_notes:
-            self.console.print(f"\nRépétition de la gamme [bold cyan]{self.current_scale_name}[/bold cyan]...")
+            self.console.print(f"\nRépétition de la gamme [bold cyan]{self.current_scale_name}[/bold cyan]")
             play_note_sequence(self.outport, self.current_scale_notes)
             self.console.print("À vous de jouer !")
         return False # We handled it, don't bubble up.
@@ -89,7 +89,9 @@ class ProgressionScaleMode(ChordModeBase):
                 time.sleep(2)
                 continue
 
-            self.console.print(f"\nJouez la gamme de: [bold yellow]{self.current_scale_name}[/bold yellow]")
+            self.console.print(f"\nÉcoutez la gamme de: [bold yellow]{self.current_scale_name}[/bold yellow]")
+            play_note_sequence(self.outport, self.current_scale_notes)
+            self.console.print("À vous de jouer !")
 
             first_attempt = True
             skip_to_next = False
