@@ -177,14 +177,17 @@ class ProgressionScaleMode(ChordModeBase):
 
             if choice == 'quit':
                 break
-            elif choice == 'repeat':
+
+            if choice == 'repeat':
                 select_new_scale = False
             elif choice == 'next':
                 select_new_scale = True
-                clear_screen()
-                self.display_header("Les Gammes", "Mode Gammes", "green")
-                self.console.print("Le nom d'une gamme va s'afficher. Jouez la note attendue pour avancer.")
-                self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
+
+            # Common logic for both 'repeat' and 'next' to refresh the screen
+            clear_screen()
+            self.display_header("Les Gammes", "Mode Gammes", "green")
+            self.console.print("Le nom d'une gamme va s'afficher. Jouez la note attendue pour avancer.")
+            self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
 
         self.show_overall_stats_and_wait(extra_stats_callback=self._display_top_scale_errors)
 
