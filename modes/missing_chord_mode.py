@@ -293,7 +293,7 @@ class MissingChordMode(ChordModeBase):
 
                 if action == 'attempt':
                     self.session_total_attempts += 1
-                    is_correct, recognized_name, _ = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
+                    is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
 
                     if is_correct:
                         if wrong_attempts == 0:
@@ -301,7 +301,7 @@ class MissingChordMode(ChordModeBase):
 
                         update_chord_success(missing_chord_name.split(" #")[0])
 
-                        display_name = recognized_name if recognized_name else missing_chord_name.split(' #')[0]
+                        display_name = f"{recognized_name} ({recognized_inversion})" if recognized_name else missing_chord_name.split(' #')[0]
                         success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{display_name}[/bold yellow]."
 
                         if not self.use_voice_leading and attempt_notes != missing_chord_notes:
@@ -330,7 +330,8 @@ class MissingChordMode(ChordModeBase):
                             if recognized_name == last_incorrect_chord:
                                 self.console.print("[bold red]Vous avez joué le même accord incorrect. Réessayez ![/bold red]")
                             else:
-                                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {recognized_name}. Réessayez !")
+                                played_chord_info = f"{recognized_name} ({recognized_inversion})"
+                                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {played_chord_info}. Réessayez !")
                             last_incorrect_chord = recognized_name
                         else:
                             self.console.print("[bold red]Incorrect.[/bold red] L'accord joué n'a pas été reconnu. Réessayez !")

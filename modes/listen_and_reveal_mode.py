@@ -71,7 +71,8 @@ class ListenAndRevealMode(ChordModeBase):
                     if is_correct:
                         if first_attempt: self.session_correct_count += 1
                         update_chord_success(self.current_chord_name)
-                        success_feedback = Text.from_markup(f"[bold green]Correct ! C'était bien {self.current_chord_name}.[/bold green]")
+                        played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else self.current_chord_name
+                        success_feedback = Text.from_markup(f"[bold green]Correct ! Vous avez joué {played_chord_info}.[/bold green]")
                         live.update(Panel(success_feedback, title="Résultat", border_style="green"), refresh=True)
                         time.sleep(1.5)
                         break
@@ -80,7 +81,8 @@ class ListenAndRevealMode(ChordModeBase):
                         update_chord_error(self.current_chord_name)
                         incorrect_attempts += 1
 
-                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name or 'Accord non reconnu'}")
+                        played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
+                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}")
 
                         if incorrect_attempts >= 3:
                             tonic_name = get_note_name(sorted(list(self.current_chord_notes))[0])
