@@ -46,7 +46,7 @@ class ProgressionScaleMode(ChordModeBase):
         if self.current_scale_notes:
             self.console.print(f"\nRépétition de la gamme [bold cyan]{self.current_scale_name}[/bold cyan]")
             play_note_sequence(self.outport, self.current_scale_notes)
-            self.console.print("À vous de jouer !")
+            self.console.print("\rÀ vous de jouer !")
         return False # We handled it, don't bubble up.
 
     def select_weighted_scale(self):
