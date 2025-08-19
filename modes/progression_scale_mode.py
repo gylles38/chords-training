@@ -68,23 +68,45 @@ class ProgressionScaleMode(ChordModeBase):
         for scale_name, count in sorted_errors[:5]: # Show top 5
             self.console.print(f"- [bold cyan]{scale_name}[/bold cyan]: {count} erreur{'s' if count > 1 else ''}")
 
+    def _wait_for_end_choice(self):
+        """Waits for the user to press 'n', 'r', or 'q' after a scale is played."""
+        from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
+        self.console.print("\nAppuyez sur [bold]n[/bold] pour la gamme suivante, [bold]r[/bold] pour répéter, ou [bold]q[/bold] pour quitter.")
+
+        enable_raw_mode()
+        try:
+            while True:
+                char = wait_for_input(timeout=0.1)
+                if char:
+                    if char.lower() == 'n':
+                        return 'next'
+                    if char.lower() == 'r':
+                        return 'repeat'
+                    if char.lower() == 'q':
+                        self.exit_flag = True
+                        return 'quit'
+        finally:
+            disable_raw_mode()
+
     def run(self):
         self.display_header("Les Gammes", "Mode Gammes", "green")
         self.console.print("Le nom d'une gamme va s'afficher. Jouez la gamme correspondante, note par note.")
         self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
 
+        select_new_scale = True
         while not self.exit_flag:
             self.clear_midi_buffer()
 
-            selected_scale = self.select_weighted_scale()
-            self.current_scale_name = selected_scale['display_name']
-            self.last_scale_name = self.current_scale_name
-
-            self.current_scale_notes = generate_scale(selected_scale['root_note_midi'], selected_scale['scale_type_key'])
+            if select_new_scale:
+                selected_scale = self.select_weighted_scale()
+                self.current_scale_name = selected_scale['display_name']
+                self.last_scale_name = self.current_scale_name
+                self.current_scale_notes = generate_scale(selected_scale['root_note_midi'], selected_scale['scale_type_key'])
 
             if not self.current_scale_notes:
                 self.console.print(f"[bold red]Erreur: Impossible de générer la gamme {self.current_scale_name}[/bold red]")
                 time.sleep(2)
+                select_new_scale = True
                 continue
 
             self.console.print(f"\nÉcoutez la gamme de: [bold yellow]{self.current_scale_name}[/bold yellow]")
@@ -95,7 +117,6 @@ class ProgressionScaleMode(ChordModeBase):
             skip_to_next = False
             played_scale = []
 
-            # Loop to collect each note of the scale
             i = 0
             while i < len(self.current_scale_notes):
                 self.console.print(f"En attente de la note {i+1}/{len(self.current_scale_notes)}...")
@@ -103,11 +124,9 @@ class ProgressionScaleMode(ChordModeBase):
                 attempt_note, status = self.collect_user_input(collection_mode='single', release_timeout=0.1)
 
                 if status == 'repeat':
-                    # Since we are now outside the raw mode context, we can print and play freely.
                     self.console.print(f"\rRépétition de la gamme [bold cyan]{self.current_scale_name}[/bold cyan]")
                     play_note_sequence(self.outport, self.current_scale_notes)
                     self.console.print("\rÀ vous de jouer !")
-                    # We use continue to re-prompt for the same note index `i`.
                     continue
 
                 if status == 'next':
@@ -122,42 +141,41 @@ class ProgressionScaleMode(ChordModeBase):
                     continue
 
                 played_scale.append(attempt_note)
-                i += 1 # Move to the next note
+                i += 1
 
-            if skip_to_next:
-                if not self.exit_flag:
-                    clear_screen()
-                    self.display_header("Les Gammes", "Mode Gammes", "green")
-                    self.console.print("Le nom d'une gamme va s'afficher. Jouez la gamme correspondante, note par note.")
-                    self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
-                continue
-
-            # Check the played scale
-            is_correct = (played_scale == self.current_scale_notes)
-
-            self.session_total_attempts += 1
-
-            if is_correct:
-                if first_attempt:
-                    self.session_correct_count += 1
-                update_scale_success(self.current_scale_name)
-                self.console.print(f"[bold green]Correct ! C'était bien la gamme de {self.current_scale_name}.[/bold green]")
-                time.sleep(1.5)
+            if skip_to_next and not self.exit_flag:
+                # This case is for 'n' pressed mid-scale.
+                # We should treat it like finishing the scale and choosing 'n'.
+                choice = 'next'
             else:
-                first_attempt = False
-                update_scale_error(self.current_scale_name)
-                played_note_names = [get_note_name(n) for n in played_scale] if played_scale else ["Rien"]
-                correct_note_names = [get_note_name(n) for n in self.current_scale_notes]
-                self.console.print(f"[bold red]Incorrect.[/bold red]")
-                self.console.print(f"Attendu: {' - '.join(correct_note_names)}")
-                self.console.print(f"Joué:    {' - '.join(played_note_names)}")
-                time.sleep(3)
+                # This block runs after the user has played all the notes of the scale.
+                is_correct = (played_scale == self.current_scale_notes)
+                self.session_total_attempts += 1
+                if is_correct:
+                    if first_attempt:
+                        self.session_correct_count += 1
+                    update_scale_success(self.current_scale_name)
+                    self.console.print(f"[bold green]Correct ! C'était bien la gamme de {self.current_scale_name}.[/bold green]")
+                    time.sleep(1.0)
+                else:
+                    first_attempt = False
+                    update_scale_error(self.current_scale_name)
+                    played_note_names = [get_note_name(n) for n in played_scale] if played_scale else ["Rien"]
+                    correct_note_names = [get_note_name(n) for n in self.current_scale_notes]
+                    self.console.print(f"[bold red]Incorrect.[/bold red]")
+                    self.console.print(f"Attendu: {' - '.join(correct_note_names)}")
+                    self.console.print(f"Joué:    {' - '.join(played_note_names)}")
+                    time.sleep(2.0)
 
-            self.session_total_count += 1
-            self.current_scale_name = None
-            self.current_scale_notes = None
+                self.session_total_count += 1
+                choice = self._wait_for_end_choice()
 
-            if not self.exit_flag:
+            if choice == 'quit':
+                break
+            elif choice == 'repeat':
+                select_new_scale = False
+            elif choice == 'next':
+                select_new_scale = True
                 clear_screen()
                 self.display_header("Les Gammes", "Mode Gammes", "green")
                 self.console.print("Le nom d'une gamme va s'afficher. Jouez la gamme correspondante, note par note.")
