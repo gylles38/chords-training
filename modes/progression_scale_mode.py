@@ -115,6 +115,11 @@ class ProgressionScaleMode(ChordModeBase):
             self.console.print("Le nom d'une gamme va s'afficher. Jouez la note attendue pour avancer.")
             self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
             self.console.print(f"\nÉcoutez la gamme de: [bold yellow]{self.current_scale_name}[/bold yellow]")
+
+            note_names = [get_note_name(n) for n in self.current_scale_notes]
+            scale_display = " -> ".join(note_names)
+            self.console.print(f"[cyan]{scale_display}[/cyan]")
+
             play_note_sequence(self.outport, self.current_scale_notes)
             self.console.print("À vous de jouer !")
 
