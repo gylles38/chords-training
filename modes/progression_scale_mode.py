@@ -116,7 +116,6 @@ class ProgressionScaleMode(ChordModeBase):
             self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
             self.console.print(f"\nÉcoutez la gamme de: [bold yellow]{self.current_scale_name}[/bold yellow]")
 
-            self.console.print(f"DEBUG: Notes MIDI générées: {self.current_scale_notes}")
             note_names = [get_note_name(n) for n in self.current_scale_notes]
             scale_display = " -> ".join(note_names)
             self.console.print(f"[cyan]{scale_display}[/cyan]")

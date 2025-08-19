@@ -110,7 +110,6 @@ def select_midi_port(port_type):
 def play_note_sequence(outport, notes, velocity=64, duration=0.3, pause=0.1):
     """Joue une séquence de notes individuellement."""
     for note in notes:
-        print(f"DEBUG: Playing MIDI note: {note}")
         outport.send(mido.Message('note_on', note=note, velocity=velocity))
         time.sleep(duration)
         outport.send(mido.Message('note_off', note=note, velocity=velocity))
