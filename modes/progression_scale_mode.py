@@ -141,7 +141,7 @@ class ProgressionScaleMode(ChordModeBase):
                     if attempt_note is None:
                         continue
 
-                    if attempt_note == correct_note_for_step:
+                    if (attempt_note % 12) == (correct_note_for_step % 12):
                         self.console.print(f"[green]Correct ![/green]")
                         time.sleep(0.5)
                         break # Correct note played, exit inner loop
