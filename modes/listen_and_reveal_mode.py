@@ -38,11 +38,18 @@ class ListenAndRevealMode(ChordModeBase):
                     new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
 
                 self.current_chord_name = new_chord_name
+                # The "correct" answer is always based on the root position notes
                 self.current_chord_notes = new_chord_notes
                 self.last_chord_name = new_chord_name
 
+                # --- NEW: Play a random inversion ---
+                # Generate all possible inversions for the chord
+                all_inversions = self._get_inversions(new_chord_notes)
+                # Randomly select one of the inversions to play
+                notes_to_play = random.choice(all_inversions) if all_inversions else new_chord_notes
+
                 live.update(Panel("Lecture de l'accord...", title="Action", border_style="yellow"), refresh=True)
-                play_chord(self.outport, self.current_chord_notes)
+                play_chord(self.outport, notes_to_play)
 
                 incorrect_attempts = 0
                 first_attempt = True
