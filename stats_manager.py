@@ -204,3 +204,29 @@ def update_note_success(note_name: str) -> None:
         if stats["note_errors"][note_name] == 0:
             del stats["note_errors"][note_name]
         save_stats(stats)
+
+
+def get_scale_errors() -> Dict[str, int]:
+    """Charge les statistiques d'erreurs par gamme."""
+    stats = load_stats()
+    return stats.get("scale_errors", {})
+
+
+def update_scale_error(scale_name: str) -> None:
+    """Met à jour le compteur d'erreurs pour une gamme spécifique."""
+    stats = load_stats()
+    if "scale_errors" not in stats:
+        stats["scale_errors"] = {}
+
+    stats["scale_errors"][scale_name] = stats["scale_errors"].get(scale_name, 0) + 1
+    save_stats(stats)
+
+
+def update_scale_success(scale_name: str) -> None:
+    """Diminue le compteur d'erreurs pour une gamme spécifique après une réussite."""
+    stats = load_stats()
+    if "scale_errors" in stats and scale_name in stats["scale_errors"]:
+        stats["scale_errors"][scale_name] = max(0, stats["scale_errors"][scale_name] - 1)
+        if stats["scale_errors"][scale_name] == 0:
+            del stats["scale_errors"][scale_name]
+        save_stats(stats)

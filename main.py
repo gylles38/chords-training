@@ -31,6 +31,7 @@ from screen_handler import clear_screen
 from modes.single_chord_mode import single_chord_mode
 from modes.listen_and_reveal_mode import listen_and_reveal_mode
 from modes.single_note_mode import single_note_mode
+from modes.progression_scale_mode import progression_scale_mode
 from modes.progression_mode import progression_mode
 from modes.degrees_mode import degrees_mode
 from modes.all_degrees_mode import all_degrees_mode
@@ -205,20 +206,21 @@ def main():
                 menu_options = Text()
                 menu_options.append("[1] Explorateur d'accords (Dictionnaire)\n", style="bold chartreuse4")
                 menu_options.append("[2] Ecoute et Devine la note\n", style="bold bright_blue")
-                menu_options.append("[3] Accord Simple\n", style="bold yellow")
-                menu_options.append("[4] Écoute et Devine l'accord\n", style="bold orange3")
-                menu_options.append("[5] Progressions d'accords (aléatoires)\n", style="bold grey37")
-                menu_options.append("[6] Degrés (aléatoire)\n", style="bold red")
-                menu_options.append("[7] Tous les Degrés (gamme)\n", style="bold purple")
-                menu_options.append("[8] Cadences (théorie)\n", style="bold magenta")
-                menu_options.append("[9] Pop/Rock (célèbres)\n", style="bold cyan")
-                menu_options.append("[10] Reconnaissance Libre\n", style="bold green4")
-                menu_options.append("[11] Progression Tonale\n", style="bold bright_magenta")
-                menu_options.append("[12] Renversements d'accords (aléatoires)\n", style="bold blue_violet")
-                menu_options.append("[13] Passage d'accords\n", style="bold purple")
-                menu_options.append("[14] Trouve l'accord manquant\n", style="bold green_yellow")
+                menu_options.append("[3] Les gammes\n", style="bold bright_cyan")
+                menu_options.append("[4] Accord Simple\n", style="bold yellow")
+                menu_options.append("[5] Écoute et Devine l'accord\n", style="bold orange3")
+                menu_options.append("[6] Progressions d'accords (aléatoires)\n", style="bold grey37")
+                menu_options.append("[7] Degrés (aléatoire)\n", style="bold red")
+                menu_options.append("[8] Tous les Degrés (gamme)\n", style="bold purple")
+                menu_options.append("[9] Cadences (théorie)\n", style="bold magenta")
+                menu_options.append("[10] Pop/Rock (célèbres)\n", style="bold cyan")
+                menu_options.append("[11] Reconnaissance Libre\n", style="bold green4")
+                menu_options.append("[12] Progression Tonale\n", style="bold bright_magenta")
+                menu_options.append("[13] Renversements d'accords (aléatoires)\n", style="bold blue_violet")
+                menu_options.append("[14] Passage d'accords\n", style="bold purple")
+                menu_options.append("[15] Trouve l'accord manquant\n", style="bold green_yellow")
                 menu_options.append("--- Configuration ---\n", style="dim")
-                menu_options.append("[15] Options\n", style="bold white")
+                menu_options.append("[16] Options\n", style="bold white")
                 menu_options.append("[q] Quitter", style="bold white")
                 menu_panel = Panel(
                     menu_options,
@@ -228,37 +230,39 @@ def main():
                 console.print(menu_panel)
 
                 # MODIFIÉ: Mise à jour des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', 'q'], show_choices=False, console=console)
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', 'q'], show_choices=False, console=console)
 
                 if mode_choice == '1':
                     chord_explorer_mode(outport)
                 elif mode_choice == '2':
                     single_note_mode(inport, outport)
                 elif mode_choice == '3':
-                    single_chord_mode(inport, outport, current_chord_set)
+                    progression_scale_mode(inport, outport)
                 elif mode_choice == '4':
-                    listen_and_reveal_mode(inport, outport, current_chord_set)
+                    single_chord_mode(inport, outport, current_chord_set)
                 elif mode_choice == '5':
-                    progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    listen_and_reveal_mode(inport, outport, current_chord_set)
                 elif mode_choice == '6':
-                    degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '7':
-                    all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '8':
-                    cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '9':
-                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '10':
-                    reverse_chord_mode(inport, outport, current_chord_set)
+                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '11':
-                    tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    reverse_chord_mode(inport, outport, current_chord_set)
                 elif mode_choice == '12':
-                    reversed_chords_mode(inport, outport, current_chord_set)
+                    tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '13':
-                    chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    reversed_chords_mode(inport, outport, current_chord_set)
                 elif mode_choice == '14':
-                    missing_chord_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '15':
+                    missing_chord_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                elif mode_choice == '16':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
                 elif mode_choice == 'q':
                     console.print("Arrêt du programme.", style="bold red")

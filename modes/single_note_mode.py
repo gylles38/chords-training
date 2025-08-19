@@ -7,7 +7,7 @@ from .chord_mode_base import ChordModeBase
 from midi_handler import play_chord
 from screen_handler import clear_screen
 from music_theory import get_note_name
-from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
+from keyboard_handler import wait_for_input
 from stats_manager import get_note_errors, update_note_error, update_note_success
 
 
@@ -33,48 +33,6 @@ class SingleNoteMode(ChordModeBase):
         while new_note == self.last_note:
             new_note = random.choices(self.note_pool, weights=weights, k=1)[0]
         return new_note
-
-    def collect_note_listen_mode(self):
-        notes_currently_on = set()
-        attempt_note = None
-        last_note_off_time = None
-
-        enable_raw_mode()
-        try:
-            while not self.exit_flag:
-                char = wait_for_input(timeout=0.01)
-                if char:
-                    if char.lower() == 'q':
-                        self.exit_flag = True
-                        return None, None
-                    elif char.lower() == 'n':
-                        return None, None
-                    elif char.lower() == 'r' and self.current_note is not None:
-                        disable_raw_mode()
-                        play_chord(self.outport, [self.current_note])
-                        enable_raw_mode()
-                        continue
-
-                for msg in self.inport.iter_pending():
-                    if msg.type == 'note_on' and msg.velocity > 0:
-                        if not notes_currently_on: # Première note jouée
-                            self.session_stopwatch_start_time = self.session_stopwatch_start_time or time.time()
-                        notes_currently_on.add(msg.note)
-                        if attempt_note is None:
-                            attempt_note = msg.note
-                        last_note_off_time = None
-                    elif msg.type == 'note_off':
-                        notes_currently_on.discard(msg.note)
-                        if not notes_currently_on and not last_note_off_time:
-                            last_note_off_time = time.time()
-
-                if last_note_off_time and time.time() - last_note_off_time > 0.1:
-                    return attempt_note, True
-
-                time.sleep(0.01)
-        finally:
-            disable_raw_mode()
-        return None, None
 
     def _display_top_note_errors(self):
         """Affiche les 3 notes avec le plus d'erreurs."""
@@ -107,11 +65,15 @@ class SingleNoteMode(ChordModeBase):
             skip_to_next = False
 
             while not self.exit_flag and not skip_to_next:
-                attempt_note, ready = self.collect_note_listen_mode()
+                attempt_note, status = self.collect_user_input(collection_mode='single', release_timeout=0.1)
 
-                if not ready:
-                    if self.exit_flag or (attempt_note is None and not self.exit_flag):
-                        skip_to_next = True
+                if status == 'next':
+                    skip_to_next = True
+                    continue
+
+                if status is not True:
+                    # This handles exit_flag being set (status=False) or other issues.
+                    # The main loop condition `while not self.exit_flag` will handle the exit.
                     continue
 
                 if attempt_note is None:

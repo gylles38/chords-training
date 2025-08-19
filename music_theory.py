@@ -129,3 +129,32 @@ def get_inversion_name(chord_name, chord_notes):
         return inversion_labels[inversion_index]
     else:
         return f"{inversion_index + 1}ème renversement"
+
+
+SCALE_INTERVALS = {
+    'major': [2, 2, 1, 2, 2, 2, 1],
+    'natural_minor': [2, 1, 2, 2, 1, 2, 2],
+    'harmonic_minor': [2, 1, 2, 2, 1, 3, 1],
+    'melodic_minor_asc': [2, 1, 2, 2, 2, 2, 1],
+}
+
+def generate_scale(root_note: int, scale_type: str) -> list[int] | None:
+    """
+    Generates a scale from a root note and a scale type.
+    Returns a list of MIDI notes for one octave (including the octave note).
+    """
+    if scale_type == 'melodic_minor_desc':
+        intervals = SCALE_INTERVALS['natural_minor']
+    elif scale_type in SCALE_INTERVALS:
+        intervals = SCALE_INTERVALS[scale_type]
+    else:
+        return None
+
+    scale = [root_note]
+    current_note = root_note
+    # The intervals define the steps to the next note. A 7-interval list defines an 8-note scale (octave included).
+    for interval in intervals:
+        current_note += interval
+        scale.append(current_note)
+
+    return scale
