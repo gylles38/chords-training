@@ -33,14 +33,13 @@ class MissingChordMode(ChordModeBase):
         progression_selection_mode,
         play_progression_before_start,
         chord_set,
-        use_transitions,
     ):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = use_transitions
+        self.use_voice_leading = True
 
     # --- Progression Generation Methods ---
 
@@ -364,7 +363,6 @@ def missing_chord_mode(
     progression_selection_mode,
     play_progression_before_start,
     chord_set,
-    use_transitions=False,
 ):
     mode = MissingChordMode(
         inport,
@@ -374,6 +372,5 @@ def missing_chord_mode(
         progression_selection_mode,
         play_progression_before_start,
         chord_set,
-        use_transitions,
     )
     mode.run()

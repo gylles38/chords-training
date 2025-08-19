@@ -8,16 +8,16 @@ from data.chords import gammes_majeures
 from screen_handler import int_to_roman
 
 class AllDegreesMode(ChordModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = use_transitions
+        self.use_voice_leading = False
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
-        table = Table(title=f"\nTableau des degrés pour {tonalite}", border_style="purple")
+        table = Table(border_style="purple")
         table.add_column("Degré", justify="center", style="bold cyan")
         table.add_column("Accord", justify="center", style="bold yellow")
 
@@ -65,6 +65,6 @@ class AllDegreesMode(ChordModeBase):
         self.show_overall_stats_and_wait()
 
 
-def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions=False):
-    mode = AllDegreesMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_transitions)
+def all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+    mode = AllDegreesMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set)
     mode.run()
