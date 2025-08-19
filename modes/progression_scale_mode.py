@@ -43,11 +43,9 @@ class ProgressionScaleMode(ChordModeBase):
                 })
 
     def _handle_repeat(self) -> Literal['repeat', False]:
-        if self.current_scale_notes:
-            self.console.print(f"\nRépétition de la gamme [bold cyan]{self.current_scale_name}[/bold cyan]")
-            play_note_sequence(self.outport, self.current_scale_notes)
-            self.console.print("\rÀ vous de jouer !")
-        return False # We handled it, don't bubble up.
+        # The repeat logic is now handled in the run loop,
+        # so this method just needs to signal that a repeat was requested.
+        return 'repeat'
 
     def select_weighted_scale(self):
         scale_errors = get_scale_errors()
@@ -98,23 +96,33 @@ class ProgressionScaleMode(ChordModeBase):
             played_scale = []
 
             # Loop to collect each note of the scale
-            for i in range(len(self.current_scale_notes)):
+            i = 0
+            while i < len(self.current_scale_notes):
                 self.console.print(f"En attente de la note {i+1}/{len(self.current_scale_notes)}...")
 
                 attempt_note, status = self.collect_user_input(collection_mode='single', release_timeout=0.1)
+
+                if status == 'repeat':
+                    # Since we are now outside the raw mode context, we can print and play freely.
+                    self.console.print(f"\rRépétition de la gamme [bold cyan]{self.current_scale_name}[/bold cyan]")
+                    play_note_sequence(self.outport, self.current_scale_notes)
+                    self.console.print("\rÀ vous de jouer !")
+                    # We use continue to re-prompt for the same note index `i`.
+                    continue
 
                 if status == 'next':
                     skip_to_next = True
                     break
 
-                if status is not True:
-                    skip_to_next = True # Exit the note collection loop because 'q' was pressed
+                if status is not True: # 'q' was pressed or other issue
+                    skip_to_next = True
                     break
 
                 if attempt_note is None:
                     continue
 
                 played_scale.append(attempt_note)
+                i += 1 # Move to the next note
 
             if skip_to_next:
                 if not self.exit_flag:

@@ -139,7 +139,9 @@ class ChordModeBase:
                         return None, False
                     if action == 'next': # 'n'
                         return None, 'next'
-                    # 'r' is handled by _handle_repeat, loop continues
+                    if action == 'repeat':
+                        return None, 'repeat'
+                    # 'r' can also be handled by specific _handle_repeat, loop continues
 
                 for msg in self.inport.iter_pending():
                     if msg.type == 'note_on' and msg.velocity > 0:
