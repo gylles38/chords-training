@@ -41,6 +41,31 @@ class MissingChordMode(ChordModeBase):
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = True
 
+    def check_chord(self, attempt_notes, chord_name, chord_notes):
+        """
+        Overrides the base class check_chord to use name-based recognition
+        even when voice leading is active, which is necessary for this mode
+        as the user cannot know the specific voicing of the missing chord.
+        """
+        from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent
+        try:
+            if not attempt_notes:
+                return False, None, None
+
+            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+
+            # Strip the " #n" suffix added by voice leading for comparison
+            base_chord_name = chord_name.split(" #")[0]
+
+            is_correct = (recognized_name and
+                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name) and
+                          len(attempt_notes) == len(chord_notes))
+
+            return is_correct, recognized_name, recognized_inversion
+        except Exception as e:
+            self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
+            return False, None, None
+
     # --- Progression Generation Methods ---
 
     def _gen_from_all_degrees(self) -> Optional[Tuple[List[str], str, str]]:
