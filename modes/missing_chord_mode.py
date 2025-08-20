@@ -141,6 +141,7 @@ class MissingChordMode(ChordModeBase):
         pause_duration = 0.5
 
         display_parts = []
+        last_displayed_notes = set()
         for i, chord_name in enumerate(progression_chords):
             text = Text()
             text.append("(")
@@ -149,18 +150,23 @@ class MissingChordMode(ChordModeBase):
 
             if i == missing_index:
                 text.append("... ? ...", style="bold yellow")
+                last_displayed_notes = set() # Reset for the next chord
             else:
+                current_notes = voicings[i]
+                common_notes = current_notes.intersection(last_displayed_notes)
+
                 chord_name_part = chord_name.split(' #')[0]
                 text.append(f"{chord_name_part} (", style="bold yellow")
 
-                current_notes = voicings[i]
                 note_list = sorted(list(current_notes))
                 for j, note_val in enumerate(note_list):
                     note_name = get_note_name_with_octave(note_val)
-                    text.append(note_name, style="cyan")
+                    style = "bold green" if note_val in common_notes else "cyan"
+                    text.append(note_name, style=style)
                     if j < len(note_list) - 1:
                         text.append(", ", style="default")
                 text.append(")", style="bold yellow")
+                last_displayed_notes = current_notes
             display_parts.append(text)
 
         full_display_text = Text(" -> ").join(display_parts)
