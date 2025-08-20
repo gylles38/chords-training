@@ -66,9 +66,11 @@ class ListenAndRevealMode(ChordModeBase):
                     attempt_notes, status = self._collect_input_logic(collection_mode='chord')
                     disable_raw_mode()
 
+                    if status == 'next':
+                        break
                     if status is not True:
                         if self.exit_flag: break
-                        else: continue
+                        else: continue # This will now only handle 'repeat'
 
                     self.session_total_attempts += 1
                     is_correct, recognized_name, recognized_inversion = self.check_chord(

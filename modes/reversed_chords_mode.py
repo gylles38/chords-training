@@ -81,6 +81,7 @@ class ReversedChordsMode(ChordModeBase):
             self.console.print(f"\nProchain accord : [bold yellow]{chord_name}[/bold yellow] ({num_notes} notes)")
 
             # --- Inversions Loop ---
+            skip_to_next_chord = False
             for i, expected_inversion in enumerate(inversions_to_play):
                 self.console.print(f"  ({i+1}/{num_notes}) Prêt à jouer [bold cyan]{expected_inversion}[/bold cyan]...")
 
@@ -89,10 +90,14 @@ class ReversedChordsMode(ChordModeBase):
                     # Get user input (MIDI notes)
                     attempt_notes, status = self.collect_user_input(collection_mode='chord')
 
+                    if status == 'next':
+                        skip_to_next_chord = True
+                        break
+
                     if self.exit_flag: # User pressed 'q'
                         break
 
-                    if not attempt_notes: # User pressed 'n' or 'r', or other issue
+                    if not attempt_notes: # User pressed 'r'
                         continue
 
                     inversion_attempts += 1
@@ -127,8 +132,11 @@ class ReversedChordsMode(ChordModeBase):
                         self.console.print(feedback)
                         self.console.print("Réessayez...")
 
-                if self.exit_flag:
+                if self.exit_flag or skip_to_next_chord:
                     break # Exit the inversions loop
+
+            if skip_to_next_chord:
+                continue
 
             if not self.exit_flag:
                 self.console.print(f"Série de renversements pour [bold yellow]{chord_name}[/bold yellow] terminée.")
