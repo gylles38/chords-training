@@ -491,7 +491,8 @@ class ChordModeBase:
                             if is_correct:
                                 self.played_voicings_in_progression.append(attempt_notes.copy())
                                 update_chord_success(chord_name.split(" #")[0])
-                                success_msg = f"[bold green]Correct ! {recognized_name} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
+                                base_chord_name = chord_name.split(" #")[0]
+                                success_msg = f"[bold green]Correct ! {base_chord_name} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)
                                 enable_raw_mode()

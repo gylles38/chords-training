@@ -343,7 +343,8 @@ class MissingChordMode(ChordModeBase):
 
                         update_chord_success(missing_chord_name.split(" #")[0])
 
-                        display_name = f"{recognized_name} ({recognized_inversion})" if recognized_name else missing_chord_name.split(' #')[0]
+                        base_chord_name = missing_chord_name.split(' #')[0]
+                        display_name = f"{base_chord_name} ({recognized_inversion})"
                         success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{display_name}[/bold yellow]."
 
                         if not self.use_voice_leading and attempt_notes != missing_chord_notes:

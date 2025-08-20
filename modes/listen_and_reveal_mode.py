@@ -80,8 +80,9 @@ class ListenAndRevealMode(ChordModeBase):
                     if is_correct:
                         if first_attempt: self.session_correct_count += 1
                         update_chord_success(self.current_chord_name)
-                        played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else self.current_chord_name
-                        success_feedback = Text.from_markup(f"[bold green]Correct ! Vous avez joué {played_chord_info}.[/bold green]")
+                        # Display the expected chord name, but the inversion the user played.
+                        success_feedback_text = f"Correct ! C'était bien {self.current_chord_name} ({recognized_inversion})."
+                        success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]")
                         live.update(Panel(success_feedback, title="Résultat", border_style="green"), refresh=True)
                         time.sleep(1.5)
                         break
