@@ -213,7 +213,7 @@ class MissingChordMode(ChordModeBase):
                 time.sleep(pause_duration)
         self.console.print()
 
-    def _collect_and_handle_input(self, prog_to_play, chord_set_to_use, missing_index) -> Tuple[Optional[Set[int]], str]:
+    def _collect_and_handle_input(self, prog_to_play, chord_set_to_use, voicings, missing_index) -> Tuple[Optional[Set[int]], str]:
         notes_currently_on = set()
         attempt_notes = set()
         last_note_off_time = None
@@ -227,7 +227,7 @@ class MissingChordMode(ChordModeBase):
                         disable_raw_mode()
                         clear_screen()
                         self.display_header("Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan")
-                        self._play_gapped_progression(prog_to_play, chord_set_to_use, missing_index)
+                        self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
                         self.console.print("Quel était l'accord manquant ?")
                         enable_raw_mode()
                         attempt_notes.clear()
@@ -302,7 +302,7 @@ class MissingChordMode(ChordModeBase):
             wrong_attempts = 0
             last_incorrect_chord = None
             while not self.exit_flag:
-                attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, missing_index)
+                attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, voicings, missing_index)
 
                 if action in ['next', 'quit']:
                     if action == 'next': break
