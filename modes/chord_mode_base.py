@@ -192,8 +192,10 @@ class ChordModeBase:
         # Original behavior: name-based recognition
         try:
             recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+            # Strip the " #n" suffix added by voice leading for comparison
+            base_chord_name = chord_name.split(" #")[0]
             is_correct = (recognized_name and
-                          are_chord_names_enharmonically_equivalent(recognized_name, chord_name) and
+                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name) and
                           len(attempt_notes) == len(chord_notes))
             return is_correct, recognized_name, recognized_inversion
         except Exception as e:
