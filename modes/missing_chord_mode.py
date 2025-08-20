@@ -41,6 +41,31 @@ class MissingChordMode(ChordModeBase):
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = True
 
+    def check_chord(self, attempt_notes, chord_name, chord_notes):
+        """
+        Overrides the base class check_chord to use name-based recognition
+        even when voice leading is active, which is necessary for this mode
+        as the user cannot know the specific voicing of the missing chord.
+        """
+        from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent
+        try:
+            if not attempt_notes:
+                return False, None, None
+
+            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+
+            # Strip the " #n" suffix added by voice leading for comparison
+            base_chord_name = chord_name.split(" #")[0]
+
+            is_correct = (recognized_name and
+                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name) and
+                          len(attempt_notes) == len(chord_notes))
+
+            return is_correct, recognized_name, recognized_inversion
+        except Exception as e:
+            self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
+            return False, None, None
+
     # --- Progression Generation Methods ---
 
     def _gen_from_all_degrees(self) -> Optional[Tuple[List[str], str, str]]:
@@ -132,7 +157,8 @@ class MissingChordMode(ChordModeBase):
         return f"\n[italic]{comment}[/italic]" if comment else ""
 
 
-    def _play_gapped_progression(self, progression_chords: List[str], chord_set: Dict, missing_index: int):
+    def _play_gapped_progression(self, progression_chords: List[str], chord_set: Dict, voicings: List[Set[int]], missing_index: int):
+        from music_theory import get_note_name_with_octave # Local import
         self.console.print("\nÉcoutez bien la progression ('r' pour réécouter)...")
         time.sleep(1)
 
@@ -140,6 +166,7 @@ class MissingChordMode(ChordModeBase):
         pause_duration = 0.5
 
         display_parts = []
+        last_displayed_notes = set()
         for i, chord_name in enumerate(progression_chords):
             text = Text()
             text.append("(")
@@ -148,8 +175,23 @@ class MissingChordMode(ChordModeBase):
 
             if i == missing_index:
                 text.append("... ? ...", style="bold yellow")
+                last_displayed_notes = set() # Reset for the next chord
             else:
-                text.append(chord_name.split(' #')[0])
+                current_notes = voicings[i]
+                common_notes = current_notes.intersection(last_displayed_notes)
+
+                chord_name_part = chord_name.split(' #')[0]
+                text.append(f"{chord_name_part} (", style="bold yellow")
+
+                note_list = sorted(list(current_notes))
+                for j, note_val in enumerate(note_list):
+                    note_name = get_note_name_with_octave(note_val)
+                    style = "bold green" if note_val in common_notes else "cyan"
+                    text.append(note_name, style=style)
+                    if j < len(note_list) - 1:
+                        text.append(", ", style="default")
+                text.append(")", style="bold yellow")
+                last_displayed_notes = current_notes
             display_parts.append(text)
 
         full_display_text = Text(" -> ").join(display_parts)
@@ -196,7 +238,7 @@ class MissingChordMode(ChordModeBase):
                 time.sleep(pause_duration)
         self.console.print()
 
-    def _collect_and_handle_input(self, prog_to_play, chord_set_to_use, missing_index) -> Tuple[Optional[Set[int]], str]:
+    def _collect_and_handle_input(self, prog_to_play, chord_set_to_use, voicings, missing_index) -> Tuple[Optional[Set[int]], str]:
         notes_currently_on = set()
         attempt_notes = set()
         last_note_off_time = None
@@ -210,7 +252,7 @@ class MissingChordMode(ChordModeBase):
                         disable_raw_mode()
                         clear_screen()
                         self.display_header("Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan")
-                        self._play_gapped_progression(prog_to_play, chord_set_to_use, missing_index)
+                        self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
                         self.console.print("Quel était l'accord manquant ?")
                         enable_raw_mode()
                         attempt_notes.clear()
@@ -279,13 +321,13 @@ class MissingChordMode(ChordModeBase):
             missing_chord_notes = chord_set_to_use[missing_chord_name]
             prog_to_play_with_answer = list(prog_to_play)
 
-            self._play_gapped_progression(prog_to_play, chord_set_to_use, missing_index)
+            self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
             self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('n' pour passer, 'q' pour quitter)")
 
             wrong_attempts = 0
             last_incorrect_chord = None
             while not self.exit_flag:
-                attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, missing_index)
+                attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, voicings, missing_index)
 
                 if action in ['next', 'quit']:
                     if action == 'next': break
@@ -293,7 +335,7 @@ class MissingChordMode(ChordModeBase):
 
                 if action == 'attempt':
                     self.session_total_attempts += 1
-                    is_correct, recognized_name, _ = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
+                    is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
 
                     if is_correct:
                         if wrong_attempts == 0:
@@ -301,7 +343,8 @@ class MissingChordMode(ChordModeBase):
 
                         update_chord_success(missing_chord_name.split(" #")[0])
 
-                        display_name = recognized_name if recognized_name else missing_chord_name.split(' #')[0]
+                        base_chord_name = missing_chord_name.split(' #')[0]
+                        display_name = f"{base_chord_name} ({recognized_inversion})"
                         success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{display_name}[/bold yellow]."
 
                         if not self.use_voice_leading and attempt_notes != missing_chord_notes:
@@ -330,7 +373,8 @@ class MissingChordMode(ChordModeBase):
                             if recognized_name == last_incorrect_chord:
                                 self.console.print("[bold red]Vous avez joué le même accord incorrect. Réessayez ![/bold red]")
                             else:
-                                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {recognized_name}. Réessayez !")
+                                played_chord_info = f"{recognized_name} ({recognized_inversion})"
+                                self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {played_chord_info}. Réessayez !")
                             last_incorrect_chord = recognized_name
                         else:
                             self.console.print("[bold red]Incorrect.[/bold red] L'accord joué n'a pas été reconnu. Réessayez !")

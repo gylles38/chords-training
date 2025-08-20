@@ -192,8 +192,10 @@ class ChordModeBase:
         # Original behavior: name-based recognition
         try:
             recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+            # Strip the " #n" suffix added by voice leading for comparison
+            base_chord_name = chord_name.split(" #")[0]
             is_correct = (recognized_name and
-                          are_chord_names_enharmonically_equivalent(recognized_name, chord_name) and
+                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name) and
                           len(attempt_notes) == len(chord_notes))
             return is_correct, recognized_name, recognized_inversion
         except Exception as e:
@@ -489,7 +491,8 @@ class ChordModeBase:
                             if is_correct:
                                 self.played_voicings_in_progression.append(attempt_notes.copy())
                                 update_chord_success(chord_name.split(" #")[0])
-                                success_msg = f"[bold green]Correct ! {chord_name.split(' #')[0]}[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
+                                base_chord_name = chord_name.split(" #")[0]
+                                success_msg = f"[bold green]Correct ! {base_chord_name} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)
                                 enable_raw_mode()
@@ -501,7 +504,8 @@ class ChordModeBase:
                                 break
                             else:
                                 update_chord_error(chord_name.split(" #")[0])
-                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name if recognized_name else 'Accord non reconnu'}\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
+                                played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
+                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)
                                 time.sleep(2)

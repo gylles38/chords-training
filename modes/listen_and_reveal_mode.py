@@ -38,11 +38,18 @@ class ListenAndRevealMode(ChordModeBase):
                     new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
 
                 self.current_chord_name = new_chord_name
+                # The "correct" answer is always based on the root position notes
                 self.current_chord_notes = new_chord_notes
                 self.last_chord_name = new_chord_name
 
+                # --- NEW: Play a random inversion ---
+                # Generate all possible inversions for the chord
+                all_inversions = self._get_inversions(new_chord_notes)
+                # Randomly select one of the inversions to play
+                notes_to_play = random.choice(all_inversions) if all_inversions else new_chord_notes
+
                 live.update(Panel("Lecture de l'accord...", title="Action", border_style="yellow"), refresh=True)
-                play_chord(self.outport, self.current_chord_notes)
+                play_chord(self.outport, notes_to_play)
 
                 incorrect_attempts = 0
                 first_attempt = True
@@ -59,9 +66,11 @@ class ListenAndRevealMode(ChordModeBase):
                     attempt_notes, status = self._collect_input_logic(collection_mode='chord')
                     disable_raw_mode()
 
+                    if status == 'next':
+                        break
                     if status is not True:
                         if self.exit_flag: break
-                        else: continue
+                        else: continue # This will now only handle 'repeat'
 
                     self.session_total_attempts += 1
                     is_correct, recognized_name, recognized_inversion = self.check_chord(
@@ -71,7 +80,9 @@ class ListenAndRevealMode(ChordModeBase):
                     if is_correct:
                         if first_attempt: self.session_correct_count += 1
                         update_chord_success(self.current_chord_name)
-                        success_feedback = Text.from_markup(f"[bold green]Correct ! C'était bien {self.current_chord_name}.[/bold green]")
+                        # Display the expected chord name, but the inversion the user played.
+                        success_feedback_text = f"Correct ! C'était bien {self.current_chord_name} ({recognized_inversion})."
+                        success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]")
                         live.update(Panel(success_feedback, title="Résultat", border_style="green"), refresh=True)
                         time.sleep(1.5)
                         break
@@ -80,7 +91,8 @@ class ListenAndRevealMode(ChordModeBase):
                         update_chord_error(self.current_chord_name)
                         incorrect_attempts += 1
 
-                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name or 'Accord non reconnu'}")
+                        played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
+                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}")
 
                         if incorrect_attempts >= 3:
                             tonic_name = get_note_name(sorted(list(self.current_chord_notes))[0])

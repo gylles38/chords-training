@@ -37,7 +37,9 @@ class ReverseChordMode(ChordModeBase):
                 while not self.exit_flag:
                     self.clear_midi_buffer()
                     attempt_notes, status = self._collect_input_logic(collection_mode='chord')
-                    if status is not True:
+                    if status == 'next' or status == 'repeat':
+                        continue
+                    if status is not True: # Now only catches 'quit' (False)
                         break
 
                     # Met à jour l'affichage avec le résultat
