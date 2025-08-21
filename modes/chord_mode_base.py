@@ -583,8 +583,9 @@ class ChordModeBase:
 
     def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, specific = False):
         if specific:
-            output = Text()
-            output.append(f"Notes jouées : [{get_colored_notes_string(attempt_notes, chord_notes)}]\n")
+            output = Text("Notes jouées : [")
+            output.append(Text.from_markup(get_colored_notes_string(attempt_notes, chord_notes)))
+            output.append("]\n")
             if recognized_name:
                 inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
                 output.append(f"Accord reconnu : {recognized_name}{inversion_text}.", style="bold green")
