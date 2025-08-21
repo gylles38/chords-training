@@ -230,3 +230,22 @@ def update_scale_success(scale_name: str) -> None:
         if stats["scale_errors"][scale_name] == 0:
             del stats["scale_errors"][scale_name]
         save_stats(stats)
+
+
+def clear_error_stats():
+    """
+    Réinitialise les statistiques d'erreurs pour les notes et les accords au démarrage.
+    """
+    stats = load_stats()
+
+    # Vérifier s'il y a des erreurs à effacer pour éviter une écriture inutile
+    chord_errors_exist = "chord_errors" in stats and stats["chord_errors"]
+    note_errors_exist = "note_errors" in stats and stats["note_errors"]
+
+    if chord_errors_exist or note_errors_exist:
+        if chord_errors_exist:
+            stats["chord_errors"] = {}
+        if note_errors_exist:
+            stats["note_errors"] = {}
+
+        save_stats(stats)

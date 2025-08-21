@@ -27,6 +27,7 @@ from data.chords import all_chords, chord_aliases, enharmonic_map, three_note_ch
 from ui import get_colored_notes_string, display_stats, display_stats_fixed
 from midi_handler import *
 from screen_handler import clear_screen
+from stats_manager import clear_error_stats
 
 from modes.single_chord_mode import single_chord_mode
 from modes.listen_and_reveal_mode import listen_and_reveal_mode
@@ -166,6 +167,9 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
 
 def main():
     """Fonction principale du programme."""
+    # Réinitialiser les statistiques d'erreurs au démarrage
+    clear_error_stats()
+
     use_timer = False
     timer_duration = 30.0
     progression_selection_mode = 'random'
