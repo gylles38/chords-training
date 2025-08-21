@@ -329,8 +329,26 @@ class MissingChordMode(ChordModeBase):
                 attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, voicings, missing_index)
 
                 if action in ['next', 'quit']:
-                    if action == 'next': break
-                    else: self.exit_flag = True; break
+                    base_chord_name = missing_chord_name.split(" #")[0]
+                    self.console.print(f"\nLa solution était : [bold yellow]{base_chord_name}[/bold yellow].")
+
+                    # Mettre à jour la progression avec la réponse pour l'affichage
+                    prog_to_play_with_answer[missing_index] = base_chord_name
+                    chord_set_to_use[base_chord_name] = missing_chord_notes
+
+                    self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
+
+                    commentary = self._get_progression_commentary(source_type, source_detail)
+                    if commentary:
+                        self.console.print(commentary)
+
+                    if action == 'next':
+                        # Petite pause pour que l'utilisateur voie la solution
+                        time.sleep(2)
+                        break
+                    else:  # action == 'quit'
+                        self.exit_flag = True
+                        break
 
                 if action == 'attempt':
                     self.session_total_attempts += 1
