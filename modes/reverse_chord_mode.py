@@ -45,7 +45,7 @@ class ReverseChordMode(ChordModeBase):
                     # Met à jour l'affichage avec le résultat
                     recognized_name, recognized_inversion = recognize_chord(attempt_notes)
 
-                    feedback_panel = Panel(
+                    feedback_panel = Panel.fit(
                         self.display_feedback(True, attempt_notes, attempt_notes, recognized_name, recognized_inversion, True),
                         title="Résultat de la Reconnaissance",
                         border_style="cyan"
