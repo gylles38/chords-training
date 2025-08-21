@@ -39,26 +39,6 @@ class ChordTransitionsMode(ChordModeBase):
         self.timer_duration = timer_duration
         self.play_progression_before_start = play_progression_before_start
 
-    def wait_for_end_choice(self) -> str:
-        """Overrides base method to add a 'replay' option."""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour rejouer, 'q' pour quitter, ou une autre touche pour continuer...")
-        enable_raw_mode()
-        try:
-            while not self.exit_flag:
-                char = wait_for_input(timeout=0.05)
-                if char:
-                    if char.lower() == 'q':
-                        self.exit_flag = True
-                        return 'quit'
-                    elif char.lower() == 'r':
-                        return 'repeat'
-                    else:
-                        return 'continue'
-                time.sleep(0.01)
-        finally:
-            disable_raw_mode()
-        return 'continue' # Default action
-
     def _generate_progression(self) -> Tuple[List[str], str]:
         """Generates a musically coherent, weighted random progression."""
         # 1. Pick a random key and its diatonic chords

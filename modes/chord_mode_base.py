@@ -106,8 +106,8 @@ class ChordModeBase:
         return Panel(content, title="Progression en cours", border_style="green")
     
     def wait_for_end_choice(self) -> str:
-        """Attend une saisie instantanée pour continuer ou quitter."""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur une touche pour continuer ou 'q' pour quitter...")
+        """Attend une saisie instantanée pour continuer, répéter ou quitter."""
+        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour répéter, 'q' pour quitter, ou une autre touche pour continuer...")
         enable_raw_mode()
         try:
             while not self.exit_flag:
@@ -116,7 +116,10 @@ class ChordModeBase:
                     if char.lower() == 'q':
                         self.exit_flag = True
                         return 'quit'
-                    return 'continue'
+                    elif char.lower() == 'r':
+                        return 'repeat'
+                    else:
+                        return 'continue'
                 time.sleep(0.01)
         finally:
             disable_raw_mode()

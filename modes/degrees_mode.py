@@ -15,8 +15,8 @@ class DegreesMode(ChordModeBase):
         self.timer_duration = timer_duration  # conservé pour compat
         self.progression_selection_mode = progression_selection_mode  # conservé pour compat
         self.play_progression_before_start = play_progression_before_start
-        # Supprime l'affichage/pause de fin de progression (un seul accord)
-        self.suppress_progression_summary = True
+        # Affiche le résumé de la progression pour permettre la répétition
+        self.suppress_progression_summary = False
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
         table = Table(border_style="green")
