@@ -587,7 +587,8 @@ class ChordModeBase:
 
         if is_correct:
             if recognized_name:
-                self.console.print(f"[bold green]{recognized_name}.[/bold green]")
+                inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
+                self.console.print(f"[bold green]Accord reconnu : {recognized_name}{inversion_text}.[/bold green]")
             else:
                 if not specific:
                     self.console.print("[bold green]Correct ![/bold green]")
