@@ -17,12 +17,12 @@ class ListenAndRevealMode(ChordModeBase):
     def __init__(self, inport, outport, chord_set):
         super().__init__(inport, outport, chord_set)
         self.last_chord_name = None
+        self.notes_to_play = None # Variable to store the exact notes played
 
     def _handle_repeat(self) -> Literal['repeat', False]:
-        if hasattr(self, "current_chord_notes") and self.current_chord_notes is not None:
-            play_chord(self.outport, self.current_chord_notes)
-            return False
-        return 'repeat'
+        if self.notes_to_play:
+            play_chord(self.outport, self.notes_to_play)
+        return False # Returning False keeps the input loop active
 
     def run(self):
         self.display_header("Écoute et Devine", "Mode Écoute et Devine", "orange3")
@@ -38,18 +38,14 @@ class ListenAndRevealMode(ChordModeBase):
                     new_chord_name, new_chord_notes = random.choice(list(self.chord_set.items()))
 
                 self.current_chord_name = new_chord_name
-                # The "correct" answer is always based on the root position notes
                 self.current_chord_notes = new_chord_notes
                 self.last_chord_name = new_chord_name
 
-                # --- NEW: Play a random inversion ---
-                # Generate all possible inversions for the chord
                 all_inversions = self._get_inversions(new_chord_notes)
-                # Randomly select one of the inversions to play
-                notes_to_play = random.choice(all_inversions) if all_inversions else new_chord_notes
+                self.notes_to_play = random.choice(all_inversions) if all_inversions else new_chord_notes
 
                 live.update(Panel("Lecture de l'accord...", title="Action", border_style="yellow"), refresh=True)
-                play_chord(self.outport, notes_to_play)
+                play_chord(self.outport, self.notes_to_play)
 
                 incorrect_attempts = 0
                 first_attempt = True
@@ -70,7 +66,7 @@ class ListenAndRevealMode(ChordModeBase):
                         break
                     if status is not True:
                         if self.exit_flag: break
-                        else: continue # This will now only handle 'repeat'
+                        else: continue
 
                     self.session_total_attempts += 1
                     is_correct, recognized_name, recognized_inversion = self.check_chord(
@@ -80,7 +76,6 @@ class ListenAndRevealMode(ChordModeBase):
                     if is_correct:
                         if first_attempt: self.session_correct_count += 1
                         update_chord_success(self.current_chord_name)
-                        # Display the expected chord name, but the inversion the user played.
                         success_feedback_text = f"Correct ! C'était bien {self.current_chord_name} ({recognized_inversion})."
                         success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]")
                         live.update(Panel(success_feedback, title="Résultat", border_style="green"), refresh=True)
@@ -108,8 +103,9 @@ class ListenAndRevealMode(ChordModeBase):
                 self.session_total_count += 1
                 if self.exit_flag: break
 
-                self.current_chord_notes = None
+                self.notes_to_play = None
                 self.current_chord_name = None
+                self.current_chord_notes = None
 
         clear_screen()
         self.display_header("Écoute et Devine", "Mode Écoute et Devine", "orange3")

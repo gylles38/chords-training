@@ -43,10 +43,18 @@ class ReverseChordMode(ChordModeBase):
                         break
 
                     # Met à jour l'affichage avec le résultat
-                    recognized_name, recognized_inversion = recognize_chord(attempt_notes)  
-                                      
-                    self.display_feedback(True, attempt_notes, attempt_notes, recognized_name, recognized_inversion, True)
-                    #live.update(Panel, refresh=True)
+                    recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+
+                    # Logique d'affichage locale pour ce mode
+                    from ui import get_colored_notes_string
+                    notes_str = get_colored_notes_string(attempt_notes, attempt_notes)
+                    self.console.print(f"Notes jouées : [{notes_str}]")
+
+                    if recognized_name:
+                        inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
+                        self.console.print(f"[bold green]Accord reconnu : {recognized_name}{inversion_text}.[/bold green]")
+                    else:
+                        self.console.print("[bold red]Accord non reconnu ![/bold red]")
 
         finally:
             disable_raw_mode()

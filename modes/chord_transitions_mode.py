@@ -31,34 +31,13 @@ def weighted_sample_without_replacement(population, weights, k=1):
     return result
 
 class ChordTransitionsMode(ChordModeBase):
-    def __init__(self, inport, outport, chord_set):
+    def __init__(self, inport, outport, chord_set, use_timer, timer_duration, play_progression_before_start):
         super().__init__(inport, outport, chord_set)
         self.progression_length = (2, 4)
         self.use_voice_leading = True  # Enable voice leading in base class
-        # Declare attributes for type checker
-        self.use_timer: bool = False
-        self.timer_duration: float = 30.0
-        self.play_progression_before_start: str = 'SHOW_AND_PLAY'
-
-    def wait_for_end_choice(self) -> str:
-        """Overrides base method to add a 'replay' option."""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour rejouer, 'q' pour quitter, ou une autre touche pour continuer...")
-        enable_raw_mode()
-        try:
-            while not self.exit_flag:
-                char = wait_for_input(timeout=0.05)
-                if char:
-                    if char.lower() == 'q':
-                        self.exit_flag = True
-                        return 'quit'
-                    elif char.lower() == 'r':
-                        return 'repeat'
-                    else:
-                        return 'continue'
-                time.sleep(0.01)
-        finally:
-            disable_raw_mode()
-        return 'continue' # Default action
+        self.use_timer = use_timer
+        self.timer_duration = timer_duration
+        self.play_progression_before_start = play_progression_before_start
 
     def _generate_progression(self) -> Tuple[List[str], str]:
         """Generates a musically coherent, weighted random progression."""
@@ -113,8 +92,5 @@ class ChordTransitionsMode(ChordModeBase):
 def chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
     # This mode works best with three_note_chords
     mode_chord_set = three_note_chords
-    mode = ChordTransitionsMode(inport, outport, mode_chord_set)
-    mode.use_timer = use_timer
-    mode.timer_duration = timer_duration
-    mode.play_progression_before_start = play_progression_before_start
+    mode = ChordTransitionsMode(inport, outport, mode_chord_set, use_timer, timer_duration, play_progression_before_start)
     mode.run()

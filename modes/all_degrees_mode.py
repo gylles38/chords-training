@@ -5,7 +5,7 @@ from rich.table import Table
 
 from .chord_mode_base import ChordModeBase
 from data.chords import gammes_majeures
-from screen_handler import int_to_roman
+from screen_handler import int_to_roman, clear_screen
 
 class AllDegreesMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
@@ -30,6 +30,7 @@ class AllDegreesMode(ChordModeBase):
     def run(self):
         last_tonalite = None
         while not self.exit_flag:
+            # --- Outer loop: Generate a new progression ---
             tonalite, gammes = random.choice(list(gammes_majeures.items()))
             while tonalite == last_tonalite:
                 tonalite, gammes = random.choice(list(gammes_majeures.items()))
@@ -45,23 +46,28 @@ class AllDegreesMode(ChordModeBase):
                 self.console.print(f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la gamme complète :")
                 play_mode = getattr(self, "play_progression_before_start", "NONE")
                 if play_mode != 'PLAY_ONLY':
-                    self.console.print(f"[bold yellow]{' -> '.join(progression_accords)}[/bold yellow]")
                     self.display_degrees_table(tonalite, gammes_filtrees)
 
-            result = self.run_progression(
-                progression_accords=progression_accords,
-                header_title="Gamme Complète",
-                header_name="Mode Tous les Degrés",
-                border_style="purple",
-                pre_display=pre_display,
-                key_name=tonalite,
-            )
+            # --- Inner loop: Play and repeat the same progression ---
+            while not self.exit_flag:
+                result = self.run_progression(
+                    progression_accords=progression_accords,
+                    header_title="Gamme Complète",
+                    header_name="Mode Tous les Degrés",
+                    border_style="purple",
+                    pre_display=pre_display,
+                    key_name=tonalite,
+                )
 
-            if result == 'exit':
+                if result == 'repeat':
+                    clear_screen()
+                    continue
+                else:
+                    break
+
+            if self.exit_flag:
                 break
-            # 'skipped' ou 'done' → on enchaîne sur une nouvelle tonalité
 
-        # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()
 
 

@@ -26,7 +26,7 @@ class CadenceMode(ChordModeBase):
     # ---------- Spécifique Cadence ----------
     def display_degrees_table(self, tonalite, gammes_filtrees):
         """Affiche le tableau des degrés pour la tonalité donnée"""
-        table = Table(title=f"\nTableau des degrés pour \n[bold yellow]{tonalite}[/bold yellow]", border_style="magenta")
+        table = Table(border_style="magenta")
         table.add_column("Degré", justify="center", style="bold cyan")
         table.add_column("Accord", justify="center", style="bold yellow")
 
