@@ -33,18 +33,24 @@ class ReverseChordMode(ChordModeBase):
 
         enable_raw_mode()
         try:
-            while not self.exit_flag:
-                self.clear_midi_buffer()
-                attempt_notes, status = self._collect_input_logic(collection_mode='chord')
-                if status == 'next' or status == 'repeat':
-                    continue
-                if status is not True: # Now only catches 'quit' (False)
-                    break
+            with Live(console=self.console, screen=False, auto_refresh=False) as live:
+                while not self.exit_flag:
+                    self.clear_midi_buffer()
+                    attempt_notes, status = self._collect_input_logic(collection_mode='chord')
+                    if status == 'next' or status == 'repeat':
+                        continue
+                    if status is not True: # Now only catches 'quit' (False)
+                        break
 
-                # Met à jour l'affichage avec le résultat
-                recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                    # Met à jour l'affichage avec le résultat
+                    recognized_name, recognized_inversion = recognize_chord(attempt_notes)
 
-                self.display_feedback(True, attempt_notes, attempt_notes, recognized_name, recognized_inversion, True)
+                    feedback_panel = Panel(
+                        self.display_feedback(True, attempt_notes, attempt_notes, recognized_name, recognized_inversion, True),
+                        title="Résultat de la Reconnaissance",
+                        border_style="cyan"
+                    )
+                    live.update(feedback_panel, refresh=True)
 
         finally:
             disable_raw_mode()

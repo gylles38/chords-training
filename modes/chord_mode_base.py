@@ -582,18 +582,25 @@ class ChordModeBase:
         return choice
 
     def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, specific = False):
+        if specific:
+            output = Text()
+            output.append(f"Notes jouées : [{get_colored_notes_string(attempt_notes, chord_notes)}]\n")
+            if recognized_name:
+                inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
+                output.append(f"Accord reconnu : {recognized_name}{inversion_text}.", style="bold green")
+            else:
+                output.append("Accord non reconnu !", style="bold red")
+            return output
+
         colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
         self.console.print(f"Notes jouées : [{colored_notes}]")
 
         if is_correct:
             if recognized_name:
-                inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
-                self.console.print(f"[bold green]Accord reconnu : {recognized_name}{inversion_text}.[/bold green]")
+                self.console.print(f"[bold green]{recognized_name}.[/bold green]")
             else:
-                if not specific:
-                    self.console.print("[bold green]Correct ![/bold green]")
-                else:
-                    self.console.print("[bold red]Accord non reconnu ![/bold red]")
+                # This case should not be hit in non-specific modes if a chord is correct.
+                self.console.print("[bold green]Correct ![/bold green]")
         else:
             if recognized_name:
                 try:
