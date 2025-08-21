@@ -232,53 +232,20 @@ def update_scale_success(scale_name: str) -> None:
         save_stats(stats)
 
 
-def cleanup_invalid_stats():
+def clear_error_stats():
     """
-    Nettoie les statistiques en supprimant les entrées invalides (notes ou accords).
-    Cette fonction est à appeler au démarrage pour maintenir la cohérence des stats.
+    Réinitialise les statistiques d'erreurs pour les notes et les accords au démarrage.
     """
-    # Importation locale pour éviter les dépendances circulaires
-    from data.chords import all_chords
-
     stats = load_stats()
 
-    # --- Nettoyage des erreurs d'accords ---
-    if "chord_errors" in stats:
-        valid_chords = set(all_chords.keys())
-        current_chord_errors = stats["chord_errors"]
+    # Vérifier s'il y a des erreurs à effacer pour éviter une écriture inutile
+    chord_errors_exist = "chord_errors" in stats and stats["chord_errors"]
+    note_errors_exist = "note_errors" in stats and stats["note_errors"]
 
-        # Filtrer pour ne garder que les accords valides
-        cleaned_chord_errors = {
-            chord: count
-            for chord, count in current_chord_errors.items()
-            if chord in valid_chords
-        }
+    if chord_errors_exist or note_errors_exist:
+        if chord_errors_exist:
+            stats["chord_errors"] = {}
+        if note_errors_exist:
+            stats["note_errors"] = {}
 
-        # Si des changements ont été faits, mettre à jour le dictionnaire
-        if len(cleaned_chord_errors) < len(current_chord_errors):
-            stats["chord_errors"] = cleaned_chord_errors
-
-    # --- Nettoyage des erreurs de notes ---
-    if "note_errors" in stats:
-        # Liste des noms de notes valides (sans octave)
-        valid_notes = {"Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"}
-        current_note_errors = stats["note_errors"]
-
-        # Filtrer pour ne garder que les notes valides
-        cleaned_note_errors = {
-            note: count
-            for note, count in current_note_errors.items()
-            if note in valid_notes
-        }
-
-        # Si des changements ont été faits, mettre à jour le dictionnaire
-        if len(cleaned_note_errors) < len(current_note_errors):
-            stats["note_errors"] = cleaned_note_errors
-
-    # Sauvegarder les statistiques uniquement si des modifications ont eu lieu
-    # Pour éviter une écriture disque inutile au démarrage.
-    # Pour simplifier, on sauvegarde si l'une des clés a été modifiée.
-    # Une vérification plus fine serait de comparer les dictionnaires avant/après.
-    if "chord_errors" in stats and len(cleaned_chord_errors) < len(current_chord_errors) or \
-       "note_errors" in stats and len(cleaned_note_errors) < len(current_note_errors):
         save_stats(stats)
