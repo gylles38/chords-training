@@ -106,8 +106,8 @@ class ChordModeBase:
         return Panel(content, title="Progression en cours", border_style="green")
     
     def wait_for_end_choice(self) -> str:
-        """Attend une saisie instantanée pour continuer, répéter ou quitter."""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour répéter, 'q' pour quitter, ou une autre touche pour continuer...")
+        """Attend une saisie instantanée pour continuer ou quitter."""
+        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur une touche pour continuer ou 'q' pour quitter...")
         enable_raw_mode()
         try:
             while not self.exit_flag:
@@ -116,10 +116,7 @@ class ChordModeBase:
                     if char.lower() == 'q':
                         self.exit_flag = True
                         return 'quit'
-                    elif char.lower() == 'r':
-                        return 'repeat'
-                    else:
-                        return 'continue'
+                    return 'continue'
                 time.sleep(0.01)
         finally:
             disable_raw_mode()
@@ -583,15 +580,17 @@ class ChordModeBase:
 
     def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, specific = False):
         if specific:
-            output = Text("Notes jouées : [")
-            output.append(Text.from_markup(get_colored_notes_string(attempt_notes, chord_notes)))
-            output.append("]\n")
+            notes_str = get_colored_notes_string(attempt_notes, chord_notes)
+            line1 = f"Notes jouées : [{notes_str}]"
+
             if recognized_name:
                 inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
-                output.append(f"Accord reconnu : {recognized_name}{inversion_text}.", style="bold green")
+                line2 = f"[bold green]Accord reconnu : {recognized_name}{inversion_text}.[/bold green]"
             else:
-                output.append("Accord non reconnu !", style="bold red")
-            return output
+                line2 = "[bold red]Accord non reconnu ![/bold red]"
+
+            full_markup = f"{line1}\n{line2}"
+            return Text.from_markup(full_markup)
 
         colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
         self.console.print(f"Notes jouées : [{colored_notes}]")
@@ -600,7 +599,6 @@ class ChordModeBase:
             if recognized_name:
                 self.console.print(f"[bold green]{recognized_name}.[/bold green]")
             else:
-                # This case should not be hit in non-specific modes if a chord is correct.
                 self.console.print("[bold green]Correct ![/bold green]")
         else:
             if recognized_name:
