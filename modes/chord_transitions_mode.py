@@ -31,14 +31,13 @@ def weighted_sample_without_replacement(population, weights, k=1):
     return result
 
 class ChordTransitionsMode(ChordModeBase):
-    def __init__(self, inport, outport, chord_set):
+    def __init__(self, inport, outport, chord_set, use_timer, timer_duration, play_progression_before_start):
         super().__init__(inport, outport, chord_set)
         self.progression_length = (2, 4)
         self.use_voice_leading = True  # Enable voice leading in base class
-        # Declare attributes for type checker
-        self.use_timer: bool = False
-        self.timer_duration: float = 30.0
-        self.play_progression_before_start: str = 'SHOW_AND_PLAY'
+        self.use_timer = use_timer
+        self.timer_duration = timer_duration
+        self.play_progression_before_start = play_progression_before_start
 
     def wait_for_end_choice(self) -> str:
         """Overrides base method to add a 'replay' option."""
@@ -113,8 +112,5 @@ class ChordTransitionsMode(ChordModeBase):
 def chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
     # This mode works best with three_note_chords
     mode_chord_set = three_note_chords
-    mode = ChordTransitionsMode(inport, outport, mode_chord_set)
-    mode.use_timer = use_timer
-    mode.timer_duration = timer_duration
-    mode.play_progression_before_start = play_progression_before_start
+    mode = ChordTransitionsMode(inport, outport, mode_chord_set, use_timer, timer_duration, play_progression_before_start)
     mode.run()
