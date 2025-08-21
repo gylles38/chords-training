@@ -61,39 +61,43 @@ class CadenceMode(ChordModeBase):
             return
 
         last_cadence_info = None
+        current_progression = None
+        debug_info = None
+
         while not self.exit_flag:
-            chord_errors = get_chord_errors()
+            if current_progression is None:
+                chord_errors = get_chord_errors()
 
-            # Recalculate weights in each iteration
-            for cadence in valid_cadences:
-                cadence['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in cadence['progression'])
+                # Recalculate weights in each iteration
+                for cadence in valid_cadences:
+                    cadence['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in cadence['progression'])
 
-            # Select a weighted random cadence
-            cadence_weights = [c['weight'] for c in valid_cadences]
+                # Select a weighted random cadence
+                cadence_weights = [c['weight'] for c in valid_cadences]
 
-            # --- DEBUG DISPLAY ---
-            debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Cadences --[/bold dim]\n"
-            weighted_cadences = sorted(valid_cadences, key=lambda x: x['weight'], reverse=True)
-            for c in weighted_cadences[:5]:
-                if c['weight'] > 1:
-                    debug_info += f"[dim] - {c['tonalite']} {c['nom_cadence']}: {c['weight']}[/dim]\n"
-            # --- END DEBUG ---
+                # --- DEBUG DISPLAY ---
+                debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Cadences --[/bold dim]\n"
+                weighted_cadences = sorted(valid_cadences, key=lambda x: x['weight'], reverse=True)
+                for c in weighted_cadences[:5]:
+                    if c['weight'] > 1:
+                        debug_info += f"[dim] - {c['tonalite']} {c['nom_cadence']}: {c['weight']}[/dim]\n"
+                # --- END DEBUG ---
 
-            selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
-
-            while (selected_cadence['tonalite'], selected_cadence['nom_cadence']) == last_cadence_info:
                 selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
 
-            last_cadence_info = (selected_cadence['tonalite'], selected_cadence['nom_cadence'])
+                while (selected_cadence['tonalite'], selected_cadence['nom_cadence']) == last_cadence_info:
+                    selected_cadence = random.choices(valid_cadences, weights=cadence_weights, k=1)[0]
 
-            self.current_tonalite = selected_cadence['tonalite']
-            self.current_cadence_name = selected_cadence['nom_cadence']
-            self.current_degres = selected_cadence['degres']
-            self.current_progression = selected_cadence['progression']
-            self.gammes_filtrees = selected_cadence['gammes_filtrees']
+                last_cadence_info = (selected_cadence['tonalite'], selected_cadence['nom_cadence'])
+
+                self.current_tonalite = selected_cadence['tonalite']
+                self.current_cadence_name = selected_cadence['nom_cadence']
+                self.current_degres = selected_cadence['degres']
+                current_progression = selected_cadence['progression']
+                self.gammes_filtrees = selected_cadence['gammes_filtrees']
 
             degres_str = ' -> '.join(self.current_degres)
-            progression_str = ' -> '.join(self.current_progression)
+            progression_str = ' -> '.join(current_progression)
 
             # Pré-affichage spécifique (tableau des degrés + descriptif)
             def pre_display():
@@ -107,7 +111,7 @@ class CadenceMode(ChordModeBase):
                     self.display_degrees_table(self.current_tonalite, self.gammes_filtrees)
 
             result = self.run_progression(
-                progression_accords=self.current_progression,
+                progression_accords=current_progression,
                 header_title="Cadences",
                 header_name="Mode Cadences Musicales",
                 border_style="magenta",
@@ -118,7 +122,10 @@ class CadenceMode(ChordModeBase):
 
             if result == 'exit':
                 break
-            # 'skipped' ou 'done' → simplement boucler vers une nouvelle cadence
+            elif result == 'repeat':
+                pass # Rejoue la même cadence
+            elif result == 'continue' or result == 'skipped':
+                current_progression = None # Force la sélection d'une nouvelle cadence
 
         # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()

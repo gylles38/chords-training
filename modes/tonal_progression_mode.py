@@ -49,36 +49,40 @@ class TonalProgressionMode(ChordModeBase):
             return
 
         last_prog_info = None
+        current_progression_accords = None
+        debug_info = None
+
         while not self.exit_flag:
-            chord_errors = get_chord_errors()
+            if current_progression_accords is None:
+                chord_errors = get_chord_errors()
 
-            for prog in valid_progressions:
-                prog['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in prog['progression'])
+                for prog in valid_progressions:
+                    prog['weight'] = 1 + sum(chord_errors.get(chord, 0) ** 2 for chord in prog['progression'])
 
-            prog_weights = [p['weight'] for p in valid_progressions]
+                prog_weights = [p['weight'] for p in valid_progressions]
 
-            # --- DEBUG DISPLAY ---
-            debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Tonal Progressions --[/bold dim]\n"
-            weighted_progs = sorted(valid_progressions, key=lambda x: x['weight'], reverse=True)
-            for p in weighted_progs[:5]:
-                if p['weight'] > 1:
-                    debug_info += f"[dim] - {p['tonalite']} {p['prog_name']}: {p['weight']}[/dim]\n"
-            # --- END DEBUG ---
+                # --- DEBUG DISPLAY ---
+                debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Tonal Progressions --[/bold dim]\n"
+                weighted_progs = sorted(valid_progressions, key=lambda x: x['weight'], reverse=True)
+                for p in weighted_progs[:5]:
+                    if p['weight'] > 1:
+                        debug_info += f"[dim] - {p['tonalite']} {p['prog_name']}: {p['weight']}[/dim]\n"
+                # --- END DEBUG ---
 
-            selected_prog = random.choices(valid_progressions, weights=prog_weights, k=1)[0]
-
-            while (selected_prog['tonalite'], selected_prog['prog_name']) == last_prog_info:
                 selected_prog = random.choices(valid_progressions, weights=prog_weights, k=1)[0]
 
-            last_prog_info = (selected_prog['tonalite'], selected_prog['prog_name'])
+                while (selected_prog['tonalite'], selected_prog['prog_name']) == last_prog_info:
+                    selected_prog = random.choices(valid_progressions, weights=prog_weights, k=1)[0]
 
-            self.current_tonalite = selected_prog['tonalite']
-            self.current_progression_name = selected_prog['prog_name']
-            self.current_progression_accords = selected_prog['progression']
-            self.current_progression_description = selected_prog['description']
+                last_prog_info = (selected_prog['tonalite'], selected_prog['prog_name'])
+
+                self.current_tonalite = selected_prog['tonalite']
+                self.current_progression_name = selected_prog['prog_name']
+                current_progression_accords = selected_prog['progression']
+                self.current_progression_description = selected_prog['description']
 
             result = self.run_progression(
-                progression_accords=self.current_progression_accords,
+                progression_accords=current_progression_accords,
                 header_title="Progression Tonale",
                 header_name="Mode Progression Tonale",
                 border_style="bright_magenta",
@@ -89,6 +93,10 @@ class TonalProgressionMode(ChordModeBase):
 
             if result == 'exit':
                 break
+            elif result == 'repeat':
+                pass
+            elif result == 'continue' or result == 'skipped':
+                current_progression_accords = None
 
         # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()

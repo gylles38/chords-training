@@ -56,17 +56,23 @@ class PopRockMode(ChordModeBase):
                     self.console.print("Exemples:")
                     self.console.print(examples_str)
 
-            result = self.run_progression(
-                progression_accords=progression_accords,
-                header_title="Progressions Pop/Rock",
-                header_name="Mode Pop/Rock",
-                border_style="cyan",
-                pre_display=pre_display,
-            )
+            # Boucle interne pour gérer la répétition de la même progression
+            while not self.exit_flag:
+                result = self.run_progression(
+                    progression_accords=progression_accords,
+                    header_title="Progressions Pop/Rock",
+                    header_name="Mode Pop/Rock",
+                    border_style="cyan",
+                    pre_display=pre_display,
+                )
 
-            if result == "exit":
-                break
-            # 'skipped' ou 'done' -> revenir au menu de sélection
+                if result == 'repeat':
+                    continue  # Rejoue la même progression
+
+                # Pour 'exit', 'continue', ou 'skipped', on sort de la boucle interne
+                if result == 'exit':
+                    self.exit_flag = True # S'assurer que la boucle externe se termine aussi
+                break # Retourne au menu de sélection
 
         # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()

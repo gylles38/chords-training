@@ -44,33 +44,36 @@ class ProgressionMode(ChordModeBase):
 
     def run(self):
         last_progression = []
+        current_progression = None
+        debug_info = None
 
         while not self.exit_flag:
-            chord_errors = get_chord_errors()
-            # Générer une progression aléatoire, différente de la précédente
-            prog_len = random.randint(3, 5)
+            if current_progression is None:
+                chord_errors = get_chord_errors()
+                # Générer une progression aléatoire, différente de la précédente
+                prog_len = random.randint(3, 5)
 
-            all_chords = list(self.chord_set.keys())
-            # Poids de base de 1 pour chaque accord, plus le carré du nombre d'erreurs
-            weights = [1 + (chord_errors.get(chord, 0) ** 2) for chord in all_chords]
+                all_chords = list(self.chord_set.keys())
+                # Poids de base de 1 pour chaque accord, plus le carré du nombre d'erreurs
+                weights = [1 + (chord_errors.get(chord, 0) ** 2) for chord in all_chords]
 
-            # --- DEBUG DISPLAY ---
-            debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Chords --[/bold dim]\n"
-            weighted_chords = sorted(zip(all_chords, weights), key=lambda x: x[1], reverse=True)
-            for chord, weight in weighted_chords[:5]:
-                if weight > 1:
-                    debug_info += f"[dim] - {chord}: {weight}[/dim]\n"
-            # --- END DEBUG ---
+                # --- DEBUG DISPLAY ---
+                debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Chords --[/bold dim]\n"
+                weighted_chords = sorted(zip(all_chords, weights), key=lambda x: x[1], reverse=True)
+                for chord, weight in weighted_chords[:5]:
+                    if weight > 1:
+                        debug_info += f"[dim] - {chord}: {weight}[/dim]\n"
+                # --- END DEBUG ---
 
-            progression_accords = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
+                new_prog = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
+                while new_prog == last_progression:
+                    new_prog = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
 
-            while progression_accords == last_progression:
-                progression_accords = weighted_sample_without_replacement(all_chords, weights, k=prog_len)
-
-            last_progression = progression_accords
+                current_progression = new_prog
+                last_progression = new_prog
 
             result = self.run_progression(
-                progression_accords=progression_accords,
+                progression_accords=current_progression,
                 header_title="Progressions d'Accords",
                 header_name="Mode Progressions d'Accords",
                 border_style="blue",
@@ -80,6 +83,12 @@ class ProgressionMode(ChordModeBase):
 
             if result == 'exit':
                 break
+            elif result == 'repeat':
+                # La progression actuelle sera rejouée
+                pass
+            elif result == 'continue' or result == 'skipped':
+                # Forcer la génération d'une nouvelle progression
+                current_progression = None
 
         # Fin de session : afficher les stats globales
         self.show_overall_stats_and_wait()
