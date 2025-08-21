@@ -6,7 +6,7 @@ from rich.table import Table
 from .chord_mode_base import ChordModeBase
 from stats_manager import get_chord_errors
 from data.chords import gammes_majeures
-from screen_handler import int_to_roman
+from screen_handler import int_to_roman, clear_screen
 
 class DegreesMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
@@ -34,18 +34,17 @@ class DegreesMode(ChordModeBase):
         last_tonalite = None
 
         while not self.exit_flag:
+            # --- Outer loop: Generate a new progression ---
             chord_errors = get_chord_errors()
             # Choisir une tonalité de manière pondérée
             tonalites = list(gammes_majeures.keys())
             weights = [1 + sum(chord_errors.get(chord, 0) ** 2 for chord in gammes_majeures[t]) for t in tonalites]
 
-            # --- DEBUG DISPLAY ---
             debug_info = "\n[bold dim]-- Debug: Top 5 Weighted Tonalites --[/bold dim]\n"
             weighted_tonalites = sorted(zip(tonalites, weights), key=lambda x: x[1], reverse=True)
             for t, w in weighted_tonalites[:5]:
                 if w > 1:
                     debug_info += f"[dim] - {t}: {w}[/dim]\n"
-            # --- END DEBUG ---
 
             tonalite = random.choices(tonalites, weights=weights, k=1)[0]
             while tonalite == last_tonalite:
@@ -55,22 +54,18 @@ class DegreesMode(ChordModeBase):
             gammes = gammes_majeures[tonalite]
             gammes_filtrees = [g for g in gammes if g in self.chord_set]
 
-            # Besoin d'au moins quelques accords pour que le tableau soit pertinent
             if len(gammes_filtrees) < 3:
                 continue
 
-            # Initialiser ou valider la position de degré active selon la gamme filtrée
             if active_degree_pos is None or active_degree_pos >= len(gammes_filtrees):
                 active_degree_pos = random.randint(0, len(gammes_filtrees) - 1)
 
-            # Si la tonalité choisie ne possède pas ce degré (après filtre), chercher une autre tonalité
             if active_degree_pos >= len(gammes_filtrees):
                 continue
 
             chord_name = gammes_filtrees[active_degree_pos]
             degree_number = int_to_roman(active_degree_pos + 1)
 
-            # Affichage spécifique avant la progression
             def pre_display():
                 self.console.print(
                     f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez le degré actif [bold cyan]{degree_number}[/bold cyan] :"
@@ -80,20 +75,26 @@ class DegreesMode(ChordModeBase):
                     self.console.print(f"[bold yellow]{chord_name}[/bold yellow]")
                     self.display_degrees_table(tonalite, gammes_filtrees)
 
-            result = self.run_progression(
-                progression_accords=[chord_name],
-                header_title="Entraînement par Degrés",
-                header_name="Mode Degrés",
-                border_style="green",
-                pre_display=pre_display,
-                debug_info=debug_info
-            )
+            # --- Inner loop: Play and repeat the same progression ---
+            while not self.exit_flag:
+                result = self.run_progression(
+                    progression_accords=[chord_name],
+                    header_title="Entraînement par Degrés",
+                    header_name="Mode Degrés",
+                    border_style="green",
+                    pre_display=pre_display,
+                    debug_info=debug_info
+                )
 
-            if result == 'exit':
+                if result == 'repeat':
+                    clear_screen()
+                    continue
+                else:
+                    break
+
+            if self.exit_flag:
                 break
-            # Sinon, on continue la boucle pour demander un nouvel accord du même degré actif dans une nouvelle tonalité
 
-        # Fin de session : afficher les stats globales uniquement à la sortie
         self.show_overall_stats_and_wait()
 
 def degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
