@@ -124,7 +124,6 @@ class MissingChordMode(ChordModeBase):
             "Cadences": self._gen_from_cadences,
             "Pop/Rock": self._gen_from_pop_rock,
             "Progression Tonale": self._gen_from_tonal,
-            "Progression Diatonique": self._gen_from_transitions,
         }
         source_type = random.choice(list(generation_methods.keys()))
         result = generation_methods[source_type]()
