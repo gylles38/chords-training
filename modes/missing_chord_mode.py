@@ -124,6 +124,7 @@ class MissingChordMode(ChordModeBase):
             "Cadences": self._gen_from_cadences,
             "Pop/Rock": self._gen_from_pop_rock,
             "Progression Tonale": self._gen_from_tonal,
+            "Progression Diatonique": self._gen_from_transitions,
         }
         source_type = random.choice(list(generation_methods.keys()))
         result = generation_methods[source_type]()
@@ -329,27 +330,8 @@ class MissingChordMode(ChordModeBase):
                 attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, voicings, missing_index)
 
                 if action in ['next', 'quit']:
-                    base_chord_name = missing_chord_name.split(" #")[0]
-                    self.console.print(f"\nLa solution était : [bold yellow]{base_chord_name}[/bold yellow].")
-
-                    # Mettre à jour la progression avec la réponse pour l'affichage
-                    prog_to_play_with_answer[missing_index] = base_chord_name
-                    chord_set_to_use[base_chord_name] = missing_chord_notes
-
-                    self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
-
-                    self.console.print(f"\nType de progression : [bold blue]{source_type}[/bold blue]")
-                    commentary = self._get_progression_commentary(source_type, source_detail)
-                    if commentary:
-                        self.console.print(commentary)
-
-                    if action == 'next':
-                        # Petite pause pour que l'utilisateur voie la solution
-                        time.sleep(2)
-                        break
-                    else:  # action == 'quit'
-                        self.exit_flag = True
-                        break
+                    if action == 'next': break
+                    else: self.exit_flag = True; break
 
                 if action == 'attempt':
                     self.session_total_attempts += 1
@@ -378,7 +360,6 @@ class MissingChordMode(ChordModeBase):
 
                         self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
 
-                        self.console.print(f"\nType de progression : [bold blue]{source_type}[/bold blue]")
                         commentary = self._get_progression_commentary(source_type, source_detail)
                         if commentary:
                             self.console.print(commentary)
