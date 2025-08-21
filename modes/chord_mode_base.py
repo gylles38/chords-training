@@ -119,7 +119,7 @@ class ChordModeBase:
 
         if time_info:
             if isinstance(content, Text):
-                content.append("\n" + time_info)
+                content.append(Text.from_markup("\n" + time_info))
             else:
                 content += f"\n{time_info}"
         return Panel(content, title="Progression en cours", border_style="green")
