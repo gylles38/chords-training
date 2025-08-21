@@ -107,7 +107,7 @@ class ChordModeBase:
     
     def wait_for_end_choice(self) -> str:
         """Attend une saisie instantanée pour continuer, répéter ou quitter."""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour répéter, 'q' pour quitter, ou une autre touche pour continuer...")
+        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour répéter, 'n' pour continuer ou 'q' pour quitter...")
         enable_raw_mode()
         try:
             while not self.exit_flag:
@@ -118,12 +118,12 @@ class ChordModeBase:
                         return 'quit'
                     elif char.lower() == 'r':
                         return 'repeat'
-                    else:
+                    elif char.lower() == 'n':
                         return 'continue'
                 time.sleep(0.01)
         finally:
             disable_raw_mode()
-        return 'continue'
+        return 'quit'
     
     def _collect_input_logic(self, collection_mode: Literal['single', 'chord'] = 'chord', release_timeout: float = 0.3):
         notes_currently_on = set()
