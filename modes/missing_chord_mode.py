@@ -285,26 +285,27 @@ class MissingChordMode(ChordModeBase):
         return None, 'quit'
 
     def run(self):
+        current_prog_data = None
+
         while not self.exit_flag:
-            clear_screen()
-            self.display_header(
-                "Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan"
-            )
-            self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !")
+            if current_prog_data is None:
+                clear_screen()
+                self.display_header(
+                    "Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan"
+                )
+                self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !")
+
+                # --- Progression Generation Loop ---
+                prog_data = None
+                while True:
+                    prog_data = self._get_random_progression()
+                    if prog_data and prog_data[0] and len(prog_data[0]) >= 3:
+                        current_prog_data = prog_data
+                        break
+                    time.sleep(0.01)
 
             self.session_total_count += 1
-
-            # --- Progression Generation Loop ---
-            prog_data = None
-            while True:
-                prog_data = self._get_random_progression()
-                if prog_data and prog_data[0] and len(prog_data[0]) >= 3:
-                    # We have a valid progression, break the generation loop
-                    break
-                # Optional: Add a small sleep to prevent a tight loop if generation consistently fails
-                time.sleep(0.01)
-
-            progression, source_type, source_detail = prog_data
+            progression, source_type, source_detail = current_prog_data
 
             voicings, prog_to_play, chord_set_to_use = [], progression, self.chord_set
             if self.use_voice_leading:
@@ -326,49 +327,38 @@ class MissingChordMode(ChordModeBase):
 
             wrong_attempts = 0
             last_incorrect_chord = None
-            while not self.exit_flag:
+            puzzle_solved = False
+            while not self.exit_flag and not puzzle_solved:
                 attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, voicings, missing_index)
 
                 if action in ['next', 'quit']:
-                    if action == 'next': break
-                    else: self.exit_flag = True; break
+                    if action == 'quit': self.exit_flag = True
+                    break
 
                 if action == 'attempt':
                     self.session_total_attempts += 1
                     is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
 
                     if is_correct:
+                        puzzle_solved = True
                         if wrong_attempts == 0:
                             self.session_correct_count += 1
-
                         update_chord_success(missing_chord_name.split(" #")[0])
 
                         base_chord_name = missing_chord_name.split(' #')[0]
                         display_name = f"{base_chord_name} ({recognized_inversion})"
                         success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{display_name}[/bold yellow]."
-
-                        if not self.use_voice_leading and attempt_notes != missing_chord_notes:
-                            target_notes_str = ", ".join(sorted([get_note_name_with_octave(n) for n in missing_chord_notes]))
-                            played_notes_str = ", ".join(sorted([get_note_name_with_octave(n) for n in attempt_notes]))
-                            success_message += f"\n  - Attendu : [cyan]({target_notes_str})[/cyan]"
-                            success_message += f"\n  - Joué    : [green]({played_notes_str})[/green]"
-
                         self.console.print(success_message)
 
                         prog_to_play_with_answer[missing_index] = display_name
                         chord_set_to_use[display_name] = attempt_notes
-
                         self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
 
                         commentary = self._get_progression_commentary(source_type, source_detail)
-                        if commentary:
-                            self.console.print(commentary)
-
-                        break
+                        if commentary: self.console.print(commentary)
                     else:
                         wrong_attempts += 1
                         update_chord_error(missing_chord_name.split(" #")[0])
-
                         if recognized_name:
                             if recognized_name == last_incorrect_chord:
                                 self.console.print("[bold red]Vous avez joué le même accord incorrect. Réessayez ![/bold red]")
@@ -379,22 +369,18 @@ class MissingChordMode(ChordModeBase):
                         else:
                             self.console.print("[bold red]Incorrect.[/bold red] L'accord joué n'a pas été reconnu. Réessayez !")
                             last_incorrect_chord = None
-
                         if wrong_attempts == 3:
                             base_chord_name = missing_chord_name.split(" #")[0]
                             self.console.print(f"[bold yellow]Indice (Debug) :[/bold yellow] L'accord était [bold cyan]{base_chord_name}[/bold cyan].")
                             play_chord(self.outport, missing_chord_notes, duration=1.5)
 
             if not self.exit_flag:
-                self.console.print("\nAppuyez sur 'n' pour la suite, 'q' pour quitter...")
-                enable_raw_mode()
-                try:
-                    while True:
-                        char = wait_for_input()
-                        if char and char.lower() == 'n': break
-                        if char and char.lower() == 'q': self.exit_flag = True; break
-                finally:
-                    disable_raw_mode()
+                choice = self.wait_for_end_choice()
+                if choice == 'quit':
+                    self.exit_flag = True
+                elif choice == 'continue':
+                    current_prog_data = None
+                # Pour 'repeat', on ne fait rien, la boucle réutilisera les mêmes données
 
         self.show_overall_stats_and_wait()
 
