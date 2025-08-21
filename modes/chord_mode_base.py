@@ -78,7 +78,7 @@ class ChordModeBase:
         return False
     
     def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
-        from music_theory import get_inversion_name # Local import
+        from music_theory import get_inversion_name, get_note_name_with_octave
         display_name = chord_name.split(" #")[0]
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
@@ -87,7 +87,7 @@ class ChordModeBase:
         if self.use_voice_leading:
             target_notes = self.chord_set.get(chord_name, set())
             inversion_text = get_inversion_name(display_name, target_notes)
-            note_names = [get_note_name(n) for n in sorted(list(target_notes))]
+            note_names = [get_note_name_with_octave(n) for n in sorted(list(target_notes))]
             notes_display = ", ".join(note_names)
             inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
             content = (
