@@ -338,6 +338,7 @@ class MissingChordMode(ChordModeBase):
 
                     self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
 
+                    self.console.print(f"\nType de progression : [bold blue]{source_type}[/bold blue]")
                     commentary = self._get_progression_commentary(source_type, source_detail)
                     if commentary:
                         self.console.print(commentary)
@@ -377,6 +378,7 @@ class MissingChordMode(ChordModeBase):
 
                         self._play_full_progression(prog_to_play_with_answer, chord_set_to_use, missing_index)
 
+                        self.console.print(f"\nType de progression : [bold blue]{source_type}[/bold blue]")
                         commentary = self._get_progression_commentary(source_type, source_detail)
                         if commentary:
                             self.console.print(commentary)
