@@ -3,9 +3,9 @@ import random
 from rich.text import Text
 from .chord_mode_base import ChordModeBase
 from data.modulations import modulations
-from data.chords import gammes_majeures, DEGREE_MAP
+from data.chords import all_scales, DEGREE_MAP
 
-# Map degree names to their index in the gammes_majeures list
+# Map degree names to their index in the all_scales list
 # Note: This is simplified. 'V/V' will be handled specially.
 # We add roman numerals for secondary dominants and other cases.
 DEGREE_INDEX_MAP = {
@@ -27,29 +27,25 @@ class ModulationMode(ChordModeBase):
         self.play_progression_before_start = play_progression_before_start
         self.use_voice_leading = True
         self.modulations = modulations
-        self.all_keys = list(gammes_majeures.keys())
+        self.all_keys = list(all_scales.keys())
 
     def _get_key_from_degree(self, original_key, degree):
         """Finds the key name for a given degree relative to an original key."""
-        if original_key not in gammes_majeures:
+        if original_key not in all_scales:
             return None
 
         degree_index = DEGREE_INDEX_MAP.get(degree)
         if degree_index is None:
             return None
 
-        # The chord name at that degree (e.g., 'Sol Majeur')
-        target_chord_name = gammes_majeures[original_key][degree_index]
+        # The chord name at that degree (e.g., 'Sol Majeur' or 'La Mineur')
+        target_chord_name = all_scales[original_key][degree_index]
 
-        # We need to find the key that corresponds to this chord name.
-        # We assume the key name is the chord name without the 'Majeur' or 'Mineur' part.
-        key_name = target_chord_name.replace(" Majeur", "").replace(" Mineur", "")
+        # This chord name IS the key name we're looking for, if it exists in all_scales
+        if target_chord_name in all_scales:
+            return target_chord_name
 
-        # Find the matching key in our list of keys
-        for key in self.all_keys:
-            if key.startswith(key_name):
-                return key
-        return None # Fallback
+        return None # Fallback if the chord name isn't a valid key
 
     def _get_chord_from_degree(self, degree_str, start_key, target_key):
         """
@@ -60,25 +56,30 @@ class ModulationMode(ChordModeBase):
         if '_new_' in degree_str:
             _, degree = degree_str.split('_new_')
             degree_index = DEGREE_INDEX_MAP.get(degree, 0)
-            return gammes_majeures[target_key][degree_index]
+            return all_scales[target_key][degree_index]
 
         # Case 2: Secondary Dominant (e.g., 'V7/V', 'V7/vi')
         if '/' in degree_str:
             dominant_degree, target_degree = degree_str.split('/')
 
             # Find the key of the target degree (e.g., for 'V/V' in C, find the key of G)
-            temp_target_key_name = gammes_majeures[start_key][DEGREE_INDEX_MAP[target_degree]].replace(" Majeur", "").replace(" Mineur", "")
-
-            # Find the actual key from the key list
-            temp_target_key = next((k for k in self.all_keys if k.startswith(temp_target_key_name)), None)
-            if not temp_target_key: return None
+            temp_target_key = self._get_key_from_degree(start_key, target_degree)
+            if not temp_target_key:
+                 return None
 
             # Now find the dominant of that temporary target key
-            dominant_chord = gammes_majeures[temp_target_key][DEGREE_INDEX_MAP['V']]
+            # Note: The V of a minor key can be minor (v) or major (V).
+            # We'll prefer the major V for a stronger pull (dominant function).
+            dominant_chord = all_scales[temp_target_key][DEGREE_INDEX_MAP['V']]
 
             # Make it a 7th chord if specified (e.g., 'V7')
             if '7' in dominant_degree:
-                return dominant_chord.replace(" Majeur", " 7ème")
+                # Ensure we are modifying a Major chord to a 7th, not a minor or diminished.
+                if "Majeur" in dominant_chord:
+                    return dominant_chord.replace(" Majeur", " 7ème")
+                else: # Fallback for minor keys where V might be minor
+                    return f"{dominant_chord.replace(' Mineur', '')} 7ème"
+
             return dominant_chord
 
         # Case 3: Simple degree from the start key (e.g., 'I', 'IV', 'vi')
@@ -86,8 +87,8 @@ class ModulationMode(ChordModeBase):
         if degree_index is not None:
              # Special case for I7
             if degree_str == "I7":
-                return gammes_majeures[start_key][0].replace(" Majeur", " 7ème")
-            return gammes_majeures[start_key][degree_index]
+                return all_scales[start_key][0].replace(" Majeur", " 7ème")
+            return all_scales[start_key][degree_index]
 
         return None
 
