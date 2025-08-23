@@ -68,16 +68,15 @@ class ModulationMode(ChordModeBase):
             dominant_chord_base = all_scales[temp_target_key][DEGREE_INDEX_MAP['V']]
 
             if '7' in dominant_degree:
-                # Try to form a 7th chord
-                chord_7th = dominant_chord_base.replace(" Majeur", " 7ème")
+                root_name = dominant_chord_base.replace(" Majeur", "").replace(" Mineur", "").replace(" Diminué", "")
+                chord_7th = f"{root_name} 7ème"
                 if chord_7th in self.chord_set:
                     return chord_7th
 
-            # Fallback to triad if 7th is not available or not specified
             if dominant_chord_base in self.chord_set:
                 return dominant_chord_base
 
-            return None # Neither 7th nor triad is available
+            return None
 
         # Case 3: Simple degree from the start key (e.g., 'I', 'IV', 'vi', or 'I7')
         degree_index = DEGREE_INDEX_MAP.get(degree_str.replace('7', ''))
@@ -85,12 +84,11 @@ class ModulationMode(ChordModeBase):
             base_chord = all_scales[start_key][degree_index]
 
             if '7' in degree_str:
-                # Try to form a 7th chord
-                chord_7th = base_chord.replace(" Majeur", " 7ème")
+                root_name = base_chord.replace(" Majeur", "").replace(" Mineur", "").replace(" Diminué", "")
+                chord_7th = f"{root_name} 7ème"
                 if chord_7th in self.chord_set:
                     return chord_7th
 
-            # Fallback to triad
             if base_chord in self.chord_set:
                 return base_chord
 
