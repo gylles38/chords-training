@@ -104,7 +104,11 @@ class ModulationMode(ChordModeBase):
         # Filter potential start keys based on modulation type constraints
         possible_start_keys = self.all_keys
         if "Homonyme Mineur" in modulation_info["name"]:
-            possible_start_keys = [key for key in self.all_keys if "Majeur" in key]
+            # A key is only possible if it's major AND its parallel minor exists in our scales.
+            possible_start_keys = [
+                key for key in self.all_keys
+                if "Majeur" in key and key.replace(" Majeur", " Mineur") in self.all_keys
+            ]
 
         if not possible_start_keys:
              return None, None, None, None # Cannot find a key that fits constraints
