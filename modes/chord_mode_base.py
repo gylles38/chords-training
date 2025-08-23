@@ -78,21 +78,37 @@ class ChordModeBase:
         return False
     
     def create_live_display(self, chord_name, prog_index, total_chords, time_info=""):
-        from music_theory import get_inversion_name # Local import
-        display_name = chord_name.split(" #")[0]
+        from music_theory import get_inversion_name, get_note_name_with_octave
+        from rich.text import Text
 
+        display_name = chord_name.split(" #")[0]
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
         # In voice leading mode, we always show the notes and inversion.
         if self.use_voice_leading:
             target_notes = self.chord_set.get(chord_name, set())
             inversion_text = get_inversion_name(display_name, target_notes)
-            note_names = [get_note_name(n) for n in sorted(list(target_notes))]
-            notes_display = ", ".join(note_names)
+
+            common_notes = set()
+            if self.last_played_notes:
+                common_notes = target_notes.intersection(self.last_played_notes)
+
+            notes_display_text = Text()
+            sorted_target_notes = sorted(list(target_notes))
+            for i, note_val in enumerate(sorted_target_notes):
+                note_name = get_note_name_with_octave(note_val)
+                style = "bold green" if note_val in common_notes else "cyan"
+                notes_display_text.append(note_name, style=style)
+                if i < len(sorted_target_notes) - 1:
+                    notes_display_text.append(", ", style="default")
+
             inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
-            content = (
-                f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}{inversion_display}[/bold yellow]\n"
-                f"Notes attendues : [cyan]{notes_display}[/cyan]"
+
+            content = Text.assemble(
+                f"Accord à jouer ({prog_index + 1}/{total_chords}): ",
+                (f"{display_name}{inversion_display}", "bold yellow"),
+                "\nNotes attendues : ",
+                notes_display_text
             )
         # For other modes, we keep the original behavior
         else:
@@ -102,12 +118,15 @@ class ChordModeBase:
                 content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]"
 
         if time_info:
-            content += f"\n{time_info}"
+            if isinstance(content, Text):
+                content.append(Text.from_markup("\n" + time_info))
+            else:
+                content += f"\n{time_info}"
         return Panel(content, title="Progression en cours", border_style="green")
     
     def wait_for_end_choice(self) -> str:
         """Attend une saisie instantanée pour continuer, répéter ou quitter."""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour répéter, 'q' pour quitter, ou une autre touche pour continuer...")
+        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour répéter, 'n' pour continuer ou 'q' pour quitter...")
         enable_raw_mode()
         try:
             while not self.exit_flag:
@@ -118,12 +137,12 @@ class ChordModeBase:
                         return 'quit'
                     elif char.lower() == 'r':
                         return 'repeat'
-                    else:
+                    elif char.lower() == 'n':
                         return 'continue'
                 time.sleep(0.01)
         finally:
             disable_raw_mode()
-        return 'continue'
+        return 'quit'
     
     def _collect_input_logic(self, collection_mode: Literal['single', 'chord'] = 'chord', release_timeout: float = 0.3):
         notes_currently_on = set()
