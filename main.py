@@ -44,6 +44,7 @@ from modes.tonal_progression_mode import tonal_progression_mode
 from modes.reversed_chords_mode import reversed_chords_mode
 from modes.chord_transitions_mode import chord_transitions_mode
 from modes.missing_chord_mode import missing_chord_mode
+from modes.modulation_mode import modulation_mode
 
 #TODO : voir si supprimable une fois tout refactorisé
 console = Console()
@@ -223,8 +224,9 @@ def main():
                 menu_options.append("[13] Renversements d'accords (aléatoires)\n", style="bold blue_violet")
                 menu_options.append("[14] Passage d'accords\n", style="bold purple")
                 menu_options.append("[15] Trouve l'accord manquant\n", style="bold green_yellow")
+                menu_options.append("[16] Les modulations\n", style="bold red1")
                 menu_options.append("--- Configuration ---\n", style="dim")
-                menu_options.append("[16] Options\n", style="bold white")
+                menu_options.append("[17] Options\n", style="bold white")
                 menu_options.append("[q] Quitter", style="bold white")
                 menu_panel = Panel(
                     menu_options,
@@ -234,7 +236,7 @@ def main():
                 console.print(menu_panel)
 
                 # MODIFIÉ: Mise à jour des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', 'q'], show_choices=False, console=console)
+                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', 'q'], show_choices=False, console=console)
 
                 if mode_choice == '1':
                     chord_explorer_mode(outport)
@@ -267,6 +269,8 @@ def main():
                 elif mode_choice == '15':
                     missing_chord_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
                 elif mode_choice == '16':
+                    modulation_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                elif mode_choice == '17':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice)
                 elif mode_choice == 'q':
                     console.print("Arrêt du programme.", style="bold red")

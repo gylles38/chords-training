@@ -1,0 +1,186 @@
+# modes/modulation_mode.py
+import random
+from rich.text import Text
+from .chord_mode_base import ChordModeBase
+from data.modulations import modulations
+from data.chords import gammes_majeures, DEGREE_MAP
+
+# Map degree names to their index in the gammes_majeures list
+# Note: This is simplified. 'V/V' will be handled specially.
+# We add roman numerals for secondary dominants and other cases.
+DEGREE_INDEX_MAP = {
+    'I': 0, 'i': 0,
+    'II': 1, 'ii': 1,
+    'III': 2, 'iii': 2,
+    'IV': 3, 'iv': 3,
+    'V': 4, 'v': 4,
+    'VI': 5, 'vi': 5,
+    'VII': 6, 'vii': 6, 'vii°': 6
+}
+
+class ModulationMode(ChordModeBase):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+        super().__init__(inport, outport, chord_set)
+        self.use_timer = use_timer
+        self.timer_duration = timer_duration
+        self.progression_selection_mode = progression_selection_mode
+        self.play_progression_before_start = play_progression_before_start
+        self.use_voice_leading = True
+        self.modulations = modulations
+        self.all_keys = list(gammes_majeures.keys())
+
+    def _get_key_from_degree(self, original_key, degree):
+        """Finds the key name for a given degree relative to an original key."""
+        if original_key not in gammes_majeures:
+            return None
+
+        degree_index = DEGREE_INDEX_MAP.get(degree)
+        if degree_index is None:
+            return None
+
+        # The chord name at that degree (e.g., 'Sol Majeur')
+        target_chord_name = gammes_majeures[original_key][degree_index]
+
+        # We need to find the key that corresponds to this chord name.
+        # We assume the key name is the chord name without the 'Majeur' or 'Mineur' part.
+        key_name = target_chord_name.replace(" Majeur", "").replace(" Mineur", "")
+
+        # Find the matching key in our list of keys
+        for key in self.all_keys:
+            if key.startswith(key_name):
+                return key
+        return None # Fallback
+
+    def _get_chord_from_degree(self, degree_str, start_key, target_key):
+        """
+        Parses a degree string and returns the corresponding chord name.
+        Handles complex cases like 'V7/V' or 'IV_new_I'.
+        """
+        # Case 1: Chord from the new key (e.g., 'V_new_I')
+        if '_new_' in degree_str:
+            _, degree = degree_str.split('_new_')
+            degree_index = DEGREE_INDEX_MAP.get(degree, 0)
+            return gammes_majeures[target_key][degree_index]
+
+        # Case 2: Secondary Dominant (e.g., 'V7/V', 'V7/vi')
+        if '/' in degree_str:
+            dominant_degree, target_degree = degree_str.split('/')
+
+            # Find the key of the target degree (e.g., for 'V/V' in C, find the key of G)
+            temp_target_key_name = gammes_majeures[start_key][DEGREE_INDEX_MAP[target_degree]].replace(" Majeur", "").replace(" Mineur", "")
+
+            # Find the actual key from the key list
+            temp_target_key = next((k for k in self.all_keys if k.startswith(temp_target_key_name)), None)
+            if not temp_target_key: return None
+
+            # Now find the dominant of that temporary target key
+            dominant_chord = gammes_majeures[temp_target_key][DEGREE_INDEX_MAP['V']]
+
+            # Make it a 7th chord if specified (e.g., 'V7')
+            if '7' in dominant_degree:
+                return dominant_chord.replace(" Majeur", " 7ème")
+            return dominant_chord
+
+        # Case 3: Simple degree from the start key (e.g., 'I', 'IV', 'vi')
+        degree_index = DEGREE_INDEX_MAP.get(degree_str)
+        if degree_index is not None:
+             # Special case for I7
+            if degree_str == "I7":
+                return gammes_majeures[start_key][0].replace(" Majeur", " 7ème")
+            return gammes_majeures[start_key][degree_index]
+
+        return None
+
+    def _generate_progression_and_info(self):
+        """Selects a modulation and generates the chord progression and descriptive info."""
+
+        # Filter available keys to those where all chords in every modulation are available
+        valid_start_keys = [
+            key for key in self.all_keys
+            if all(chord in self.chord_set for chord in gammes_majeures[key])
+        ]
+        if not valid_start_keys:
+            return None, None, None
+
+        start_key = random.choice(valid_start_keys)
+        modulation_info = random.choice(self.modulations)
+
+        progression_degrees = modulation_info["progression_degrees"]
+
+        # Determine the target key based on the modulation type
+        if "Dominante" in modulation_info["name"]:
+            target_key = self._get_key_from_degree(start_key, 'V')
+        elif "Sous-dominante" in modulation_info["name"]:
+            target_key = self._get_key_from_degree(start_key, 'IV')
+        elif "Relatif Mineur" in modulation_info["name"]:
+            target_key = self._get_key_from_degree(start_key, 'vi')
+        elif "Homonyme" in modulation_info["name"]:
+            target_key = start_key.replace(" Majeur", " Mineur")
+        else: # For cases like Anatole where there isn't one single target key
+            target_key = start_key
+
+        progression_chords = []
+        for degree in progression_degrees:
+            chord = self._get_chord_from_degree(degree, start_key, target_key)
+            if chord and chord in self.chord_set:
+                progression_chords.append(chord)
+            else:
+                # If a chord is not in the allowed set, we can't run this progression
+                return None, None, None # Signal to retry
+
+        # Get pivot chord for the explanation
+        pivot_chord_degree = next((d for d in progression_degrees if '/' in d or '7' in d), None)
+        pivot_chord_name = self._get_chord_from_degree(pivot_chord_degree, start_key, target_key) if pivot_chord_degree else ""
+
+        explanation = modulation_info["explanation_template"].format(
+            start_key=start_key,
+            target_key=target_key,
+            pivot_chord_name=pivot_chord_name
+        )
+
+        return progression_chords, explanation, modulation_info['name']
+
+
+    def run(self):
+        current_progression = None
+        explanation = ""
+        header_name = ""
+
+        while not self.exit_flag:
+            if current_progression is None:
+                # Keep trying until we get a valid progression for the current chord_set
+                prog, expl, name = self._generate_progression_and_info()
+                while prog is None:
+                    prog, expl, name = self._generate_progression_and_info()
+                    if self.exit_flag: return # Exit if 'q' is pressed during generation
+
+                current_progression = prog
+                explanation = expl
+                header_name = name
+
+            def pre_display():
+                self.console.print(Text(f"Exercice : {header_name}", style="bold cyan", justify="center"))
+                self.console.print(explanation)
+                self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
+
+            result = self.run_progression(
+                progression_accords=current_progression,
+                header_title="Modulations",
+                header_name="[16] Les modulations",
+                border_style="green",
+                pre_display=pre_display
+            )
+
+            if result == 'exit':
+                break
+            elif result == 'repeat':
+                pass
+            elif result == 'continue' or result == 'skipped':
+                current_progression = None
+
+        self.show_overall_stats_and_wait()
+
+
+def modulation_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+    mode = ModulationMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set)
+    mode.run()
