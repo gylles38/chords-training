@@ -94,15 +94,7 @@ class ModulationMode(ChordModeBase):
     def _generate_progression_and_info(self):
         """Selects a modulation and generates the chord progression and descriptive info."""
 
-        # Filter available keys to those where all chords in every modulation are available
-        valid_start_keys = [
-            key for key in self.all_keys
-            if all(chord in self.chord_set for chord in gammes_majeures[key])
-        ]
-        if not valid_start_keys:
-            return None, None, None
-
-        start_key = random.choice(valid_start_keys)
+        start_key = random.choice(self.all_keys)
         modulation_info = random.choice(self.modulations)
 
         progression_degrees = modulation_info["progression_degrees"]
@@ -119,14 +111,21 @@ class ModulationMode(ChordModeBase):
         else: # For cases like Anatole where there isn't one single target key
             target_key = start_key
 
+        if not target_key: # Could fail if _get_key_from_degree fails
+             return None, None, None
+
         progression_chords = []
         for degree in progression_degrees:
             chord = self._get_chord_from_degree(degree, start_key, target_key)
-            if chord and chord in self.chord_set:
+            if chord:
                 progression_chords.append(chord)
             else:
-                # If a chord is not in the allowed set, we can't run this progression
-                return None, None, None # Signal to retry
+                # If a degree can't be resolved to a chord, this progression is invalid
+                return None, None, None
+
+        # After generating the progression, check if all its chords are in the allowed set
+        if not all(chord in self.chord_set for chord in progression_chords):
+            return None, None, None # Signal to retry
 
         # Get pivot chord for the explanation
         pivot_chord_degree = next((d for d in progression_degrees if '/' in d or '7' in d), None)
@@ -148,11 +147,18 @@ class ModulationMode(ChordModeBase):
 
         while not self.exit_flag:
             if current_progression is None:
-                # Keep trying until we get a valid progression for the current chord_set
-                prog, expl, name = self._generate_progression_and_info()
-                while prog is None:
+                attempts = 0
+                prog, expl, name = None, None, None
+                while prog is None and attempts < 50:  # Safety break after 50 attempts
                     prog, expl, name = self._generate_progression_and_info()
-                    if self.exit_flag: return # Exit if 'q' is pressed during generation
+                    attempts += 1
+
+                if prog is None:
+                    self.console.print("\n[bold red]Impossible de générer une modulation avec les réglages d'accords actuels.[/bold red]")
+                    self.console.print("[bold yellow]Essayez de sélectionner 'Tous les accords' dans les options (menu principal -> 17).[/bold yellow]")
+                    import time
+                    time.sleep(5)
+                    return # Exit the mode gracefully
 
                 current_progression = prog
                 explanation = expl
