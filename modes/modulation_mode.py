@@ -61,34 +61,38 @@ class ModulationMode(ChordModeBase):
         # Case 2: Secondary Dominant (e.g., 'V7/V', 'V7/vi')
         if '/' in degree_str:
             dominant_degree, target_degree = degree_str.split('/')
-
-            # Find the key of the target degree (e.g., for 'V/V' in C, find the key of G)
             temp_target_key = self._get_key_from_degree(start_key, target_degree)
             if not temp_target_key:
-                 return None
+                return None
 
-            # Now find the dominant of that temporary target key
-            # Note: The V of a minor key can be minor (v) or major (V).
-            # We'll prefer the major V for a stronger pull (dominant function).
-            dominant_chord = all_scales[temp_target_key][DEGREE_INDEX_MAP['V']]
+            dominant_chord_base = all_scales[temp_target_key][DEGREE_INDEX_MAP['V']]
 
-            # Make it a 7th chord if specified (e.g., 'V7')
             if '7' in dominant_degree:
-                # Ensure we are modifying a Major chord to a 7th, not a minor or diminished.
-                if "Majeur" in dominant_chord:
-                    return dominant_chord.replace(" Majeur", " 7ème")
-                else: # Fallback for minor keys where V might be minor
-                    return f"{dominant_chord.replace(' Mineur', '')} 7ème"
+                # Try to form a 7th chord
+                chord_7th = dominant_chord_base.replace(" Majeur", " 7ème")
+                if chord_7th in self.chord_set:
+                    return chord_7th
 
-            return dominant_chord
+            # Fallback to triad if 7th is not available or not specified
+            if dominant_chord_base in self.chord_set:
+                return dominant_chord_base
 
-        # Case 3: Simple degree from the start key (e.g., 'I', 'IV', 'vi')
-        degree_index = DEGREE_INDEX_MAP.get(degree_str)
+            return None # Neither 7th nor triad is available
+
+        # Case 3: Simple degree from the start key (e.g., 'I', 'IV', 'vi', or 'I7')
+        degree_index = DEGREE_INDEX_MAP.get(degree_str.replace('7', ''))
         if degree_index is not None:
-             # Special case for I7
-            if degree_str == "I7":
-                return all_scales[start_key][0].replace(" Majeur", " 7ème")
-            return all_scales[start_key][degree_index]
+            base_chord = all_scales[start_key][degree_index]
+
+            if '7' in degree_str:
+                # Try to form a 7th chord
+                chord_7th = base_chord.replace(" Majeur", " 7ème")
+                if chord_7th in self.chord_set:
+                    return chord_7th
+
+            # Fallback to triad
+            if base_chord in self.chord_set:
+                return base_chord
 
         return None
 
