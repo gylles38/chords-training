@@ -31,10 +31,10 @@ def weighted_sample_without_replacement(population, weights, k=1):
     return result
 
 class ChordTransitionsMode(ChordModeBase):
-    def __init__(self, inport, outport, chord_set, use_timer, timer_duration, play_progression_before_start):
+    def __init__(self, inport, outport, chord_set, use_timer, timer_duration, play_progression_before_start, use_voice_leading):
         super().__init__(inport, outport, chord_set)
         self.progression_length = (2, 4)
-        self.use_voice_leading = True  # Enable voice leading in base class
+        self.use_voice_leading = use_voice_leading
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.play_progression_before_start = play_progression_before_start
@@ -89,8 +89,8 @@ class ChordTransitionsMode(ChordModeBase):
         self.show_overall_stats_and_wait()
 
 
-def chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+def chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_voice_leading):
     # This mode works best with three_note_chords
     mode_chord_set = three_note_chords
-    mode = ChordTransitionsMode(inport, outport, mode_chord_set, use_timer, timer_duration, play_progression_before_start)
+    mode = ChordTransitionsMode(inport, outport, mode_chord_set, use_timer, timer_duration, play_progression_before_start, use_voice_leading)
     mode.run()

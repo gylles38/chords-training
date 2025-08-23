@@ -19,13 +19,13 @@ DEGREE_INDEX_MAP = {
 }
 
 class ModulationMode(ChordModeBase):
-    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
+    def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_voice_leading):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = True
+        self.use_voice_leading = use_voice_leading
         self.modulations = modulations
         self.all_keys = list(all_scales.keys())
 
@@ -208,6 +208,6 @@ class ModulationMode(ChordModeBase):
         self.show_overall_stats_and_wait()
 
 
-def modulation_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
-    mode = ModulationMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set)
+def modulation_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_voice_leading):
+    mode = ModulationMode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_voice_leading)
     mode.run()
