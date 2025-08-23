@@ -19,21 +19,21 @@ Syntaxe spéciale pour les degrés dans 'progression':
 modulations = [
     {
         "name": "Modulation vers la Dominante (V)",
-        "description": "Une des modulations les plus courantes. On utilise le 7ème accord de dominante de la nouvelle tonalité pour 'annoncer' le changement.",
-        "progression_degrees": ["I", "IV", "V7/V", "V_new_I"],
-        "explanation_template": "Modulation de {start_key} vers sa dominante, {target_key}. La progression utilise {pivot_chord_name} (le V7 de {target_key}) pour préparer la nouvelle tonique."
+        "description": "Une des modulations les plus courantes. On utilise l'accord de dominante de la nouvelle tonalité pour 'annoncer' le changement.",
+        "progression_degrees": ["I", "IV", "V/V", "V_new_I"],
+        "explanation_template": "Modulation de {start_key} vers sa dominante, {target_key}. La progression utilise {pivot_chord_name} (le V de {target_key}) pour préparer la nouvelle tonique."
     },
     {
         "name": "Modulation vers la Sous-dominante (IV)",
-        "description": "Une modulation douce, souvent réalisée en transformant la tonique de départ en un accord de 7ème de dominante pour résoudre sur la nouvelle tonique.",
-        "progression_degrees": ["I", "V", "I7", "IV_new_I"],
-        "explanation_template": "Modulation de {start_key} vers sa sous-dominante, {target_key}. L'accord {pivot_chord_name} (I7) crée une tension qui se résout naturellement sur {target_key}."
+        "description": "Une modulation douce, souvent réalisée en utilisant la tonique de départ pour pivoter vers la nouvelle tonalité.",
+        "progression_degrees": ["I", "V", "I", "IV_new_I"],
+        "explanation_template": "Modulation de {start_key} vers sa sous-dominante, {target_key}. L'accord {pivot_chord_name} (I) sert de pivot avant de passer à {target_key}."
     },
     {
         "name": "Modulation vers le Relatif Mineur (vi)",
         "description": "Passe d'une tonalité majeure à sa relative mineure. L'accord du 6ème degré (vi) sert de pivot car il est le 1er degré de la nouvelle tonalité.",
-        "progression_degrees": ["I", "vi", "V7/vi", "vi_new_i"],
-        "explanation_template": "Modulation de {start_key} vers son relatif mineur, {target_key}. L'accord {pivot_chord_name} (le vi de {start_key}) sert de pivot, devenant le 'i' de la nouvelle tonalité."
+        "progression_degrees": ["I", "vi", "V/vi", "vi_new_i"],
+        "explanation_template": "Modulation de {start_key} vers son relatif mineur, {target_key}. L'accord {pivot_chord_name} (le V de {target_key}) sert à établir la nouvelle tonalité mineure."
     },
     {
         "name": "Modulation vers le Ton Homonyme Mineur",
@@ -44,7 +44,7 @@ modulations = [
      {
         "name": "Anatole (Rhythm Changes Bridge)",
         "description": "Une progression célèbre utilisée comme pont dans de nombreux standards de jazz, basée sur un cycle de dominantes.",
-        "progression_degrees": ["V7/vi", "V7/ii", "V7/V", "V"],
+        "progression_degrees": ["V/vi", "V/ii", "V/V", "V"],
         "explanation_template": "La progression 'Anatole' ou 'Rhythm Changes Bridge' module rapidement à travers un cycle de dominantes secondaires, partant de {start_key}."
     }
 ]

@@ -95,9 +95,17 @@ class ModulationMode(ChordModeBase):
     def _generate_progression_and_info(self):
         """Selects a modulation and generates the chord progression and descriptive info."""
 
-        start_key = random.choice(self.all_keys)
         modulation_info = random.choice(self.modulations)
 
+        # Filter potential start keys based on modulation type constraints
+        possible_start_keys = self.all_keys
+        if "Homonyme Mineur" in modulation_info["name"]:
+            possible_start_keys = [key for key in self.all_keys if "Majeur" in key]
+
+        if not possible_start_keys:
+             return None, None, None, None # Cannot find a key that fits constraints
+
+        start_key = random.choice(possible_start_keys)
         progression_degrees = modulation_info["progression_degrees"]
 
         # Determine the target key based on the modulation type
@@ -108,12 +116,15 @@ class ModulationMode(ChordModeBase):
         elif "Relatif Mineur" in modulation_info["name"]:
             target_key = self._get_key_from_degree(start_key, 'vi')
         elif "Homonyme" in modulation_info["name"]:
-            target_key = start_key.replace(" Majeur", " Mineur")
+            if "Majeur" in start_key:
+                target_key = start_key.replace(" Majeur", " Mineur")
+            else: # Should not happen due to filter above, but as a fallback
+                return None, None, None, None
         else: # For cases like Anatole where there isn't one single target key
             target_key = start_key
 
         if not target_key: # Could fail if _get_key_from_degree fails
-             return None, None, None
+             return None, None, None, None
 
         progression_chords = []
         for degree in progression_degrees:
@@ -122,14 +133,14 @@ class ModulationMode(ChordModeBase):
                 progression_chords.append(chord)
             else:
                 # If a degree can't be resolved to a chord, this progression is invalid
-                return None, None, None
+                return None, None, None, None
 
         # After generating the progression, check if all its chords are in the allowed set
         if not all(chord in self.chord_set for chord in progression_chords):
-            return None, None, None # Signal to retry
+            return None, None, None, None # Signal to retry
 
         # Get pivot chord for the explanation
-        pivot_chord_degree = next((d for d in progression_degrees if '/' in d or '7' in d), None)
+        pivot_chord_degree = next((d for d in progression_degrees if '/' in d or 'I' == d), "I")
         pivot_chord_name = self._get_chord_from_degree(pivot_chord_degree, start_key, target_key) if pivot_chord_degree else ""
 
         explanation = modulation_info["explanation_template"].format(
@@ -138,20 +149,21 @@ class ModulationMode(ChordModeBase):
             pivot_chord_name=pivot_chord_name
         )
 
-        return progression_chords, explanation, modulation_info['name']
+        return progression_chords, explanation, modulation_info['name'], modulation_info['description']
 
 
     def run(self):
         current_progression = None
         explanation = ""
         header_name = ""
+        description = ""
 
         while not self.exit_flag:
             if current_progression is None:
                 attempts = 0
-                prog, expl, name = None, None, None
-                while prog is None and attempts < 50:  # Safety break after 50 attempts
-                    prog, expl, name = self._generate_progression_and_info()
+                prog, expl, name, desc = None, None, None, None
+                while prog is None and attempts < 100:  # Increased attempts for safety
+                    prog, expl, name, desc = self._generate_progression_and_info()
                     attempts += 1
 
                 if prog is None:
@@ -164,9 +176,11 @@ class ModulationMode(ChordModeBase):
                 current_progression = prog
                 explanation = expl
                 header_name = name
+                description = desc
 
             def pre_display():
                 self.console.print(Text(f"Exercice : {header_name}", style="bold cyan", justify="center"))
+                self.console.print(f"[italic]{description}[/italic]\n")
                 self.console.print(explanation)
                 self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
 
