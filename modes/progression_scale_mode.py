@@ -25,8 +25,9 @@ SCALE_TYPES = {
 }
 
 class ProgressionScaleMode(ChordModeBase):
-    def __init__(self, inport, outport, chord_set=None):
+    def __init__(self, inport, outport, play_progression_before_start, chord_set=None):
         super().__init__(inport, outport, chord_set)
+        self.play_progression_before_start = play_progression_before_start
         self.current_scale_name = None
         self.current_scale_notes = None
         self.last_scale_name = None
@@ -116,9 +117,10 @@ class ProgressionScaleMode(ChordModeBase):
             self.console.print("Appuyez sur 'q' pour quitter, 'r' pour ré-écouter la gamme, 'n' pour passer à la suivante.")
             self.console.print(f"\nÉcoutez la gamme de: [bold yellow]{self.current_scale_name}[/bold yellow]")
 
-            note_names = [get_note_name(n) for n in self.current_scale_notes]
-            scale_display = " -> ".join(note_names)
-            self.console.print(f"[cyan]{scale_display}[/cyan]")
+            if self.play_progression_before_start != 'PLAY_ONLY':
+                note_names = [get_note_name(n) for n in self.current_scale_notes]
+                scale_display = " -> ".join(note_names)
+                self.console.print(f"[cyan]{scale_display}[/cyan]")
 
             play_note_sequence(self.outport, self.current_scale_notes)
             self.console.print("À vous de jouer !")
@@ -198,7 +200,7 @@ class ProgressionScaleMode(ChordModeBase):
 
         self.show_overall_stats_and_wait(extra_stats_callback=self._display_top_scale_errors)
 
-def progression_scale_mode(inport, outport):
+def progression_scale_mode(inport, outport, play_progression_before_start):
     """Entry point for the Progression Scale Mode."""
-    mode = ProgressionScaleMode(inport, outport)
+    mode = ProgressionScaleMode(inport, outport, play_progression_before_start)
     mode.run()

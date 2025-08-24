@@ -247,7 +247,7 @@ def main():
                 elif mode_choice == '2':
                     single_note_mode(inport, outport)
                 elif mode_choice == '3':
-                    progression_scale_mode(inport, outport)
+                    progression_scale_mode(inport, outport, play_progression_before_start)
                 elif mode_choice == '4':
                     single_chord_mode(inport, outport, current_chord_set)
                 elif mode_choice == '5':
