@@ -52,19 +52,22 @@ class ReversedChordsMode(ChordModeBase):
         self.console.print("Appuyez sur 'q' pour quitter à tout moment.")
         time.sleep(2)
 
-        last_chord_name = None
+        chord_name = None
+        replay_chord = False
 
         while not self.exit_flag:
             clear_screen()
             self.display_header("Renversements d'accords", self.mode_name, "magenta")
 
             # --- Chord Selection ---
-            chord_name = random.choice(list(self.chord_set.keys()))
-            if len(self.chord_set) > 1:
-                while chord_name == last_chord_name:
-                    chord_name = random.choice(list(self.chord_set.keys()))
-            last_chord_name = chord_name
+            if not replay_chord:
+                last_chord_name = chord_name
+                chord_name = random.choice(list(self.chord_set.keys()))
+                if len(self.chord_set) > 1:
+                    while chord_name == last_chord_name:
+                        chord_name = random.choice(list(self.chord_set.keys()))
 
+            replay_chord = False # Reset flag for the next iteration
             target_notes = self.chord_set[chord_name]
             num_notes = len(target_notes)
 
@@ -113,7 +116,8 @@ class ReversedChordsMode(ChordModeBase):
 
                     if is_correct:
                         update_chord_success(chord_name)
-                        self.console.print(f"[bold green]Correct ! ({rec_name} - {rec_inv})[/bold green]\n")
+                        # Affiche le nom de l'accord demandé, pas le nom reconnu (pour les enharmoniques)
+                        self.console.print(f"[bold green]Correct ! ({chord_name} - {rec_inv})[/bold green]\n")
                         if inversion_attempts == 1:
                             self.session_correct_count += 1
                         time.sleep(1.5)
@@ -139,11 +143,13 @@ class ReversedChordsMode(ChordModeBase):
                 continue
 
             if not self.exit_flag:
-                self.console.print(f"Série de renversements pour [bold yellow]{chord_name}[/bold yellow] terminée.")
-                self.console.print("\nAppuyez sur une touche pour l'accord suivant, ou 'q' pour quitter.")
-                char = wait_for_any_key(self.inport)
-                if char and char.lower() == 'q':
+                self.console.print(f"\n[bold green]Série de renversements pour [bold yellow]{chord_name}[/bold yellow] terminée ![/bold green]")
+                choice = self.wait_for_end_choice()
+                if choice == 'quit':
                     self.exit_flag = True
+                elif choice == 'repeat':
+                    replay_chord = True # Set flag to replay the same chord
+                # For 'continue', do nothing and let the loop pick a new chord
 
         # --- End of session ---
         self.show_overall_stats_and_wait()

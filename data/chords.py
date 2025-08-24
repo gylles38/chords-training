@@ -303,3 +303,21 @@ tonal_progressions = {
         "description": "La progression 'quatre accords magiques', omniprésente en pop et rock. Peut sonner joyeuse ou mélancolique."
     }
 }
+
+# --- Génération des gammes mineures ---
+# On génère les gammes mineures naturelles à partir des gammes majeures relatives.
+# La gamme mineure naturelle commence sur le 6ème degré de la gamme majeure.
+gammes_mineures = {}
+for major_key, chords in gammes_majeures.items():
+    # Le nom de la gamme mineure est le nom de l'accord du 6ème degré (index 5)
+    relative_minor_name = chords[5]
+
+    # Les accords de la gamme mineure sont une rotation des accords de la gamme majeure
+    # La liste commence par le 6ème degré de la gamme majeure.
+    minor_chords = chords[5:] + chords[:5]
+
+    gammes_mineures[relative_minor_name] = minor_chords
+
+# --- Dictionnaire unifié de toutes les gammes ---
+# Pour un accès facile dans les modes de jeu.
+all_scales = {**gammes_majeures, **gammes_mineures}

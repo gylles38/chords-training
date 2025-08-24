@@ -84,32 +84,36 @@ class ChordModeBase:
         display_name = chord_name.split(" #")[0]
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
-        # In voice leading mode, we always show the notes and inversion.
+        # In voice leading mode, we always show the notes and inversion, unless in PLAY_ONLY mode.
         if self.use_voice_leading:
             target_notes = self.chord_set.get(chord_name, set())
             inversion_text = get_inversion_name(display_name, target_notes)
-
-            common_notes = set()
-            if self.last_played_notes:
-                common_notes = target_notes.intersection(self.last_played_notes)
-
-            notes_display_text = Text()
-            sorted_target_notes = sorted(list(target_notes))
-            for i, note_val in enumerate(sorted_target_notes):
-                note_name = get_note_name_with_octave(note_val)
-                style = "bold green" if note_val in common_notes else "cyan"
-                notes_display_text.append(note_name, style=style)
-                if i < len(sorted_target_notes) - 1:
-                    notes_display_text.append(", ", style="default")
-
             inversion_display = f" ({inversion_text})" if inversion_text and inversion_text != "position fondamentale" else ""
 
+            # The main prompt is always shown
             content = Text.assemble(
                 f"Accord à jouer ({prog_index + 1}/{total_chords}): ",
-                (f"{display_name}{inversion_display}", "bold yellow"),
-                "\nNotes attendues : ",
-                notes_display_text
+                (f"{display_name}{inversion_display}", "bold yellow")
             )
+
+            # But the expected notes are only shown if not in ear-training mode
+            if play_mode != 'PLAY_ONLY':
+                common_notes = set()
+                if self.last_played_notes:
+                    common_notes = target_notes.intersection(self.last_played_notes)
+
+                notes_display_text = Text()
+                sorted_target_notes = sorted(list(target_notes))
+                for i, note_val in enumerate(sorted_target_notes):
+                    note_name = get_note_name_with_octave(note_val)
+                    style = "bold green" if note_val in common_notes else "cyan"
+                    notes_display_text.append(note_name, style=style)
+                    if i < len(sorted_target_notes) - 1:
+                        notes_display_text.append(", ", style="default")
+
+                content.append("\nNotes attendues : ", style="default")
+                content.append(notes_display_text)
+
         # For other modes, we keep the original behavior
         else:
             if play_mode == 'PLAY_ONLY':
@@ -287,14 +291,57 @@ class ChordModeBase:
         return inversions
 
     def _calculate_voice_leading_cost(self, notes1, notes2):
-        """Calculates the voice leading cost between two chords."""
-        if not notes1 or not notes2 or len(notes1) != len(notes2):
+        """
+        Calculates the voice leading cost between two chords, correctly
+        handling chords of different sizes.
+        """
+        if not notes1 or not notes2:
             return float('inf')
 
-        list1 = sorted(list(notes1))
-        list2 = sorted(list(notes2))
+        # If chords are identical, cost is 0
+        if notes1 == notes2:
+            return 0
 
-        return sum(abs(n1 - n2) for n1, n2 in zip(list1, list2))
+        common_tones = notes1.intersection(notes2)
+        rem1 = sorted(list(notes1 - common_tones))
+        rem2 = sorted(list(notes2 - common_tones))
+
+        # Start with a penalty for changing the number of voices.
+        # This encourages keeping the same number of notes where possible.
+        cost = abs(len(rem1) - len(rem2)) * 12  # A whole octave penalty per added/removed voice
+
+        # Greedy algorithm to find the smoothest path for moving voices
+        total_distance = 0
+
+        # Determine which list of remaining notes is smaller
+        if len(rem1) < len(rem2):
+            small_rem, large_rem = rem1, rem2
+        else:
+            small_rem, large_rem = rem2, rem1
+
+        large_rem_copy = list(large_rem)
+
+        # For each note in the smaller set, find its closest partner in the larger set
+        for note in small_rem:
+            best_match = -1
+            min_dist = float('inf')
+
+            for partner in large_rem_copy:
+                dist = abs(note - partner)
+                if dist < min_dist:
+                    min_dist = dist
+                    best_match = partner
+
+            if best_match != -1:
+                total_distance += min_dist
+                large_rem_copy.remove(best_match)
+
+        # The remaining notes in large_rem_copy are the "unpaired" notes.
+        # Their "movement" cost is already factored in by the initial penalty.
+
+        cost += total_distance
+
+        return cost
 
     def _calculate_best_voicings(self, progression_names):
         """
@@ -391,8 +438,9 @@ class ChordModeBase:
 
         if pre_display:
             pre_display()
-        else:
-            self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
+
+        # Toujours afficher les instructions après le pre_display personnalisé
+        self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
@@ -478,8 +526,9 @@ class ChordModeBase:
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
-                                live.update("[bold cyan]Lecture de la progression...[/bold cyan]", refresh=True)
-                                play_progression_sequence(self.outport, current_progression_chords, self.chord_set)
+                                if getattr(self, "play_progression_before_start", "NONE") != 'NONE':
+                                    live.update("[bold cyan]Lecture de la progression...[/bold cyan]", refresh=True)
+                                    play_progression_sequence(self.outport, current_progression_chords, self.chord_set)
                                 enable_raw_mode()
                                 while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()

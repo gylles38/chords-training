@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from .chord_mode_base import ChordModeBase
+from music_theory import get_chord_type_from_name
 from data.chords import (
     all_chords,
     three_note_chords,
@@ -33,13 +34,14 @@ class MissingChordMode(ChordModeBase):
         progression_selection_mode,
         play_progression_before_start,
         chord_set,
+        use_voice_leading,
     ):
         super().__init__(inport, outport, chord_set)
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
-        self.use_voice_leading = True
+        self.use_voice_leading = use_voice_leading
 
     def check_chord(self, attempt_notes, chord_name, chord_notes):
         """
@@ -159,7 +161,7 @@ class MissingChordMode(ChordModeBase):
 
     def _play_gapped_progression(self, progression_chords: List[str], chord_set: Dict, voicings: List[Set[int]], missing_index: int):
         from music_theory import get_note_name_with_octave # Local import
-        self.console.print("\nÉcoutez bien la progression ('r' pour réécouter)...")
+        self.console.print("\nÉcoutez bien la progression...")
         time.sleep(1)
 
         chord_duration = 0.8
@@ -181,16 +183,21 @@ class MissingChordMode(ChordModeBase):
                 common_notes = current_notes.intersection(last_displayed_notes)
 
                 chord_name_part = chord_name.split(' #')[0]
-                text.append(f"{chord_name_part} (", style="bold yellow")
 
-                note_list = sorted(list(current_notes))
-                for j, note_val in enumerate(note_list):
-                    note_name = get_note_name_with_octave(note_val)
-                    style = "bold green" if note_val in common_notes else "cyan"
-                    text.append(note_name, style=style)
-                    if j < len(note_list) - 1:
-                        text.append(", ", style="default")
-                text.append(")", style="bold yellow")
+                if self.play_progression_before_start != 'PLAY_ONLY':
+                    text.append(f"{chord_name_part} (", style="bold yellow")
+
+                    note_list = sorted(list(current_notes))
+                    for j, note_val in enumerate(note_list):
+                        note_name = get_note_name_with_octave(note_val)
+                        style = "bold green" if note_val in common_notes else "cyan"
+                        text.append(note_name, style=style)
+                        if j < len(note_list) - 1:
+                            text.append(", ", style="default")
+                    text.append(")", style="bold yellow")
+                else:
+                    text.append(f"{chord_name_part}", style="bold yellow")
+
                 last_displayed_notes = current_notes
             display_parts.append(text)
 
@@ -253,7 +260,7 @@ class MissingChordMode(ChordModeBase):
                         clear_screen()
                         self.display_header("Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan")
                         self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
-                        self.console.print("Quel était l'accord manquant ?")
+                        self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('r' pour répéter, 'n' pour passer, 'q' pour quitter)")
                         enable_raw_mode()
                         attempt_notes.clear()
                         notes_currently_on.clear()
@@ -293,7 +300,9 @@ class MissingChordMode(ChordModeBase):
                 self.display_header(
                     "Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan"
                 )
-                self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !")
+                self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !\n")
+                self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
+
 
                 # --- Progression Generation Loop ---
                 prog_data = None
@@ -323,7 +332,13 @@ class MissingChordMode(ChordModeBase):
             prog_to_play_with_answer = list(prog_to_play)
 
             self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
-            self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('n' pour passer, 'q' pour quitter)")
+
+            # Create a panel for the question to be consistent with other modes
+            question_text = Text(f"Quel était l'accord manquant à la position {missing_index + 1} ?", justify="center")
+            question_panel = Panel(question_text, title="Progression en cours", border_style="green")
+            self.console.print(question_panel)
+            self.console.print("('r' pour réécouter, 'n' pour passer, 'q' pour quitter)")
+
 
             wrong_attempts = 0
             last_incorrect_chord = None
@@ -331,8 +346,11 @@ class MissingChordMode(ChordModeBase):
             while not self.exit_flag and not puzzle_solved:
                 attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, voicings, missing_index)
 
-                if action in ['next', 'quit']:
-                    if action == 'quit': self.exit_flag = True
+                if action == 'next':
+                    current_prog_data = None # Ensure we get a new puzzle
+                    break
+                elif action == 'quit':
+                    self.exit_flag = True
                     break
 
                 if action == 'attempt':
@@ -369,18 +387,29 @@ class MissingChordMode(ChordModeBase):
                         else:
                             self.console.print("[bold red]Incorrect.[/bold red] L'accord joué n'a pas été reconnu. Réessayez !")
                             last_incorrect_chord = None
+                        base_chord_name = missing_chord_name.split(" #")[0]
                         if wrong_attempts == 3:
-                            base_chord_name = missing_chord_name.split(" #")[0]
-                            self.console.print(f"[bold yellow]Indice (Debug) :[/bold yellow] L'accord était [bold cyan]{base_chord_name}[/bold cyan].")
-                            play_chord(self.outport, missing_chord_notes, duration=1.5)
+                            tonic_note = base_chord_name.split(" ")[0]
+                            self.console.print(f"Indice : La note fondamentale de l'accord est [bold cyan]{tonic_note}[/bold cyan].")
+                        elif wrong_attempts == 5:
+                            chord_type = get_chord_type_from_name(base_chord_name)
+                            self.console.print(f"Deuxième indice : Le type de l'accord est [bold cyan]{chord_type}[/bold cyan].")
 
-            if not self.exit_flag:
+            if self.exit_flag:
+                break
+
+            if puzzle_solved:
                 choice = self.wait_for_end_choice()
                 if choice == 'quit':
                     self.exit_flag = True
                 elif choice == 'continue':
                     current_prog_data = None
-                # Pour 'repeat', on ne fait rien, la boucle réutilisera les mêmes données
+                elif choice == 'repeat':
+                    # Do nothing, allows the loop to re-run with the same data
+                    pass
+            else:
+                # This path is taken if user skipped with 'n'
+                current_prog_data = None
 
         self.show_overall_stats_and_wait()
 
@@ -393,6 +422,7 @@ def missing_chord_mode(
     progression_selection_mode,
     play_progression_before_start,
     chord_set,
+    use_voice_leading,
 ):
     mode = MissingChordMode(
         inport,
@@ -402,5 +432,6 @@ def missing_chord_mode(
         progression_selection_mode,
         play_progression_before_start,
         chord_set,
+        use_voice_leading,
     )
     mode.run()
