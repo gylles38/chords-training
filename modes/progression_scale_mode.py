@@ -122,7 +122,9 @@ class ProgressionScaleMode(ChordModeBase):
                 scale_display = " -> ".join(note_names)
                 self.console.print(f"[cyan]{scale_display}[/cyan]")
 
-            play_note_sequence(self.outport, self.current_scale_notes)
+            if self.play_progression_before_start != 'NONE':
+                play_note_sequence(self.outport, self.current_scale_notes)
+
             self.console.print("À vous de jouer !")
 
             scale_was_perfect = True
