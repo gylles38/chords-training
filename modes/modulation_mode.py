@@ -1,8 +1,6 @@
 # modes/modulation_mode.py
 import random
 from rich.text import Text
-from rich.columns import Columns
-from rich.align import Align
 from .chord_mode_base import ChordModeBase
 from data.modulations import modulations
 from data.chords import all_scales, DEGREE_MAP
@@ -196,11 +194,16 @@ class ModulationMode(ChordModeBase):
 
                 if self.play_progression_before_start != 'PLAY_ONLY' and start_key and target_key:
                     prog_chord_names = [c.split(" #")[0] for c in current_progression]
-                    tables = [
-                        create_degrees_table(start_key, all_scales[start_key], prog_chord_names),
-                        create_degrees_table(target_key, all_scales[target_key], prog_chord_names)
-                    ]
-                    self.console.print(Align.center(Columns(tables, expand=True)))
+
+                    # Add a newline for spacing
+                    self.console.print()
+
+                    # Display tables vertically
+                    table1 = create_degrees_table(start_key, all_scales[start_key], prog_chord_names)
+                    self.console.print(table1)
+
+                    table2 = create_degrees_table(target_key, all_scales[target_key], prog_chord_names)
+                    self.console.print(table2)
 
                 self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
 
