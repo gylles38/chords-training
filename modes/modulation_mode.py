@@ -2,7 +2,6 @@
 import random
 from rich.text import Text
 from rich.columns import Columns
-from rich.align import Align
 from .chord_mode_base import ChordModeBase
 from data.modulations import modulations
 from data.chords import all_scales, DEGREE_MAP
@@ -203,8 +202,8 @@ class ModulationMode(ChordModeBase):
                         create_degrees_table(start_key, all_scales[start_key], prog_chord_names),
                         create_degrees_table(target_key, all_scales[target_key], prog_chord_names)
                     ]
-                    # Use Align.center on Columns with expand=False (default)
-                    self.console.print(Align.center(Columns(tables)))
+                    # Default left-alignment
+                    self.console.print(Columns(tables))
 
                 self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
 
