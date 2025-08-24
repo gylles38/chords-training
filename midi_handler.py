@@ -66,10 +66,15 @@ def play_progression_sequence(outport, progression, chord_set, duration=0.8):
     for chord_name in progression:
         if chord_name in chord_set:
             target_notes = chord_set[chord_name]
-            
-            # Utiliser la nouvelle fonction pour trouver la meilleure inversion
-            transposed_notes = get_closest_inversion(target_notes, last_played_notes)
-            
+
+            # Si le nom de l'accord contient '#', c'est un accord pré-calculé
+            # pour le guidage vocal, donc on le joue tel quel.
+            if " #" in chord_name:
+                transposed_notes = target_notes
+            else:
+                # Comportement original pour les autres modes
+                transposed_notes = get_closest_inversion(target_notes, last_played_notes)
+
             play_chord(outport, transposed_notes, duration=duration)
             last_played_notes = transposed_notes
             time.sleep(0.5)
