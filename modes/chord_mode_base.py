@@ -522,8 +522,9 @@ class ChordModeBase:
                             if action == 'repeat':
                                 while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
-                                live.update("[bold cyan]Lecture de la progression...[/bold cyan]", refresh=True)
-                                play_progression_sequence(self.outport, current_progression_chords, self.chord_set)
+                                if getattr(self, "play_progression_before_start", "NONE") != 'NONE':
+                                    live.update("[bold cyan]Lecture de la progression...[/bold cyan]", refresh=True)
+                                    play_progression_sequence(self.outport, current_progression_chords, self.chord_set)
                                 enable_raw_mode()
                                 while wait_for_input(timeout=0.001): pass
                                 disable_raw_mode()
