@@ -38,6 +38,7 @@ class ChordTransitionsMode(ChordModeBase):
         self.use_timer = use_timer
         self.timer_duration = timer_duration
         self.play_progression_before_start = play_progression_before_start
+        self.last_progression_info = None
 
     def _generate_progression(self) -> Tuple[List[str], str]:
         """Generates a musically coherent, weighted random progression."""
@@ -63,6 +64,12 @@ class ChordTransitionsMode(ChordModeBase):
         while not self.exit_flag:
             # Generate a new progression for the outer loop
             progression_names, key_name = self._generate_progression()
+
+            if len(progression_names) > 1:
+                while (key_name, tuple(progression_names)) == self.last_progression_info:
+                    progression_names, key_name = self._generate_progression()
+
+            self.last_progression_info = (key_name, tuple(progression_names))
 
             if len(progression_names) < 2:
                 continue

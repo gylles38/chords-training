@@ -166,6 +166,7 @@ class ModulationMode(ChordModeBase):
         header_name = ""
         description = ""
         start_key, target_key = "", ""
+        last_modulation_info = None
 
         while not self.exit_flag:
             if current_progression is None:
@@ -173,6 +174,8 @@ class ModulationMode(ChordModeBase):
                 prog, expl, name, desc, sk, tk = None, None, None, None, None, None
                 while prog is None and attempts < 100:  # Increased attempts for safety
                     prog, expl, name, desc, sk, tk = self._generate_progression_and_info()
+                    if (name, sk) == last_modulation_info:
+                        prog = None # Force retry
                     attempts += 1
 
                 if prog is None:
@@ -182,6 +185,7 @@ class ModulationMode(ChordModeBase):
                     time.sleep(5)
                     return # Exit the mode gracefully
 
+                last_modulation_info = (name, sk)
                 current_progression = prog
                 explanation = expl
                 header_name = name
