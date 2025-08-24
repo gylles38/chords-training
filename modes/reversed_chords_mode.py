@@ -52,19 +52,22 @@ class ReversedChordsMode(ChordModeBase):
         self.console.print("Appuyez sur 'q' pour quitter à tout moment.")
         time.sleep(2)
 
-        last_chord_name = None
+        chord_name = None
+        replay_chord = False
 
         while not self.exit_flag:
             clear_screen()
             self.display_header("Renversements d'accords", self.mode_name, "magenta")
 
             # --- Chord Selection ---
-            chord_name = random.choice(list(self.chord_set.keys()))
-            if len(self.chord_set) > 1:
-                while chord_name == last_chord_name:
-                    chord_name = random.choice(list(self.chord_set.keys()))
-            last_chord_name = chord_name
+            if not replay_chord:
+                last_chord_name = chord_name
+                chord_name = random.choice(list(self.chord_set.keys()))
+                if len(self.chord_set) > 1:
+                    while chord_name == last_chord_name:
+                        chord_name = random.choice(list(self.chord_set.keys()))
 
+            replay_chord = False # Reset flag for the next iteration
             target_notes = self.chord_set[chord_name]
             num_notes = len(target_notes)
 
@@ -143,8 +146,9 @@ class ReversedChordsMode(ChordModeBase):
                 choice = self.wait_for_end_choice()
                 if choice == 'quit':
                     self.exit_flag = True
-                # Pour 'repeat' ou 'continue', on passe simplement à l'accord suivant,
-                # ce qui est le comportement par défaut de la boucle while.
+                elif choice == 'repeat':
+                    replay_chord = True # Set flag to replay the same chord
+                # For 'continue', do nothing and let the loop pick a new chord
 
         # --- End of session ---
         self.show_overall_stats_and_wait()
