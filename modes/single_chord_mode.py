@@ -23,7 +23,6 @@ class SingleChordMode(ChordModeBase):
             last_chord_name = chord_name
 
             def pre_display():
-                self.console.print("Jouez l'accord affiché. Appuyez sur 'r' pour répéter, 'n' pour passer, 'q' pour quitter.")
                 self.console.print(f"\nJouez : [bold bright_yellow]{chord_name}[/bold bright_yellow]")
 
             result = self.run_progression(

@@ -434,8 +434,9 @@ class ChordModeBase:
 
         if pre_display:
             pre_display()
-        else:
-            self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
+
+        # Toujours afficher les instructions après le pre_display personnalisé
+        self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 

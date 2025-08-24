@@ -205,8 +205,6 @@ class ModulationMode(ChordModeBase):
                     # Default left-alignment
                     self.console.print(Columns(tables))
 
-                self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
-
             result = self.run_progression(
                 progression_accords=current_progression,
                 header_title="Modulations",
