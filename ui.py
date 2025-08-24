@@ -1,6 +1,7 @@
 # ui.py
 from music_theory import get_note_name
 from rich.console import Console
+from messages import UI
 
 # Initialisation de la console Rich
 console = Console()
@@ -36,36 +37,36 @@ def get_colored_notes_string(played_notes, correct_notes):
 
 def display_stats(correct_count, total_count, elapsed_time=None):
     """Affiche les statistiques de performance."""
-    console.print("\n--- Bilan de la session totale ---")
+    console.print(UI.SESSION_SUMMARY)
     if total_count > 0:
         pourcentage = (correct_count / total_count) * 100
-        console.print(f"Accords corrects : [bold green]{correct_count}[/bold green]")
-        console.print(f"Accords incorrects : [bold red]{total_count - correct_count}[/bold red]")
-        console.print(f"Taux de réussite : [bold cyan]{pourcentage:.2f}%[/bold cyan]")
+        console.print(UI.CORRECT_CHORDS.format(correct_count=correct_count))
+        console.print(UI.INCORRECT_CHORDS.format(incorrect_count=total_count - correct_count))
+        console.print(UI.SUCCESS_RATE.format(percentage=pourcentage))
     else:
-        console.print("Aucun accord ou progression d'accords n'a été joué.")
+        console.print(UI.NO_CHORDS_PLAYED)
     if elapsed_time is not None:
-        console.print(f"Temps écoulé : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
+        console.print(UI.ELAPSED_TIME.format(elapsed_time=elapsed_time))
     console.print("-------------------------")
 
 def display_stats_fixed(correct_count, total_attempts, total_chords, elapsed_time=None):
     """Affiche les statistiques de performance corrigées."""
-    console.print("\n--- Bilan de la session ---")
+    console.print(UI.SESSION_SUMMARY_FIXED)
     if total_attempts > 0:
         accuracy = (correct_count / total_attempts) * 100
-        console.print(f"Tentatives totales : [bold yellow]{total_attempts}[/bold yellow]")
-        console.print(f"Tentatives réussies : [bold green]{correct_count}[/bold green]")
-        console.print(f"Tentatives échouées : [bold red]{total_attempts - correct_count}[/bold red]")
-        console.print(f"Précision globale : [bold cyan]{accuracy:.2f}%[/bold cyan]")
+        console.print(UI.TOTAL_ATTEMPTS.format(total_attempts=total_attempts))
+        console.print(UI.SUCCESSFUL_ATTEMPTS.format(correct_count=correct_count))
+        console.print(UI.FAILED_ATTEMPTS.format(failed_count=total_attempts - correct_count))
+        console.print(UI.GLOBAL_ACCURACY.format(accuracy=accuracy))
         
         if total_chords > 0:
             avg_attempts_per_chord = total_attempts / total_chords
-            console.print(f"Moyenne tentatives/accord : [bold magenta]{avg_attempts_per_chord:.1f}[/bold magenta]")
+            console.print(UI.AVG_ATTEMPTS_PER_CHORD.format(avg_attempts=avg_attempts_per_chord))
     else:
-        console.print("Aucune tentative enregistrée.")
+        console.print(UI.NO_ATTEMPTS_RECORDED)
     
     if elapsed_time is not None:
-        console.print(f"Temps écoulé : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
+        console.print(UI.ELAPSED_TIME.format(elapsed_time=elapsed_time))
 
 def create_degrees_table(tonalite: str, chords_in_scale: list, chords_to_highlight: list = None) -> "Table":
     """Crée et retourne une table Rich pour les degrés d'une tonalité, avec surlignage optionnel."""
@@ -75,9 +76,9 @@ def create_degrees_table(tonalite: str, chords_in_scale: list, chords_to_highlig
     if chords_to_highlight is None:
         chords_to_highlight = []
 
-    table = Table(title=f"Tonalité de [bold yellow]{tonalite}[/bold yellow]", border_style="blue")
-    table.add_column("Degré", justify="center", style="bold cyan")
-    table.add_column("Accord", justify="center")
+    table = Table(title=UI.TONALITY_TITLE.format(tonality=tonalite), border_style="blue")
+    table.add_column(UI.DEGREE_COLUMN, justify="center", style="bold cyan")
+    table.add_column(UI.CHORD_COLUMN, justify="center")
 
     for i, chord_name in enumerate(chords_in_scale, 1):
         roman_degree = int_to_roman(i)

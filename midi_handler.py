@@ -7,6 +7,7 @@ from rich.table import Table
 from rich.prompt import Prompt
 
 from data.chords import all_chords
+from messages import Midi
 
 console = Console()
 
@@ -73,7 +74,7 @@ def play_progression_sequence(outport, progression, chord_set, duration=0.8):
             last_played_notes = transposed_notes
             time.sleep(0.5)
         else:
-            console.print(f"[bold red]L'accord {chord_name} n'a pas pu être joué (non trouvé dans le set sélectionné).[/bold red]")
+            console.print(Midi.CHORD_NOT_PLAYED.format(chord_name=chord_name))
 
 
 def select_midi_port(port_type):
@@ -81,21 +82,21 @@ def select_midi_port(port_type):
     ports = mido.get_input_names() if port_type == "input" else mido.get_output_names()
     
     if not ports:
-        console.print(f"[bold red]Aucun port {port_type} MIDI trouvé. Assurez-vous que votre périphérique est connecté.[/bold red]")
+        console.print(Midi.NO_PORT_FOUND.format(port_type=port_type))
         return None
     
-    table = Table(title=f"Ports {port_type} MIDI disponibles", style="bold cyan")
-    table.add_column("Index", style="bold yellow")
-    table.add_column("Nom du port", style="bold white")
+    table = Table(title=Midi.AVAILABLE_PORTS.format(port_type=port_type), style="bold cyan")
+    table.add_column(Midi.PORT_INDEX_COLUMN, style="bold yellow")
+    table.add_column(Midi.PORT_NAME_COLUMN, style="bold white")
 
     for i, port_name in enumerate(ports):
         table.add_row(f"[{i+1}]", port_name)
-    table.add_row("[q]", "Quitter")
+    table.add_row("[q]", Midi.QUIT)
     
     console.print(table)
     
     while True:
-        choice = Prompt.ask(f"Veuillez choisir un port {port_type} (1-{len(ports)}) ou 'q' pour quitter", console=console)
+        choice = Prompt.ask(Midi.CHOOSE_PORT.format(port_type=port_type, port_count=len(ports)), console=console)
         if choice.lower() == 'q':
             return None
         try:
@@ -103,9 +104,9 @@ def select_midi_port(port_type):
             if 0 <= choice_index < len(ports):
                 return ports[choice_index]
             else:
-                console.print(f"[bold red]Sélection invalide. Veuillez entrer un numéro valide.[/bold red]")
+                console.print(Midi.INVALID_SELECTION_NUMBER)
         except ValueError:
-            console.print("[bold red]Sélection invalide. Veuillez entrer un numéro.[/bold red]")
+            console.print(Midi.INVALID_SELECTION_INPUT)
 
 def play_note_sequence(outport, notes, velocity=64, duration=0.3, pause=0.1):
     """Joue une séquence de notes individuellement."""

@@ -7,6 +7,7 @@ from stats_manager import get_chord_errors
 from screen_handler import int_to_roman
 from data.chords import gammes_majeures, cadences, DEGREE_MAP
 from ui import create_degrees_table
+from messages import CadenceMode as CadenceMessages, UI
 
 class CadenceMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_voice_leading):
@@ -95,19 +96,20 @@ class CadenceMode(ChordModeBase):
 
             # Pré-affichage spécifique (tableau des degrés + descriptif)
             def pre_display():
-                self.console.print(f"Dans la tonalité de [bold yellow]{self.current_tonalite}[/bold yellow], "
-                                   f"jouez la [bold cyan]{self.current_cadence_name}[/bold cyan] "
-                                   f"([bold cyan]{degres_str}[/bold cyan]) :")
+                self.console.print(CadenceMessages.TONALITY_INFO.format(tonality=self.current_tonalite))
+                self.console.print(CadenceMessages.PLAY_CADENCE.format(
+                    cadence_name=self.current_cadence_name,
+                    chord_progression=progression_str
+                ))
 
                 play_mode = getattr(self, "play_progression_before_start", "NONE")
                 if play_mode != 'PLAY_ONLY':
-                    self.console.print(f"[bold yellow]{progression_str}[/bold yellow]")
                     self.display_degrees_table(self.current_tonalite, self.gammes_filtrees)
 
             result = self.run_progression(
                 progression_accords=current_progression,
-                header_title="Cadences",
-                header_name="Mode Cadences Musicales",
+                header_title=CadenceMessages.HEADER_TITLE,
+                header_name=CadenceMessages.HEADER_NAME,
                 border_style="magenta",
                 pre_display=pre_display,
                 debug_info=debug_info,
