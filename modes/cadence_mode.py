@@ -6,6 +6,7 @@ from .chord_mode_base import ChordModeBase
 from stats_manager import get_chord_errors
 from screen_handler import int_to_roman
 from data.chords import gammes_majeures, cadences, DEGREE_MAP
+from ui import create_degrees_table
 
 class CadenceMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set, use_voice_leading):
@@ -25,15 +26,8 @@ class CadenceMode(ChordModeBase):
 
     # ---------- Spécifique Cadence ----------
     def display_degrees_table(self, tonalite, gammes_filtrees):
-        """Affiche le tableau des degrés pour la tonalité donnée"""
-        table = Table(border_style="magenta")
-        table.add_column("Degré", justify="center", style="bold cyan")
-        table.add_column("Accord", justify="center", style="bold yellow")
-
-        for i, chord_name in enumerate(gammes_filtrees, 1):
-            roman_degree = int_to_roman(i)
-            table.add_row(roman_degree, chord_name)
-
+        """Affiche le tableau des degrés pour la tonalité donnée en utilisant la fonction centralisée."""
+        table = create_degrees_table(tonalite, gammes_filtrees)
         self.console.print(table)
 
     def run(self):

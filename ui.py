@@ -66,4 +66,19 @@ def display_stats_fixed(correct_count, total_attempts, total_chords, elapsed_tim
     
     if elapsed_time is not None:
         console.print(f"Temps écoulé : [bold cyan]{elapsed_time:.2f} secondes[/bold cyan]")
+
+def create_degrees_table(tonalite: str, chords_in_scale: list) -> "Table":
+    """Crée et retourne une table Rich pour les degrés d'une tonalité."""
+    from rich.table import Table
+    from screen_handler import int_to_roman
+
+    table = Table(title=f"Tonalité de [bold yellow]{tonalite}[/bold yellow]", border_style="blue")
+    table.add_column("Degré", justify="center", style="bold cyan")
+    table.add_column("Accord", justify="center", style="bold yellow")
+
+    for i, chord_name in enumerate(chords_in_scale, 1):
+        roman_degree = int_to_roman(i)
+        table.add_row(roman_degree, chord_name)
+
+    return table
     console.print("-------------------------")
