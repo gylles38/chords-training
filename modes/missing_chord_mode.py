@@ -301,6 +301,8 @@ class MissingChordMode(ChordModeBase):
                     "Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan"
                 )
                 self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !")
+                self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
+
 
                 # --- Progression Generation Loop ---
                 prog_data = None
