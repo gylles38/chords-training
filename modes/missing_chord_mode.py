@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from .chord_mode_base import ChordModeBase
+from music_theory import get_chord_type_from_name
 from data.chords import (
     all_chords,
     three_note_chords,
@@ -370,10 +371,13 @@ class MissingChordMode(ChordModeBase):
                         else:
                             self.console.print("[bold red]Incorrect.[/bold red] L'accord joué n'a pas été reconnu. Réessayez !")
                             last_incorrect_chord = None
+                        base_chord_name = missing_chord_name.split(" #")[0]
                         if wrong_attempts == 3:
-                            base_chord_name = missing_chord_name.split(" #")[0]
-                            self.console.print(f"[bold yellow]Indice (Debug) :[/bold yellow] L'accord était [bold cyan]{base_chord_name}[/bold cyan].")
-                            play_chord(self.outport, missing_chord_notes, duration=1.5)
+                            tonic_note = base_chord_name.split(" ")[0]
+                            self.console.print(f"Indice : La note fondamentale de l'accord est [bold cyan]{tonic_note}[/bold cyan].")
+                        elif wrong_attempts == 5:
+                            chord_type = get_chord_type_from_name(base_chord_name)
+                            self.console.print(f"Deuxième indice : Le type de l'accord est [bold cyan]{chord_type}[/bold cyan].")
 
             if not self.exit_flag:
                 choice = self.wait_for_end_choice()
