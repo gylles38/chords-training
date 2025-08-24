@@ -139,11 +139,12 @@ class ReversedChordsMode(ChordModeBase):
                 continue
 
             if not self.exit_flag:
-                self.console.print(f"Série de renversements pour [bold yellow]{chord_name}[/bold yellow] terminée.")
-                self.console.print("\nAppuyez sur une touche pour l'accord suivant, ou 'q' pour quitter.")
-                char = wait_for_any_key(self.inport)
-                if char and char.lower() == 'q':
+                self.console.print(f"\n[bold green]Série de renversements pour [bold yellow]{chord_name}[/bold yellow] terminée ![/bold green]")
+                choice = self.wait_for_end_choice()
+                if choice == 'quit':
                     self.exit_flag = True
+                # Pour 'repeat' ou 'continue', on passe simplement à l'accord suivant,
+                # ce qui est le comportement par défaut de la boucle while.
 
         # --- End of session ---
         self.show_overall_stats_and_wait()
