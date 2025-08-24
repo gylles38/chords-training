@@ -332,7 +332,13 @@ class MissingChordMode(ChordModeBase):
             prog_to_play_with_answer = list(prog_to_play)
 
             self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
-            self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('r' pour répéter, 'n' pour passer, 'q' pour quitter)")
+
+            # Create a panel for the question to be consistent with other modes
+            question_text = Text(f"Quel était l'accord manquant à la position {missing_index + 1} ?", justify="center")
+            question_panel = Panel(question_text, title="Progression en cours", border_style="green")
+            self.console.print(question_panel)
+            self.console.print("('r' pour réécouter, 'n' pour passer, 'q' pour quitter)")
+
 
             wrong_attempts = 0
             last_incorrect_chord = None
