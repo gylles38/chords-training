@@ -82,15 +82,25 @@ else:
 
 # ---------- Fonctions communes ----------
 def wait_for_any_key(inport):
-    """Attend n'importe quelle touche du clavier (non bloquant sur le MIDI)."""
-    while True:
-        char = wait_for_input(timeout=0.05)
-        if char:
-            return char.lower()
-        # Vider le tampon MIDI
-        if inport:
-            for _ in inport.iter_pending():
-                pass
+    """Attend qu'une touche soit pressée sur le clavier ou qu'une note MIDI soit jouée."""
+    enable_raw_mode()
+    try:
+        while True:
+            # Check for keyboard input
+            char = wait_for_input(timeout=0.01)
+            if char:
+                return
+
+            # Check for MIDI input and clear buffer
+            if inport and inport.poll():
+                # Read all pending messages to clear buffer and then return
+                for _ in inport.iter_pending():
+                    pass
+                return
+
+            time.sleep(0.01)
+    finally:
+        disable_raw_mode()
 
 def get_single_char_choice(prompt, valid_choices):
     """Demande un choix à un caractère unique avec validation, sans spammer le terminal."""
