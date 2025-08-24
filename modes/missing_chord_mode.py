@@ -260,7 +260,7 @@ class MissingChordMode(ChordModeBase):
                         clear_screen()
                         self.display_header("Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan")
                         self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
-                        self.console.print("Quel était l'accord manquant ?")
+                        self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('r' pour répéter, 'n' pour passer, 'q' pour quitter)")
                         enable_raw_mode()
                         attempt_notes.clear()
                         notes_currently_on.clear()
@@ -300,7 +300,7 @@ class MissingChordMode(ChordModeBase):
                 self.display_header(
                     "Trouve l'Accord Manquant", "Mode de Jeu", "bright_cyan"
                 )
-                self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !")
+                self.console.print("Je vais jouer une progression avec un accord manquant. À vous de le trouver !\n")
                 self.console.print("Appuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.")
 
 
