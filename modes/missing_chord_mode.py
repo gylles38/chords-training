@@ -160,7 +160,7 @@ class MissingChordMode(ChordModeBase):
 
     def _play_gapped_progression(self, progression_chords: List[str], chord_set: Dict, voicings: List[Set[int]], missing_index: int):
         from music_theory import get_note_name_with_octave # Local import
-        self.console.print("\nÉcoutez bien la progression ('r' pour réécouter)...")
+        self.console.print("\nÉcoutez bien la progression...")
         time.sleep(1)
 
         chord_duration = 0.8
@@ -324,7 +324,7 @@ class MissingChordMode(ChordModeBase):
             prog_to_play_with_answer = list(prog_to_play)
 
             self._play_gapped_progression(prog_to_play, chord_set_to_use, voicings, missing_index)
-            self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('n' pour passer, 'q' pour quitter)")
+            self.console.print(f"Quel était l'accord manquant à la position {missing_index + 1} ? ('r' pour répéter, 'n' pour passer, 'q' pour quitter)")
 
             wrong_attempts = 0
             last_incorrect_chord = None
