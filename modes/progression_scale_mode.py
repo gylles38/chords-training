@@ -132,7 +132,12 @@ class ProgressionScaleMode(ChordModeBase):
             i = 0
             while i < len(self.current_scale_notes):
                 correct_note_for_step = self.current_scale_notes[i]
-                self.console.print(f"Jouez la note {i+1}/{len(self.current_scale_notes)} ({get_note_name(correct_note_for_step)})...")
+
+                prompt = f"Jouez la note {i+1}/{len(self.current_scale_notes)}"
+                if self.play_progression_before_start != 'PLAY_ONLY':
+                    prompt += f" ({get_note_name(correct_note_for_step)})"
+                prompt += "..."
+                self.console.print(prompt)
 
                 while True: # Inner loop to wait for the correct note
                     attempt_note, status = self.collect_user_input(collection_mode='single', release_timeout=0.1)
