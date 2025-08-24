@@ -1,8 +1,7 @@
 # modes/modulation_mode.py
 import random
 from rich.text import Text
-from rich.layout import Layout
-from rich.panel import Panel
+from rich.columns import Columns
 from .chord_mode_base import ChordModeBase
 from data.modulations import modulations
 from data.chords import all_scales, DEGREE_MAP
@@ -195,12 +194,11 @@ class ModulationMode(ChordModeBase):
                 self.console.print(explanation)
 
                 if self.play_progression_before_start != 'PLAY_ONLY' and start_key and target_key:
-                    layout = Layout()
-                    layout.split_row(
-                        Panel(create_degrees_table(start_key, all_scales[start_key]), title="Tonalité de départ"),
-                        Panel(create_degrees_table(target_key, all_scales[target_key]), title="Tonalité d'arrivée")
-                    )
-                    self.console.print(layout)
+                    tables = [
+                        create_degrees_table(start_key, all_scales[start_key]),
+                        create_degrees_table(target_key, all_scales[target_key])
+                    ]
+                    self.console.print(Columns(tables, expand=True))
 
                 self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
 
