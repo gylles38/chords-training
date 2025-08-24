@@ -340,8 +340,11 @@ class MissingChordMode(ChordModeBase):
             while not self.exit_flag and not puzzle_solved:
                 attempt_notes, action = self._collect_and_handle_input(prog_to_play, chord_set_to_use, voicings, missing_index)
 
-                if action in ['next', 'quit']:
-                    if action == 'quit': self.exit_flag = True
+                if action == 'next':
+                    current_prog_data = None # Ensure we get a new puzzle
+                    break
+                elif action == 'quit':
+                    self.exit_flag = True
                     break
 
                 if action == 'attempt':
@@ -386,13 +389,21 @@ class MissingChordMode(ChordModeBase):
                             chord_type = get_chord_type_from_name(base_chord_name)
                             self.console.print(f"Deuxième indice : Le type de l'accord est [bold cyan]{chord_type}[/bold cyan].")
 
-            if not self.exit_flag:
+            if self.exit_flag:
+                break
+
+            if puzzle_solved:
                 choice = self.wait_for_end_choice()
                 if choice == 'quit':
                     self.exit_flag = True
                 elif choice == 'continue':
                     current_prog_data = None
-                # Pour 'repeat', on ne fait rien, la boucle réutilisera les mêmes données
+                elif choice == 'repeat':
+                    # Do nothing, allows the loop to re-run with the same data
+                    pass
+            else:
+                # This path is taken if user skipped with 'n'
+                current_prog_data = None
 
         self.show_overall_stats_and_wait()
 
