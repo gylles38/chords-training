@@ -116,7 +116,8 @@ class ReversedChordsMode(ChordModeBase):
 
                     if is_correct:
                         update_chord_success(chord_name)
-                        self.console.print(f"[bold green]Correct ! ({rec_name} - {rec_inv})[/bold green]\n")
+                        # Affiche le nom de l'accord demandé, pas le nom reconnu (pour les enharmoniques)
+                        self.console.print(f"[bold green]Correct ! ({chord_name} - {rec_inv})[/bold green]\n")
                         if inversion_attempts == 1:
                             self.session_correct_count += 1
                         time.sleep(1.5)
