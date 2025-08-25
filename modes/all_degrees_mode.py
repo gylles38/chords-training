@@ -6,6 +6,7 @@ from rich.table import Table
 from .chord_mode_base import ChordModeBase
 from data.chords import gammes_majeures
 from screen_handler import int_to_roman, clear_screen
+from messages import AllDegreesMode as AllDegreesMessages, UI
 
 class AllDegreesMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
@@ -18,8 +19,8 @@ class AllDegreesMode(ChordModeBase):
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
         table = Table(border_style="purple")
-        table.add_column("Degré", justify="center", style="bold cyan")
-        table.add_column("Accord", justify="center", style="bold yellow")
+        table.add_column(UI.DEGREE_COLUMN, justify="center", style="bold cyan")
+        table.add_column(UI.CHORD_COLUMN, justify="center", style="bold yellow")
 
         for i, chord_name in enumerate(gammes_filtrees, 1):
             roman_degree = int_to_roman(i)
@@ -43,7 +44,13 @@ class AllDegreesMode(ChordModeBase):
             progression_accords = gammes_filtrees
 
             def pre_display():
-                self.console.print(f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez la gamme complète :")
+                degree_progression = "I-ii-iii-IV-V-vi-vii°"
+                self.console.print(AllDegreesMessages.TONALITY_INFO.format(tonality=tonalite))
+                self.console.print(AllDegreesMessages.PLAY_DEGREES.format(
+                    tonality=tonalite,
+                    degree_progression=degree_progression,
+                    chord_progression=" ".join(progression_accords)
+                ))
                 play_mode = getattr(self, "play_progression_before_start", "NONE")
                 if play_mode != 'PLAY_ONLY':
                     self.display_degrees_table(tonalite, gammes_filtrees)
@@ -52,8 +59,8 @@ class AllDegreesMode(ChordModeBase):
             while not self.exit_flag:
                 result = self.run_progression(
                     progression_accords=progression_accords,
-                    header_title="Gamme Complète",
-                    header_name="Mode Tous les Degrés",
+                    header_title=AllDegreesMessages.HEADER_TITLE,
+                    header_name=AllDegreesMessages.HEADER_NAME,
                     border_style="purple",
                     pre_display=pre_display,
                     key_name=tonalite,

@@ -11,12 +11,12 @@ from screen_handler import int_to_roman, clear_screen
 class DegreesMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
         super().__init__(inport, outport, chord_set)
-        self.use_timer = use_timer  # conservé pour compat
-        self.timer_duration = timer_duration  # conservé pour compat
-        self.progression_selection_mode = progression_selection_mode  # conservé pour compat
+        self.use_timer = use_timer
+        self.timer_duration = timer_duration
+        self.progression_selection_mode = progression_selection_mode
         self.play_progression_before_start = play_progression_before_start
-        # Affiche le résumé de la progression pour permettre la répétition
         self.suppress_progression_summary = False
+        self.last_chord_name = None
 
     def display_degrees_table(self, tonalite, gammes_filtrees):
         table = Table(border_style="green")
@@ -64,6 +64,13 @@ class DegreesMode(ChordModeBase):
                 continue
 
             chord_name = gammes_filtrees[active_degree_pos]
+
+            if len(gammes_filtrees) > 1:
+                while chord_name == self.last_chord_name:
+                    active_degree_pos = random.randint(0, len(gammes_filtrees) - 1)
+                    chord_name = gammes_filtrees[active_degree_pos]
+
+            self.last_chord_name = chord_name
             degree_number = int_to_roman(active_degree_pos + 1)
 
             def pre_display():

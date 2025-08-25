@@ -28,6 +28,7 @@ from ui import get_colored_notes_string, display_stats, display_stats_fixed
 from midi_handler import *
 from screen_handler import clear_screen
 from stats_manager import clear_error_stats
+from messages import Main, MainMenu, OptionsMenu, ChordModeBase
 
 from modes.single_chord_mode import single_chord_mode
 from modes.listen_and_reveal_mode import listen_and_reveal_mode
@@ -66,11 +67,11 @@ console = Console()
 def safe_format_chord_info(chord_name, inversion):
     """Formate de manière sécurisée les informations d'accord"""
     if not chord_name:
-        return "Accord non reconnu"
+        return ChordModeBase.UNRECOGNIZED_CHORD
 
     # Nettoyer les caractères problématiques
     safe_name = str(chord_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
-    safe_inversion = str(inversion) if inversion else "position inconnue"
+    safe_inversion = str(inversion) if inversion else ChordModeBase.UNKNOWN_INVERSION
     safe_inversion = safe_inversion.replace('%', 'pct').replace('{', '(').replace('}', ')')
 
     return f"{safe_name} ({safe_inversion})"
@@ -103,55 +104,58 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
     while True:
         clear_screen()
 
-        # Définir le texte pour l'option de lecture de progression
         if play_progression_before_start == 'SHOW_AND_PLAY':
-            progression_text = "Afficher et jouer"
+            progression_text = OptionsMenu.PLAY_PROGRESSION_SHOW_AND_PLAY
             progression_style = "bold green"
         elif play_progression_before_start == 'PLAY_ONLY':
-            progression_text = "Jouer sans afficher (à l'oreille)"
+            progression_text = OptionsMenu.PLAY_PROGRESSION_PLAY_ONLY
             progression_style = "bold yellow"
         else: # 'NONE'
-            progression_text = "Ne pas jouer"
+            progression_text = OptionsMenu.PLAY_PROGRESSION_NONE
             progression_style = "bold red"
 
         panel_content = Text()
-        panel_content.append("[1] Minuteur progression: ", style="bold white")
-        panel_content.append(f"Activé ({timer_duration}s)\n" if use_timer else "Désactivé\n", style="bold green" if use_timer else "bold red")
-        panel_content.append("[2] Définir la durée du minuteur\n", style="bold white")
-        panel_content.append("[3] Sélection progression: ", style="bold white")
-        panel_content.append(f"MIDI (touche)\n" if progression_selection_mode == 'midi' else "Aléatoire\n", style="bold green" if progression_selection_mode == 'midi' else "bold red")
-        panel_content.append("[4] Lecture progression: ", style="bold white")
+        panel_content.append(OptionsMenu.TIMER, style="bold white")
+        timer_status = OptionsMenu.TIMER_ENABLED.format(duration=timer_duration) if use_timer else OptionsMenu.TIMER_DISABLED
+        panel_content.append(f"{timer_status}\n", style="bold green" if use_timer else "bold red")
+        panel_content.append(f"{OptionsMenu.SET_TIMER}\n", style="bold white")
+        panel_content.append(OptionsMenu.PROGRESSION_SELECTION, style="bold white")
+        prog_selection_text = OptionsMenu.PROGRESSION_SELECTION_MIDI if progression_selection_mode == 'midi' else OptionsMenu.PROGRESSION_SELECTION_RANDOM
+        panel_content.append(f"{prog_selection_text}\n", style="bold green" if progression_selection_mode == 'midi' else "bold red")
+        panel_content.append(OptionsMenu.PLAY_PROGRESSION, style="bold white")
         panel_content.append(f"{progression_text}\n", style=progression_style)
-        panel_content.append("[5] Accords autorisés: ", style="bold white")
-        panel_content.append(f"{'Tous les accords' if chord_set_choice == 'all' else 'Majeurs/Mineurs'}\n", style="bold green")
-        panel_content.append("[6] Conduite des voix: ", style="bold white")
-        panel_content.append(f"{'Activée' if use_voice_leading else 'Désactivée'}\n", style="bold green" if use_voice_leading else "bold red")
-        panel_content.append("[q] Retour au menu principal", style="bold white")
+        panel_content.append(OptionsMenu.CHORD_SET, style="bold white")
+        chord_set_text = OptionsMenu.CHORD_SET_ALL if chord_set_choice == 'all' else OptionsMenu.CHORD_SET_BASIC
+        panel_content.append(f"{chord_set_text}\n", style="bold green")
+        panel_content.append(OptionsMenu.VOICE_LEADING, style="bold white")
+        voice_leading_text = OptionsMenu.VOICE_LEADING_ENABLED if use_voice_leading else OptionsMenu.VOICE_LEADING_DISABLED
+        panel_content.append(f"{voice_leading_text}\n", style="bold green" if use_voice_leading else "bold red")
+        panel_content.append(OptionsMenu.RETURN, style="bold white")
 
         panel = Panel(
             panel_content,
-            title="Menu Options",
+            title=OptionsMenu.TITLE,
             border_style="cyan"
         )
         console.print(panel)
 
-        choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', 'q'], show_choices=False, console=console)
+        choice = Prompt.ask(OptionsMenu.CHOICE, choices=['1', '2', '3', '4', '5', '6', 'q'], show_choices=False, console=console)
 
         if choice == '1':
             use_timer = not use_timer
         elif choice == '2':
             try:
-                new_duration = Prompt.ask("Nouvelle durée en secondes", default=str(timer_duration), console=console)
+                new_duration = Prompt.ask(OptionsMenu.NEW_DURATION, default=str(timer_duration), console=console)
                 new_duration = float(new_duration)
                 if new_duration > 0:
                     timer_duration = new_duration
-                    console.print(f"Durée du minuteur mise à jour à [bold green]{timer_duration:.2f} secondes.[/bold green]")
+                    console.print(OptionsMenu.DURATION_UPDATED.format(duration=timer_duration))
                     time.sleep(1)
                 else:
-                    console.print("[bold red]La durée doit être un nombre positif.[/bold red]")
+                    console.print(OptionsMenu.POSITIVE_DURATION_ERROR)
                     time.sleep(1)
             except ValueError:
-                console.print("[bold red]Saisie invalide. Veuillez entrer un nombre.[/bold red]")
+                console.print(OptionsMenu.INVALID_INPUT_ERROR)
                 time.sleep(1)
         elif choice == '3':
             progression_selection_mode = 'midi' if progression_selection_mode == 'random' else 'random'
@@ -183,27 +187,27 @@ def main():
 
     clear_screen()
     console.print(Panel(
-        Text("Bienvenue dans l'Entraîneur d'Accords MIDI", style="bold bright_green", justify="center"),
-        title="Entraîneur d'Accords",
+        Text(Main.WELCOME, style="bold bright_green", justify="center"),
+        title=Main.TITLE,
         border_style="green",
         padding=(1, 4)
     ))
 
     inport_name = select_midi_port("input")
     if not inport_name:
-        console.print("[bold red]Annulation de la sélection du port d'entrée. Arrêt du programme.[/bold red]")
+        console.print(Main.INPUT_PORT_CANCEL)
         return
 
     outport_name = select_midi_port("output")
     if not outport_name:
-        console.print("[bold red]Annulation de la sélection du port de sortie. Arrêt du programme.[/bold red]")
+        console.print(Main.OUTPUT_PORT_CANCEL)
         return
 
     try:
         with mido.open_input(inport_name) as inport, mido.open_output(outport_name) as outport:
             clear_screen()
-            console.print(f"Port d'entrée MIDI sélectionné : [bold green]{inport.name}[/bold green]")
-            console.print(f"Port de sortie MIDI sélectionné : [bold green]{outport.name}[/bold green]")
+            console.print(Main.INPUT_PORT_SELECTED.format(port_name=inport.name))
+            console.print(Main.OUTPUT_PORT_SELECTED.format(port_name=outport.name))
             time.sleep(2)
 
             while True:
@@ -213,34 +217,34 @@ def main():
 
                 clear_screen()
                 menu_options = Text()
-                menu_options.append("[1] Explorateur d'accords (Dictionnaire)\n", style="bold chartreuse4")
-                menu_options.append("[2] Ecoute et Devine la note\n", style="bold bright_blue")
-                menu_options.append("[3] Les gammes\n", style="bold bright_cyan")
-                menu_options.append("[4] Accord Simple\n", style="bold yellow")
-                menu_options.append("[5] Écoute et Devine l'accord\n", style="bold orange3")
-                menu_options.append("[6] Progressions d'accords (aléatoires)\n", style="bold grey37")
-                menu_options.append("[7] Degrés (aléatoire)\n", style="bold red")
-                menu_options.append("[8] Tous les Degrés (gamme)\n", style="bold purple")
-                menu_options.append("[9] Cadences (théorie)\n", style="bold magenta")
-                menu_options.append("[10] Pop/Rock (célèbres)\n", style="bold cyan")
-                menu_options.append("[11] Reconnaissance Libre\n", style="bold green4")
-                menu_options.append("[12] Progression Tonale\n", style="bold bright_magenta")
-                menu_options.append("[13] Renversements d'accords (aléatoires)\n", style="bold blue_violet")
-                menu_options.append("[14] Passage d'accords\n", style="bold purple")
-                menu_options.append("[15] Trouve l'accord manquant\n", style="bold green_yellow")
-                menu_options.append("[16] Les modulations\n", style="bold red1")
-                menu_options.append("--- Configuration ---\n", style="dim")
-                menu_options.append("[17] Options\n", style="bold white")
-                menu_options.append("[q] Quitter", style="bold white")
+                menu_options.append(f"{MainMenu.CHORD_EXPLORER}\n", style="bold chartreuse4")
+                menu_options.append(f"{MainMenu.SINGLE_NOTE}\n", style="bold bright_blue")
+                menu_options.append(f"{MainMenu.PROGRESSION_SCALE}\n", style="bold bright_cyan")
+                menu_options.append(f"{MainMenu.SINGLE_CHORD}\n", style="bold yellow")
+                menu_options.append(f"{MainMenu.LISTEN_AND_REVEAL}\n", style="bold orange3")
+                menu_options.append(f"{MainMenu.PROGRESSION}\n", style="bold grey37")
+                menu_options.append(f"{MainMenu.DEGREES}\n", style="bold red")
+                menu_options.append(f"{MainMenu.ALL_DEGREES}\n", style="bold purple")
+                menu_options.append(f"{MainMenu.CADENCE}\n", style="bold magenta")
+                menu_options.append(f"{MainMenu.POP_ROCK}\n", style="bold cyan")
+                menu_options.append(f"{MainMenu.REVERSE_CHORD}\n", style="bold green4")
+                menu_options.append(f"{MainMenu.TONAL_PROGRESSION}\n", style="bold bright_magenta")
+                menu_options.append(f"{MainMenu.REVERSED_CHORDS}\n", style="bold blue_violet")
+                menu_options.append(f"{MainMenu.CHORD_TRANSITIONS}\n", style="bold purple")
+                menu_options.append(f"{MainMenu.MISSING_CHORD}\n", style="bold green_yellow")
+                menu_options.append(f"{MainMenu.MODULATION}\n", style="bold red1")
+                menu_options.append(f"{MainMenu.CONFIG_SECTION}\n", style="dim")
+                menu_options.append(f"{MainMenu.OPTIONS}\n", style="bold white")
+                menu_options.append(MainMenu.QUIT, style="bold white")
+
                 menu_panel = Panel(
                     menu_options,
-                    title="Menu Principal",
+                    title=MainMenu.TITLE,
                     border_style="bold blue"
                 )
                 console.print(menu_panel)
 
-                # MODIFIÉ: Mise à jour des choix possibles
-                mode_choice = Prompt.ask("Votre choix", choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', 'q'], show_choices=False, console=console)
+                mode_choice = Prompt.ask(MainMenu.CHOICE, choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', 'q'], show_choices=False, console=console)
 
                 if mode_choice == '1':
                     chord_explorer_mode(outport)
@@ -277,15 +281,15 @@ def main():
                 elif mode_choice == '17':
                     use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice, use_voice_leading = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice, use_voice_leading)
                 elif mode_choice == 'q':
-                    console.print("Arrêt du programme.", style="bold red")
+                    console.print(Main.STOP_PROGRAM, style="bold red")
                     break
                 else:
                     pass
                 
     except KeyboardInterrupt:
-        console.print("\nArrêt du programme.", style="bold red")
+        console.print(f"\n{Main.STOP_PROGRAM}", style="bold red")
     except Exception as e:
-        console.print(f"[bold red]Une erreur s'est produite : {e}[/bold red]")
+        console.print(Main.ERROR.format(e=e))
 
 if __name__ == "__main__":
     main()

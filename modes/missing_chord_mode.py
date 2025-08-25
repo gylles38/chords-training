@@ -293,6 +293,7 @@ class MissingChordMode(ChordModeBase):
 
     def run(self):
         current_prog_data = None
+        last_prog_data = None
 
         while not self.exit_flag:
             if current_prog_data is None:
@@ -309,8 +310,10 @@ class MissingChordMode(ChordModeBase):
                 while True:
                     prog_data = self._get_random_progression()
                     if prog_data and prog_data[0] and len(prog_data[0]) >= 3:
-                        current_prog_data = prog_data
-                        break
+                        if prog_data != last_prog_data:
+                            current_prog_data = prog_data
+                            last_prog_data = prog_data
+                            break
                     time.sleep(0.01)
 
             self.session_total_count += 1

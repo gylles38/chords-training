@@ -7,7 +7,7 @@ from .chord_mode_base import ChordModeBase
 from data.chords import all_chords, chord_aliases
 from music_theory import get_note_name
 from midi_handler import play_chord
-
+from messages import ChordExplorerMode as ChordExplorerMessages
 
 class ChordExplorerMode(ChordModeBase):
     def __init__(self, inport, outport, chord_set):
@@ -19,15 +19,15 @@ class ChordExplorerMode(ChordModeBase):
         last_chord_name = None
         while not self.exit_flag:
             # Rafraîchit entièrement l'écran pour éviter le défilement
-            self.display_header("Dictionnaire d'accords", "Mode Explorateur d'Accords", "bright_blue")
-            self.console.print("Entrez un nom d'accord pour voir ses notes et l'entendre.")
+            self.display_header(ChordExplorerMessages.TITLE, ChordExplorerMessages.TITLE, "bright_blue")
+            self.console.print(ChordExplorerMessages.SUBTITLE)
             self.console.print("Exemples : [cyan]C, F#m, Gm7, Bb, Ddim[/cyan]")
             if last_message:
                 self.console.print("")
                 self.console.print(last_message)
 
             try:
-                user_input = Prompt.ask("\n[prompt.label]Accord à trouver (ou 'q' pour quitter)[/prompt.label]")
+                user_input = Prompt.ask(f"\n[prompt.label]{ChordExplorerMessages.PROMPT} (ou 'q' pour quitter)[/prompt.label]")
                 if user_input is None:
                     continue
 
@@ -55,20 +55,19 @@ class ChordExplorerMode(ChordModeBase):
                     note_names = [get_note_name(n) for n in sorted_notes_midi]
                     notes_str = ", ".join(note_names)
 
-                    last_message = (
-                        f"L'accord [bold green]{full_chord_name}[/bold green] est composé des notes : "
-                        f"[bold yellow]{notes_str}[/bold yellow]\n"
-                        f"Lecture de l'accord..."
+                    last_message = ChordExplorerMessages.PLAYING_CHORD.format(
+                        chord_name=full_chord_name,
+                        notes=notes_str
                     )
                     last_chord_notes = chord_notes_midi
                     last_chord_name = full_chord_name
                     play_chord(self.outport, chord_notes_midi, duration=1.2)
                 else:
-                    last_message = f"[bold red]Accord '{user_input}' non reconnu.[/bold red] Veuillez réessayer."
+                    last_message = ChordExplorerMessages.INVALID_CHORD
             except Exception as e:
                 last_message = f"[bold red]Une erreur est survenue : {e}[/bold red]"
 
-        self.console.print("\nRetour au menu principal.")
+        self.console.print(f"\n{ChordExplorerMessages.QUITTING}")
 
 
 def chord_explorer_mode(outport):

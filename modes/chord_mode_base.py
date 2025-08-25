@@ -15,6 +15,7 @@ from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, d
 from midi_handler import play_chord, play_progression_sequence
 from data.chords import all_chords
 from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent, get_chord_type_from_name, get_note_name
+from messages import ChordModeBase as ChordModeBaseMessages
 
 class ChordModeBase:
     def __init__(self, inport, outport, chord_set):
@@ -53,7 +54,7 @@ class ChordModeBase:
             border_style=border_style
         ))
         chord_type = 'Tous' if self.chord_set == all_chords else 'Majeurs/Mineurs'
-        self.console.print(f"Type d'accords: [bold cyan]{chord_type}[/bold cyan]")
+        self.console.print(ChordModeBaseMessages.CHORD_TYPE.format(chord_type=chord_type))
 
     def handle_keyboard_input(self, char):
         # Gère les entrées communes dans la classe mère
@@ -92,7 +93,7 @@ class ChordModeBase:
 
             # The main prompt is always shown
             content = Text.assemble(
-                f"Accord à jouer ({prog_index + 1}/{total_chords}): ",
+                ChordModeBaseMessages.PLAY_CHORD_PROMPT_WITH_INVERSION.format(prog_index=prog_index + 1, total_chords=total_chords),
                 (f"{display_name}{inversion_display}", "bold yellow")
             )
 
@@ -111,26 +112,26 @@ class ChordModeBase:
                     if i < len(sorted_target_notes) - 1:
                         notes_display_text.append(", ", style="default")
 
-                content.append("\nNotes attendues : ", style="default")
+                content.append(ChordModeBaseMessages.EXPECTED_NOTES, style="default")
                 content.append(notes_display_text)
 
         # For other modes, we keep the original behavior
         else:
             if play_mode == 'PLAY_ONLY':
-                content = f"Jouez l'accord ({prog_index + 1}/{total_chords})"
+                content = ChordModeBaseMessages.PLAY_CHORD_PROMPT.format(prog_index=prog_index + 1, total_chords=total_chords)
             else:
-                content = f"Accord à jouer ({prog_index + 1}/{total_chords}): [bold yellow]{display_name}[/bold yellow]"
+                content = ChordModeBaseMessages.PLAY_CHORD_PROMPT_WITH_NAME.format(prog_index=prog_index + 1, total_chords=total_chords, display_name=display_name)
 
         if time_info:
             if isinstance(content, Text):
                 content.append(Text.from_markup("\n" + time_info))
             else:
                 content += f"\n{time_info}"
-        return Panel(content, title="Progression en cours", border_style="green")
+        return Panel(content, title=ChordModeBaseMessages.PROGRESS_PANEL_TITLE, border_style="green")
     
     def wait_for_end_choice(self) -> str:
         """Attend une saisie instantanée pour continuer, répéter ou quitter."""
-        self.console.print("\n[bold green]Progression terminée ![/bold green] Appuyez sur 'r' pour répéter, 'n' pour continuer ou 'q' pour quitter...")
+        self.console.print(ChordModeBaseMessages.PROGRESSION_COMPLETE)
         enable_raw_mode()
         try:
             while not self.exit_flag:
@@ -225,12 +226,12 @@ class ChordModeBase:
                           len(attempt_notes) == len(chord_notes))
             return is_correct, recognized_name, recognized_inversion
         except Exception as e:
-            self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
+            self.console.print(ChordModeBaseMessages.RECOGNITION_ERROR.format(e=e))
             return False, None, None
         
     def show_overall_stats_and_wait(self, extra_stats_callback: Optional[Callable] = None):
         """Affiche les stats globales de la session et attend une touche."""
-        self.console.print("\nAffichage des statistiques.")
+        self.console.print(ChordModeBaseMessages.SHOWING_STATS)
 
         # Affichage principal
         display_stats_fixed(self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
@@ -250,9 +251,9 @@ class ChordModeBase:
             is_new_record, prev_best, new_best = update_mode_record(mode_key, accuracy, self.session_total_attempts)
             if is_new_record:
                 if prev_best is not None:
-                    self.console.print(f"\n[bold bright_green]Nouveau record ![/bold bright_green] Précision {accuracy:.2f}% (ancien: {float(prev_best):.2f}%).")
+                    self.console.print(ChordModeBaseMessages.NEW_RECORD.format(accuracy=accuracy, prev_best=float(prev_best)))
                 else:
-                    self.console.print(f"\n[bold bright_green]Premier record enregistré ![/bold bright_green] Précision {accuracy:.2f}%.")
+                    self.console.print(ChordModeBaseMessages.FIRST_RECORD.format(accuracy=accuracy))
 
         # Record de temps: soit chronomètre (moins de temps), soit minuteur (plus de temps restant)
         if getattr(self, "use_timer", False):
@@ -260,22 +261,22 @@ class ChordModeBase:
                 is_new_time, prev_time, new_time = update_timer_remaining_record(mode_key, float(self.session_max_remaining_time), int(self.session_total_attempts))
                 if is_new_time:
                     if prev_time is not None:
-                        self.console.print(f"[bold bright_green]Nouveau record de temps restant ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")
+                        self.console.print(ChordModeBaseMessages.NEW_TIME_RECORD_REMAINING.format(new_time=new_time, prev_time=float(prev_time)))
                     else:
-                        self.console.print(f"[bold bright_green]Premier record de temps restant ![/bold bright_green] {new_time:.2f}s.")
+                        self.console.print(ChordModeBaseMessages.FIRST_TIME_RECORD_REMAINING.format(new_time=new_time))
         else:
             if self.elapsed_time:
                 is_new_time, prev_time, new_time = update_stopwatch_record(mode_key, float(self.elapsed_time), int(self.session_total_attempts))
                 if is_new_time:
                     if prev_time is not None:
-                        self.console.print(f"[bold bright_green]Nouveau record de temps ![/bold bright_green] {new_time:.2f}s (ancien: {float(prev_time):.2f}s).")
+                        self.console.print(ChordModeBaseMessages.NEW_TIME_RECORD.format(new_time=new_time, prev_time=float(prev_time)))
                     else:
-                        self.console.print(f"[bold bright_green]Premier record de temps ![/bold bright_green] {new_time:.2f}s.")
+                        self.console.print(ChordModeBaseMessages.FIRST_TIME_RECORD.format(new_time=new_time))
 
         if extra_stats_callback:
             extra_stats_callback()
 
-        self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
+        self.console.print(ChordModeBaseMessages.RETURN_TO_MENU)
         self.clear_midi_buffer()
         wait_for_any_key(self.inport)
 
@@ -440,7 +441,7 @@ class ChordModeBase:
             pre_display()
 
         # Toujours afficher les instructions après le pre_display personnalisé
-        self.console.print("\nAppuyez sur 'q' pour quitter, 'r' pour répéter, 'n' pour passer à la suivante.\n")
+        self.console.print(ChordModeBaseMessages.INSTRUCTIONS)
 
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 

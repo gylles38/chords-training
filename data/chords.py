@@ -238,7 +238,9 @@ cadences = {
     "Cadence Parfaite": ["V", "I"],
     "Cadence Plagale": ["IV", "I"],
     "Cadence Rompue": ["V", "vi"],
-    "Demi-Cadence": ["IV", "V"],
+    "Demi-Cadence (IV-V)": ["IV", "V"],
+    "Demi-Cadence (I-V)": ["I", "V"],
+    "Demi-Cadence (ii-V)": ["ii", "V"],
     "Progression II-V-I": ["ii", "V", "I"]
 }
 
