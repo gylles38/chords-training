@@ -234,7 +234,7 @@ class ChordModeBase:
         self.console.print(ChordModeBaseMessages.SHOWING_STATS)
 
         # Affichage principal
-        display_stats_fixed(self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
+        display_stats_fixed(self.console, self.session_correct_count, self.session_total_attempts, self.session_total_count, self.elapsed_time)
 
         base_mode_key = self.__class__.__name__
         play_mode = getattr(self, "play_progression_before_start", None)
@@ -564,7 +564,7 @@ class ChordModeBase:
                                 self.played_voicings_in_progression.append(attempt_notes.copy())
                                 update_chord_success(chord_name.split(" #")[0])
                                 base_chord_name = chord_name.split(" #")[0]
-                                success_msg = f"[bold green]Correct ! {base_chord_name} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
+                                success_msg = f"[bold green]Correct ! {base_chord_name} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)
                                 enable_raw_mode()
@@ -577,7 +577,7 @@ class ChordModeBase:
                             else:
                                 update_chord_error(chord_name.split(" #")[0])
                                 played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
-                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{get_colored_notes_string(attempt_notes, target_notes)}]"
+                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)
                                 time.sleep(2)
@@ -651,7 +651,7 @@ class ChordModeBase:
         return choice
 
     def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, specific = False):
-        colored_notes = get_colored_notes_string(attempt_notes, chord_notes)
+        colored_notes = get_colored_notes_string(self.console, attempt_notes, chord_notes)
         self.console.print(f"Notes jouées : [{colored_notes}]")
 
         if is_correct:
@@ -680,7 +680,7 @@ class ChordModeBase:
         # Calculer le temps écoulé de session si chronomètre actif (sans compte à rebours)
         if not getattr(self, "use_timer", False) and getattr(self, "session_stopwatch_start_time", None) is not None:
             self.elapsed_time = time.time() - self.session_stopwatch_start_time
-        display_stats(self.correct_count, self.total_attempts, self.elapsed_time if self.elapsed_time else None)
+        display_stats(self.console, self.correct_count, self.total_attempts, self.elapsed_time if self.elapsed_time else None)
         self.console.print("\nAppuyez sur une touche pour retourner au menu principal.")
         self.clear_midi_buffer()
         wait_for_any_key(self.inport)

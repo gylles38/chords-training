@@ -47,7 +47,7 @@ class ReverseChordMode(ChordModeBase):
 
                     # Logique d'affichage locale pour ce mode
                     from ui import get_colored_notes_string
-                    notes_str = get_colored_notes_string(attempt_notes, attempt_notes)
+                    notes_str = get_colored_notes_string(self.console, attempt_notes, attempt_notes)
                     self.console.print(f"Notes jouées : [{notes_str}]")
 
                     if recognized_name:
