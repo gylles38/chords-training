@@ -1,5 +1,6 @@
 # modes/path_mode.py
 
+import time
 from rich.console import Console
 from rich.prompt import Prompt
 
@@ -108,15 +109,18 @@ def path_mode(inport, outport):
             console.print(PathModeMenu.STARTING_STEP.format(title=step_info['title']), style="bold cyan")
             console.print(step_info['description'])
 
-            # On suppose que le mode se termine et que l'utilisateur a "réussi"
-            # Une version plus avancée pourrait retourner un score ou un statut.
-            mode_function(**valid_args)
+            # Lancer le mode et récupérer le statut de réussite
+            success = mode_function(**valid_args)
 
-            # Mettre à jour la progression
-            progress_manager.advance_to_next_step()
-
-            console.print(PathModeMenu.STEP_COMPLETED, style="bold green")
-            Prompt.ask(PathModeMenu.CONTINUE_PROMPT)
+            # Ne mettre à jour la progression que si l'étape est réussie
+            if success:
+                progress_manager.advance_to_next_step()
+                console.print(PathModeMenu.STEP_COMPLETED, style="bold green")
+                Prompt.ask(PathModeMenu.CONTINUE_PROMPT)
+            else:
+                # L'utilisateur a quitté sans terminer, on ne fait rien et on revient au menu du parcours
+                console.print("\nRetour au menu du parcours...", style="yellow")
+                time.sleep(1)
 
         elif choice == 'q':
             # Quitter le mode parcours
