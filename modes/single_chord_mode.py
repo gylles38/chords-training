@@ -3,8 +3,8 @@ import random
 from .chord_mode_base import ChordModeBase
 
 class SingleChordMode(ChordModeBase):
-    def __init__(self, inport, outport, chord_set):
-        super().__init__(inport, outport, chord_set)
+    def __init__(self, inport, outport, current_chord_set):
+        super().__init__(inport, outport, current_chord_set)
         # Pas de timer ni de lecture préalable pour ce mode
         self.use_timer = False
         self.timer_duration = 0.0
@@ -41,6 +41,6 @@ class SingleChordMode(ChordModeBase):
         self.show_overall_stats_and_wait()
 
 
-def single_chord_mode(inport, outport, chord_set):
-    mode = SingleChordMode(inport, outport, chord_set)
+def single_chord_mode(inport, outport, current_chord_set):
+    mode = SingleChordMode(inport, outport, current_chord_set)
     mode.run()
