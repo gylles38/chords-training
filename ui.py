@@ -100,20 +100,22 @@ def display_progression_path_ui(console, progression_path, current_step_index):
 
     console.print(Panel(Text(PathModeMenu.TITLE, justify="center", style="bold blue")))
 
-    content = Text()
+    full_text = ""
     for i, step in enumerate(progression_path):
+        # Determine status and overall style for the line
         if i < current_step_index:
             status = PathModeMenu.STEP_STATUS_COMPLETED
-            title_style = "dim"
+            # For completed steps, we want the whole line to be dim
+            line_markup = f"[dim]{status} {step['title']}\n    {step['description']}[/dim]\n\n"
         elif i == current_step_index:
             status = PathModeMenu.STEP_STATUS_CURRENT
-            title_style = "bold cyan"
+            # For the current step, we let the markup in 'status' define the style
+            line_markup = f"{status} [bold cyan]{step['title']}[/bold cyan]\n    {step['description']}\n\n"
         else:
             status = PathModeMenu.STEP_STATUS_LOCKED
-            title_style = "dim"
+            # For locked steps, the whole line is dim
+            line_markup = f"[dim]{status} {step['title']}\n    {step['description']}[/dim]\n\n"
 
-        content.append(f"{status} ", style=title_style)
-        content.append(f"{step['title']}\n", style=title_style)
-        content.append(f"    {step['description']}\n\n", style="dim")
+        full_text += line_markup
 
-    console.print(Panel(content, border_style="blue"))
+    console.print(Panel(Text.from_markup(full_text.strip()), border_style="blue"))
