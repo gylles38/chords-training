@@ -17,46 +17,46 @@ progression_path = [
         "params": {}
     },
     {
-        "title": "2. Explorateur d'accords",
-        "description": "Explorez librement différents types d'accords et écoutez leur sonorité.",
-        "mode_id": "CHORD_EXPLORER",
-        "params": {}
-    },
-    {
-        "title": "3. Accords simples",
+        "title": "2. Accords simples",
         "description": "Entraînez-vous à reconnaître et jouer les accords majeurs et mineurs de base.",
         "mode_id": "SINGLE_CHORD",
         "params": {"chord_set_choice": "basic"}
     },
     {
-        "title": "4. Écoutez et devinez",
+        "title": "3. Écoutez et devinez",
         "description": "Développez votre oreille en écoutant un accord puis en le jouant.",
         "mode_id": "LISTEN_AND_REVEAL",
         "params": {"chord_set_choice": "basic"}
     },
     {
-        "title": "5. Les degrés de la gamme",
+        "title": "4. Les degrés de la gamme",
         "description": "Comprenez le rôle de chaque accord dans une tonalité (I, IV, V, etc.).",
         "mode_id": "DEGREES",
         "params": {"chord_set_choice": "basic"}
     },
     {
-        "title": "6. Progressions d'accords simples",
+        "title": "5. Progressions d'accords simples",
         "description": "Commencez à enchaîner des accords pour former des progressions courantes.",
         "mode_id": "PROGRESSION",
         "params": {"chord_set_choice": "basic"}
     },
     {
-        "title": "7. Les cadences",
+        "title": "6. Les cadences",
         "description": "Apprenez à reconnaître les cadences, ces formules qui concluent les phrases musicales.",
         "mode_id": "CADENCE",
         "params": {"chord_set_choice": "basic"}
     },
     {
-        "title": "8. Progressions Pop/Rock",
+        "title": "7. Progressions Pop/Rock",
         "description": "Jouez les progressions d'accords les plus utilisées dans la musique populaire.",
         "mode_id": "POP_ROCK",
         "params": {}
+    },
+    {
+        "title": "8. Trouvez l'accord manquant",
+        "description": "Écoutez une progression et identifiez l'accord qui a été omis.",
+        "mode_id": "MISSING_CHORD",
+        "params": {"use_voice_leading": True}
     },
     {
         "title": "9. Progressions tonales avancées",

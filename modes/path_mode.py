@@ -22,13 +22,13 @@ from modes.cadence_mode import cadence_mode
 from modes.pop_rock_mode import pop_rock_mode
 from modes.tonal_progression_mode import tonal_progression_mode
 from modes.chord_transitions_mode import chord_transitions_mode
+from modes.missing_chord_mode import missing_chord_mode
 from data.chords import all_chords, three_note_chords
 
 # --- Mapping des ID de mode aux fonctions réelles ---
 # Cela permet de découpler la configuration (data) de la logique (code).
 mode_map = {
     "SINGLE_NOTE": single_note_mode,
-    "CHORD_EXPLORER": chord_explorer_mode,
     "SINGLE_CHORD": single_chord_mode,
     "LISTEN_AND_REVEAL": listen_and_reveal_mode,
     "DEGREES": degrees_mode,
@@ -37,6 +37,7 @@ mode_map = {
     "POP_ROCK": pop_rock_mode,
     "TONAL_PROGRESSION": tonal_progression_mode,
     "CHORD_TRANSITIONS": chord_transitions_mode,
+    "MISSING_CHORD": missing_chord_mode,
 }
 
 def path_mode(inport, outport):
