@@ -89,16 +89,19 @@ class ListenAndRevealMode(ChordModeBase):
                         played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
                         feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}")
 
-                        if incorrect_attempts >= 3:
-                            tonic_name = get_note_name(sorted(list(self.current_chord_notes))[0])
-                            feedback_text.append(Text.from_markup(f"\nIndice : La tonique est [bold cyan]{tonic_name}[/bold cyan]."))
-
                         if incorrect_attempts >= 7:
-                            revealed_type = get_chord_type_from_name(self.current_chord_name)
                             feedback_text.append(Text.from_markup(f"\n[bold magenta]La réponse était : {self.current_chord_name}[/bold magenta]"))
                             live.update(Panel(feedback_text, title="Réponse", border_style="magenta"), refresh=True)
                             time.sleep(2.5)
                             break
+
+                        if incorrect_attempts >= 3:
+                            tonic_name = get_note_name(sorted(list(self.current_chord_notes))[0])
+                            feedback_text.append(Text.from_markup(f"\nIndice : La tonique est [bold cyan]{tonic_name}[/bold cyan]."))
+
+                        if incorrect_attempts >= 5:
+                            chord_type = get_chord_type_from_name(self.current_chord_name)
+                            feedback_text.append(Text.from_markup(f"\nIndice : Le type d'accord est [bold yellow]{chord_type}[/bold yellow]."))
 
                 self.session_total_count += 1
                 if self.exit_flag: break
