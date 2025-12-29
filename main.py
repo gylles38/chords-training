@@ -176,12 +176,12 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
 
 def main():
     """Fonction principale du programme."""
-    # Essayer de définir le backend MIDI sur JACK
+    # Essayer de définir le backend MIDI sur ALSA pour une meilleure compatibilité
     try:
-        mido.set_backend('mido.backends.rtmidi/UNIX_JACK')
-        console.print("Backend MIDI défini sur JACK.", style="bold green")
+        mido.set_backend('mido.backends.rtmidi/LINUX_ALSA')
+        console.print("Backend MIDI défini sur ALSA.", style="bold green")
     except Exception as e:
-        console.print(f"Impossible de définir le backend MIDI sur JACK: {e}", style="bold yellow")
+        console.print(f"Impossible de définir le backend MIDI sur ALSA: {e}", style="bold yellow")
         console.print("Utilisation du backend par défaut.", style="bold yellow")
 
     # Réinitialiser les statistiques d'erreurs au démarrage
