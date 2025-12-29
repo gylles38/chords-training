@@ -239,3 +239,17 @@ class ModulationMode:
     HEADER_NAME = "Mode Modulations"
     PLAY_MODULATION = "\nModulez de [bold bright_yellow]{from_tonality}[/bold bright_yellow] à [bold bright_cyan]{to_tonality}[/bold bright_cyan] via [bold magenta]{pivot_chord}[/bold magenta]"
     PROGRESSION_INFO = "Progression : [bold cyan]{progression}[/bold cyan]"
+
+class PathModeMenu:
+    TITLE = "Parcours de Progression"
+    STEP_STATUS_COMPLETED = "[bold green]Terminé[/bold green]"
+    STEP_STATUS_CURRENT = "[bold yellow]Actuel[/bold yellow]"
+    STEP_STATUS_LOCKED = "[dim]Verrouillé[/dim]"
+    PATH_COMPLETED = "Félicitations, vous avez terminé le parcours de progression !"
+    RETURN_PROMPT = "Appuyez sur Entrée pour revenir au menu principal"
+    STEP_PROMPT = "Vous êtes à l'étape : [bold cyan]{title}[/bold cyan]"
+    CHOICE = "[1] Commencer l'étape\n[q] Quitter"
+    MODE_NOT_FOUND = "Erreur : Le mode de jeu avec l'ID '{mode_id}' n'a pas été trouvé."
+    STARTING_STEP = "Lancement de l'étape : {title}..."
+    STEP_COMPLETED = "Étape terminée avec succès ! Prêt pour la suite ?"
+    CONTINUE_PROMPT = "Appuyez sur Entrée pour continuer le parcours"

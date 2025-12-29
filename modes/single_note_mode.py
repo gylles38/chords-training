@@ -106,7 +106,10 @@ class SingleNoteMode(ChordModeBase):
         # Utiliser la méthode de la classe de base pour des stats cohérentes
         self.show_overall_stats_and_wait(extra_stats_callback=self._display_top_note_errors)
 
+        # Retourne True si l'utilisateur a au moins essayé une note, False sinon.
+        return self.session_total_count > 0
+
 
 def single_note_mode(inport, outport):
     mode = SingleNoteMode(inport, outport)
-    mode.run()
+    return mode.run()

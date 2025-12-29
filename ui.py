@@ -3,10 +3,7 @@ from music_theory import get_note_name
 from rich.console import Console
 from messages import UI
 
-# Initialisation de la console Rich
-console = Console()
-
-def get_colored_notes_string(played_notes, correct_notes):
+def get_colored_notes_string(console, played_notes, correct_notes):
     """
     Retourne une chaîne de caractères avec les notes jouées, colorées en fonction de leur justesse.
     
@@ -35,7 +32,7 @@ def get_colored_notes_string(played_notes, correct_notes):
             
     return ", ".join(output_parts)
 
-def display_stats(correct_count, total_count, elapsed_time=None):
+def display_stats(console, correct_count, total_count, elapsed_time=None):
     """Affiche les statistiques de performance."""
     console.print(UI.SESSION_SUMMARY)
     if total_count > 0:
@@ -49,7 +46,7 @@ def display_stats(correct_count, total_count, elapsed_time=None):
         console.print(UI.ELAPSED_TIME.format(elapsed_time=elapsed_time))
     console.print("-------------------------")
 
-def display_stats_fixed(correct_count, total_attempts, total_chords, elapsed_time=None):
+def display_stats_fixed(console, correct_count, total_attempts, total_chords, elapsed_time=None):
     """Affiche les statistiques de performance corrigées."""
     console.print(UI.SESSION_SUMMARY_FIXED)
     if total_attempts > 0:
@@ -92,4 +89,33 @@ def create_degrees_table(tonalite: str, chords_in_scale: list, chords_to_highlig
         table.add_row(roman_degree, f"[{style}]{chord_name}[/]")
 
     return table
-    console.print("-------------------------")
+
+def display_progression_path_ui(console, progression_path, current_step_index):
+    """
+    Affiche l'interface du parcours de progression en utilisant Rich.
+    """
+    from rich.panel import Panel
+    from rich.text import Text
+    from messages import PathModeMenu
+
+    console.print(Panel(Text(PathModeMenu.TITLE, justify="center", style="bold blue")))
+
+    full_text = ""
+    for i, step in enumerate(progression_path):
+        # Determine status and overall style for the line
+        if i < current_step_index:
+            status = PathModeMenu.STEP_STATUS_COMPLETED
+            # For completed steps, we want the whole line to be dim
+            line_markup = f"[dim]{status} {step['title']}\n    {step['description']}[/dim]\n\n"
+        elif i == current_step_index:
+            status = PathModeMenu.STEP_STATUS_CURRENT
+            # For the current step, we let the markup in 'status' define the style
+            line_markup = f"{status} [bold cyan]{step['title']}[/bold cyan]\n    {step['description']}\n\n"
+        else:
+            status = PathModeMenu.STEP_STATUS_LOCKED
+            # For locked steps, the whole line is dim
+            line_markup = f"[dim]{status} {step['title']}\n    {step['description']}[/dim]\n\n"
+
+        full_text += line_markup
+
+    console.print(Panel(Text.from_markup(full_text.strip()), border_style="blue"))
