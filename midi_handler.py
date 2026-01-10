@@ -86,7 +86,8 @@ def select_midi_port(port_type):
     """Permet à l'utilisateur de choisir un port MIDI parmi la liste disponible."""
     ports = mido.get_input_names() if port_type == "input" else mido.get_output_names()
     
-    if not ports:
+    # Gérer le cas où aucun port d'entrée n'est trouvé.
+    if not ports and port_type == "input":
         console.print(Midi.NO_PORT_FOUND.format(port_type=port_type))
         return None
     
@@ -96,18 +97,27 @@ def select_midi_port(port_type):
 
     for i, port_name in enumerate(ports):
         table.add_row(f"[{i+1}]", port_name)
+
+    virtual_port_index = len(ports) + 1
+    if port_type == "output":
+        table.add_row(f"[{virtual_port_index}]", Midi.CREATE_VIRTUAL_PORT, style="bold green")
+
     table.add_row("[q]", Midi.QUIT)
     
     console.print(table)
     
     while True:
-        choice = Prompt.ask(Midi.CHOOSE_PORT.format(port_type=port_type, port_count=len(ports)), console=console)
+        choice = Prompt.ask(Midi.CHOOSE_PORT.format(port_type=port_type, port_count=virtual_port_index), console=console)
+
         if choice.lower() == 'q':
             return None
+
         try:
             choice_index = int(choice) - 1
             if 0 <= choice_index < len(ports):
                 return ports[choice_index]
+            elif port_type == 'output' and choice_index == virtual_port_index - 1:
+                return "__create_virtual_port__"
             else:
                 console.print(Midi.INVALID_SELECTION_NUMBER)
         except ValueError:

@@ -176,6 +176,14 @@ def options_menu(use_timer, timer_duration, progression_selection_mode, play_pro
 
 def main():
     """Fonction principale du programme."""
+    # Essayer de définir le backend MIDI sur ALSA pour une meilleure compatibilité
+    try:
+        mido.set_backend('mido.backends.rtmidi/LINUX_ALSA')
+        console.print("Backend MIDI défini sur ALSA.", style="bold green")
+    except Exception as e:
+        console.print(f"Impossible de définir le backend MIDI sur ALSA: {e}", style="bold yellow")
+        console.print("Utilisation du backend par défaut.", style="bold yellow")
+
     # Réinitialiser les statistiques d'erreurs au démarrage
     clear_error_stats()
 
@@ -205,92 +213,99 @@ def main():
         return
 
     try:
-        with mido.open_input(inport_name) as inport, mido.open_output(outport_name) as outport:
-            clear_screen()
-            console.print(Main.INPUT_PORT_SELECTED.format(port_name=inport.name))
-            console.print(Main.OUTPUT_PORT_SELECTED.format(port_name=outport.name))
-            time.sleep(2)
+        with mido.open_input(inport_name) as inport:
+            # Déterminer quel contexte de port de sortie utiliser
+            if outport_name == "__create_virtual_port__":
+                outport_context = mido.open_output('Chords Training', virtual=True)
+            else:
+                outport_context = mido.open_output(outport_name)
 
-            while True:
-                current_chord_set = all_chords if chord_set_choice == 'all' else three_note_chords
-                for _ in inport.iter_pending():
-                    pass
-
+            with outport_context as outport:
                 clear_screen()
-                menu_options = Text()
-                # Nouvelle option pour le parcours de progression
-                menu_options.append("[1] Parcours de Progression\n", style="bold gold1")
-                menu_options.append(f"--- Modes Libres ---\n", style="dim")
-                menu_options.append(f"{MainMenu.CHORD_EXPLORER.replace('[1]', '[2]')}\n", style="bold chartreuse4")
-                menu_options.append(f"{MainMenu.SINGLE_NOTE.replace('[2]', '[3]')}\n", style="bold bright_blue")
-                menu_options.append(f"{MainMenu.PROGRESSION_SCALE.replace('[3]', '[4]')}\n", style="bold bright_cyan")
-                menu_options.append(f"{MainMenu.SINGLE_CHORD.replace('[4]', '[5]')}\n", style="bold yellow")
-                menu_options.append(f"{MainMenu.LISTEN_AND_REVEAL.replace('[5]', '[6]')}\n", style="bold orange3")
-                menu_options.append(f"{MainMenu.PROGRESSION.replace('[6]', '[7]')}\n", style="bold grey37")
-                menu_options.append(f"{MainMenu.DEGREES.replace('[7]', '[8]')}\n", style="bold red")
-                menu_options.append(f"{MainMenu.ALL_DEGREES.replace('[8]', '[9]')}\n", style="bold purple")
-                menu_options.append(f"{MainMenu.CADENCE.replace('[9]', '[10]')}\n", style="bold magenta")
-                menu_options.append(f"{MainMenu.POP_ROCK.replace('[10]', '[11]')}\n", style="bold cyan")
-                menu_options.append(f"{MainMenu.REVERSE_CHORD.replace('[11]', '[12]')}\n", style="bold green4")
-                menu_options.append(f"{MainMenu.TONAL_PROGRESSION.replace('[12]', '[13]')}\n", style="bold bright_magenta")
-                menu_options.append(f"{MainMenu.REVERSED_CHORDS.replace('[13]', '[14]')}\n", style="bold blue_violet")
-                menu_options.append(f"{MainMenu.CHORD_TRANSITIONS.replace('[14]', '[15]')}\n", style="bold purple")
-                menu_options.append(f"{MainMenu.MISSING_CHORD.replace('[15]', '[16]')}\n", style="bold green_yellow")
-                menu_options.append(f"{MainMenu.MODULATION.replace('[16]', '[17]')}\n", style="bold red1")
-                menu_options.append(f"{MainMenu.CONFIG_SECTION}\n", style="dim")
-                menu_options.append(f"{MainMenu.OPTIONS.replace('[17]', '[o]')}\n", style="bold white")
-                menu_options.append(MainMenu.QUIT, style="bold white")
+                console.print(Main.INPUT_PORT_SELECTED.format(port_name=inport.name))
+                console.print(Main.OUTPUT_PORT_SELECTED.format(port_name=outport.name))
+                time.sleep(2)
 
-                menu_panel = Panel(
-                    menu_options,
-                    title=MainMenu.TITLE,
-                    border_style="bold blue"
-                )
-                console.print(menu_panel)
+                while True:
+                    current_chord_set = all_chords if chord_set_choice == 'all' else three_note_chords
+                    for _ in inport.iter_pending():
+                        pass
 
-                mode_choice = Prompt.ask(MainMenu.CHOICE, choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', 'o', 'q'], show_choices=False, console=console)
+                    clear_screen()
+                    menu_options = Text()
+                    # Nouvelle option pour le parcours de progression
+                    menu_options.append("[1] Parcours de Progression\n", style="bold gold1")
+                    menu_options.append(f"--- Modes Libres ---\n", style="dim")
+                    menu_options.append(f"{MainMenu.CHORD_EXPLORER.replace('[1]', '[2]')}\n", style="bold chartreuse4")
+                    menu_options.append(f"{MainMenu.SINGLE_NOTE.replace('[2]', '[3]')}\n", style="bold bright_blue")
+                    menu_options.append(f"{MainMenu.PROGRESSION_SCALE.replace('[3]', '[4]')}\n", style="bold bright_cyan")
+                    menu_options.append(f"{MainMenu.SINGLE_CHORD.replace('[4]', '[5]')}\n", style="bold yellow")
+                    menu_options.append(f"{MainMenu.LISTEN_AND_REVEAL.replace('[5]', '[6]')}\n", style="bold orange3")
+                    menu_options.append(f"{MainMenu.PROGRESSION.replace('[6]', '[7]')}\n", style="bold grey37")
+                    menu_options.append(f"{MainMenu.DEGREES.replace('[7]', '[8]')}\n", style="bold red")
+                    menu_options.append(f"{MainMenu.ALL_DEGREES.replace('[8]', '[9]')}\n", style="bold purple")
+                    menu_options.append(f"{MainMenu.CADENCE.replace('[9]', '[10]')}\n", style="bold magenta")
+                    menu_options.append(f"{MainMenu.POP_ROCK.replace('[10]', '[11]')}\n", style="bold cyan")
+                    menu_options.append(f"{MainMenu.REVERSE_CHORD.replace('[11]', '[12]')}\n", style="bold green4")
+                    menu_options.append(f"{MainMenu.TONAL_PROGRESSION.replace('[12]', '[13]')}\n", style="bold bright_magenta")
+                    menu_options.append(f"{MainMenu.REVERSED_CHORDS.replace('[13]', '[14]')}\n", style="bold blue_violet")
+                    menu_options.append(f"{MainMenu.CHORD_TRANSITIONS.replace('[14]', '[15]')}\n", style="bold purple")
+                    menu_options.append(f"{MainMenu.MISSING_CHORD.replace('[15]', '[16]')}\n", style="bold green_yellow")
+                    menu_options.append(f"{MainMenu.MODULATION.replace('[16]', '[17]')}\n", style="bold red1")
+                    menu_options.append(f"{MainMenu.CONFIG_SECTION}\n", style="dim")
+                    menu_options.append(f"{MainMenu.OPTIONS.replace('[17]', '[o]')}\n", style="bold white")
+                    menu_options.append(MainMenu.QUIT, style="bold white")
 
-                if mode_choice == '1':
-                    path_mode(inport, outport)
-                elif mode_choice == '2':
-                    chord_explorer_mode(outport)
-                elif mode_choice == '3':
-                    single_note_mode(inport, outport)
-                elif mode_choice == '4':
-                    progression_scale_mode(inport, outport, play_progression_before_start)
-                elif mode_choice == '5':
-                    single_chord_mode(inport, outport, current_chord_set)
-                elif mode_choice == '6':
-                    listen_and_reveal_mode(inport, outport, current_chord_set)
-                elif mode_choice == '7':
-                    progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
-                elif mode_choice == '8':
-                    degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
-                elif mode_choice == '9':
-                    all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
-                elif mode_choice == '10':
-                    cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
-                elif mode_choice == '11':
-                    pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
-                elif mode_choice == '12':
-                    reverse_chord_mode(inport, outport, current_chord_set)
-                elif mode_choice == '13':
-                    tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
-                elif mode_choice == '14':
-                    reversed_chords_mode(inport, outport, current_chord_set)
-                elif mode_choice == '15':
-                    chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
-                elif mode_choice == '16':
-                    missing_chord_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
-                elif mode_choice == '17':
-                    modulation_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
-                elif mode_choice == 'o':
-                    use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice, use_voice_leading = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice, use_voice_leading)
-                elif mode_choice == 'q':
-                    console.print(Main.STOP_PROGRAM, style="bold red")
-                    break
-                else:
-                    pass
+                    menu_panel = Panel(
+                        menu_options,
+                        title=MainMenu.TITLE,
+                        border_style="bold blue"
+                    )
+                    console.print(menu_panel)
+
+                    mode_choice = Prompt.ask(MainMenu.CHOICE, choices=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', 'o', 'q'], show_choices=False, console=console)
+
+                    if mode_choice == '1':
+                        path_mode(inport, outport)
+                    elif mode_choice == '2':
+                        chord_explorer_mode(outport)
+                    elif mode_choice == '3':
+                        single_note_mode(inport, outport)
+                    elif mode_choice == '4':
+                        progression_scale_mode(inport, outport, play_progression_before_start)
+                    elif mode_choice == '5':
+                        single_chord_mode(inport, outport, current_chord_set)
+                    elif mode_choice == '6':
+                        listen_and_reveal_mode(inport, outport, current_chord_set)
+                    elif mode_choice == '7':
+                        progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    elif mode_choice == '8':
+                        degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    elif mode_choice == '9':
+                        all_degrees_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    elif mode_choice == '10':
+                        cadence_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
+                    elif mode_choice == '11':
+                        pop_rock_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    elif mode_choice == '12':
+                        reverse_chord_mode(inport, outport, current_chord_set)
+                    elif mode_choice == '13':
+                        tonal_progression_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set)
+                    elif mode_choice == '14':
+                        reversed_chords_mode(inport, outport, current_chord_set)
+                    elif mode_choice == '15':
+                        chord_transitions_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
+                    elif mode_choice == '16':
+                        missing_chord_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
+                    elif mode_choice == '17':
+                        modulation_mode(inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, current_chord_set, use_voice_leading)
+                    elif mode_choice == 'o':
+                        use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice, use_voice_leading = options_menu(use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set_choice, use_voice_leading)
+                    elif mode_choice == 'q':
+                        console.print(Main.STOP_PROGRAM, style="bold red")
+                        break
+                    else:
+                        pass
                 
     except KeyboardInterrupt:
         console.print(f"\n{Main.STOP_PROGRAM}", style="bold red")

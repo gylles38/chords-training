@@ -83,6 +83,7 @@ class Midi:
     AVAILABLE_PORTS = "Ports {port_type} MIDI disponibles"
     PORT_INDEX_COLUMN = "Index"
     PORT_NAME_COLUMN = "Nom du port"
+    CREATE_VIRTUAL_PORT = "Créer un port MIDI virtuel"
     QUIT = "Quitter"
     CHOOSE_PORT = "Veuillez choisir un port {port_type} (1-{port_count}) ou 'q' pour quitter"
     INVALID_SELECTION_NUMBER = "[bold red]Sélection invalide. Veuillez entrer un numéro valide.[/bold red]"
