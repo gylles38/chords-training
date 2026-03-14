@@ -60,21 +60,19 @@ def get_chord_display_name(french_name):
 def recognize_chord(played_notes_set):
     """
     Reconnaît un accord à partir d'un ensemble de notes MIDI jouées.
-    Cette version prend en compte la note la plus basse pour déterminer l'accord
-    correct parmi les candidats possibles et son inversion.
+    Supporte les accords de 7ème simplifiés (3 notes au lieu de 4).
     
     Args:
         played_notes_set (set): Un ensemble de numéros de notes MIDI.
 
     Returns:
-        tuple: (Nom de l'accord reconnu, type de renversement)
-               ou (None, None) si non reconnu.
+        tuple: (Nom de l'accord reconnu, type de renversement, is_simplified)
+               ou (None, None, False) si non reconnu.
     """
-    # Import local pour éviter la dépendance circulaire
     from data.chords import all_chords
     
     if len(played_notes_set) < 2:
-        return None, None
+        return None, None, False
 
     played_notes_sorted = sorted(list(played_notes_set))
     lowest_note_midi = played_notes_sorted[0]
@@ -82,36 +80,52 @@ def recognize_chord(played_notes_set):
     lowest_note_pc = lowest_note_midi % 12
     
     best_match = None
+    best_is_simplified = False
     lowest_inversion_index = float('inf')
 
-    # Parcourir tous les accords pour trouver les candidats
     for chord_name, ref_notes in all_chords.items():
         ref_pitch_classes = frozenset(note % 12 for note in ref_notes)
+        root_note_pc = min(ref_notes) % 12
 
-        # Si les classes de hauteur des notes jouées correspondent à un accord de référence
+        is_match = False
+        is_simplified = False
+
+        # 1. Correspondance exacte
         if played_pitch_classes == ref_pitch_classes:
-            
-            # Déterminer la classe de hauteur de la racine de l'accord de référence
-            root_note_pc = min(ref_notes) % 12
-            
-            # Créer une liste ordonnée des classes de hauteur de l'accord,
-            # en commençant par la racine (fondamentale)
+            is_match = True
+        # 2. Correspondance simplifiée (pour les accords de 7ème à 4 notes)
+        elif len(ref_notes) == 4 and "7ème" in chord_name and len(played_notes_set) == 3:
+            # L'accord simplifié doit contenir la tonique et être un sous-ensemble de l'accord complet
+            if root_note_pc in played_pitch_classes and played_pitch_classes.issubset(ref_pitch_classes):
+                is_match = True
+                is_simplified = True
+
+        if is_match:
+            # Pour les inversions, on se base sur l'accord de référence
             sorted_ref_pcs = sorted(list(ref_pitch_classes))
             root_index_in_sorted = sorted_ref_pcs.index(root_note_pc)
             ordered_chord_pcs = sorted_ref_pcs[root_index_in_sorted:] + sorted_ref_pcs[:root_index_in_sorted]
             
-            # L'indice de la note la plus basse dans cette liste ordonnée
-            # est l'indice du renversement
             try:
                 inversion_index = ordered_chord_pcs.index(lowest_note_pc)
             except ValueError:
-                # Cela ne devrait pas arriver si les sets de pitch classes correspondent
+                # Dans le cas d'un accord simplifié, la note basse pourrait ne pas être dans l'ordre de référence ?
+                # Normalement si c'est un subset et que la note basse est dedans, ça marche.
                 continue
 
-            # Mettre à jour le meilleur accord s'il a un renversement plus bas
-            if inversion_index < lowest_inversion_index:
-                lowest_inversion_index = inversion_index
+            # Priorité aux matchs non simplifiés, puis au renversement le plus bas
+            if (not best_is_simplified and is_simplified) and best_match:
+                continue
+
+            if is_simplified and not best_is_simplified:
+                # Premier match simplifié trouvé
                 best_match = (chord_name, inversion_index)
+                best_is_simplified = True
+                lowest_inversion_index = inversion_index
+            elif (is_simplified == best_is_simplified):
+                if inversion_index < lowest_inversion_index:
+                    lowest_inversion_index = inversion_index
+                    best_match = (chord_name, inversion_index)
 
     if best_match:
         chord_name, inversion_index = best_match
@@ -120,9 +134,9 @@ def recognize_chord(played_notes_set):
             inversion_label = inversion_labels[inversion_index]
         else:
             inversion_label = f"{inversion_index + 1}ème renversement"
-        return chord_name, inversion_label
+        return chord_name, inversion_label, best_is_simplified
     
-    return None, None
+    return None, None, False
 
 def are_chord_names_enharmonically_equivalent(name1, name2):
     """

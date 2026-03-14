@@ -21,10 +21,10 @@ class ReversedChordsMode(ChordModeBase):
         Checks if the played notes match the target chord AND its specific inversion.
         """
         if not attempt_notes:
-            return False, None, None
+            return False, None, None, False
 
         try:
-            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+            recognized_name, recognized_inversion, is_simplified = recognize_chord(attempt_notes)
 
             # Check if the chord name is correct (including enharmonic equivalents)
             is_chord_correct = (recognized_name and
@@ -34,11 +34,13 @@ class ReversedChordsMode(ChordModeBase):
             is_inversion_correct = (recognized_inversion == target_inversion)
 
             target_notes = self.chord_set.get(target_chord_name)
+            # En mode renversement, on n'autorise pas la version simplifiée pour valider l'exercice
+            # car le but est de travailler les positions complètes.
             is_note_count_correct = len(attempt_notes) == len(target_notes) if target_notes else False
 
             is_correct = is_chord_correct and is_inversion_correct and is_note_count_correct
 
-            return is_correct, recognized_name, recognized_inversion
+            return is_correct, recognized_name, recognized_inversion, is_simplified
         except Exception as e:
             self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
             return False, None, None
@@ -106,7 +108,7 @@ class ReversedChordsMode(ChordModeBase):
                     inversion_attempts += 1
                     self.session_total_attempts += 1
 
-                    is_correct, rec_name, rec_inv = self.check_chord_with_inversion(
+                    is_correct, rec_name, rec_inv, is_simp = self.check_chord_with_inversion(
                         attempt_notes, chord_name, expected_inversion
                     )
 

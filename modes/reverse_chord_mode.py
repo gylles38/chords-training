@@ -43,7 +43,7 @@ class ReverseChordMode(ChordModeBase):
                         break
 
                     # Met à jour l'affichage avec le résultat
-                    recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                    recognized_name, recognized_inversion, is_simplified = recognize_chord(attempt_notes)
 
                     # Logique d'affichage locale pour ce mode
                     from ui import get_colored_notes_string
@@ -52,8 +52,9 @@ class ReverseChordMode(ChordModeBase):
 
                     if recognized_name:
                         inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
+                        simplified_text = " (simplifié)" if is_simplified else ""
                         display_name = get_chord_display_name(recognized_name)
-                        self.console.print(f"[bold green]Accord reconnu : {display_name}{inversion_text}.[/bold green]")
+                        self.console.print(f"[bold green]Accord reconnu : {display_name}{simplified_text}{inversion_text}.[/bold green]")
                     else:
                         self.console.print("[bold red]Accord non reconnu ![/bold red]")
 
