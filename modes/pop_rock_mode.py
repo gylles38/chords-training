@@ -5,6 +5,7 @@ from rich.prompt import Prompt
 
 from .chord_mode_base import ChordModeBase
 from data.chords import pop_rock_progressions
+from music_theory import get_chord_display_name
 
 
 class PopRockMode(ChordModeBase):
@@ -27,7 +28,11 @@ class PopRockMode(ChordModeBase):
             table.add_column("Exemples de chansons", style="yellow")
 
             for num, data in pop_rock_progressions.items():
-                prog_str = " -> ".join(data["progression"]) if isinstance(data.get("progression"), list) else str(data.get("progression", ""))
+                progression = data.get("progression", [])
+                if isinstance(progression, list):
+                    prog_str = " -> ".join([get_chord_display_name(c) for c in progression])
+                else:
+                    prog_str = str(progression)
                 examples = data.get("examples", [])
                 examples_str = "\n".join(examples) if isinstance(examples, list) else str(examples)
                 table.add_row(num, prog_str, examples_str)
@@ -45,7 +50,7 @@ class PopRockMode(ChordModeBase):
                 continue
 
             progression_accords = selected_data.get("progression", [])
-            progression_str = " -> ".join(progression_accords)
+            progression_str = " -> ".join([get_chord_display_name(c) for c in progression_accords])
             examples_str = "\n".join(selected_data.get("examples", []))
 
             def pre_display():

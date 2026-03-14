@@ -6,6 +6,7 @@ from .chord_mode_base import ChordModeBase
 from stats_manager import get_chord_errors
 from screen_handler import int_to_roman
 from data.chords import gammes_majeures, cadences, DEGREE_MAP
+from music_theory import get_chord_display_name
 from ui import create_degrees_table
 from messages import CadenceMode as CadenceMessages, UI
 
@@ -92,11 +93,11 @@ class CadenceMode(ChordModeBase):
                 self.gammes_filtrees = selected_cadence['gammes_filtrees']
 
             degres_str = ' -> '.join(self.current_degres)
-            progression_str = ' -> '.join(current_progression)
+            progression_str = ' -> '.join([get_chord_display_name(c) for c in current_progression])
 
             # Pré-affichage spécifique (tableau des degrés + descriptif)
             def pre_display():
-                self.console.print(CadenceMessages.TONALITY_INFO.format(tonality=self.current_tonalite))
+                self.console.print(CadenceMessages.TONALITY_INFO.format(tonality=get_chord_display_name(self.current_tonalite)))
                 self.console.print(CadenceMessages.PLAY_CADENCE.format(
                     cadence_name=self.current_cadence_name,
                     chord_progression=progression_str

@@ -1,16 +1,58 @@
 # music_theory.py
 
 def get_note_name_with_octave(midi_note):
-    """Convertit un numéro de note MIDI en son nom avec l'octave."""
-    notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
+    """Convertit un numéro de note MIDI en son nom avec l'octave (bilingue)."""
+    notes_fr = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
+    notes_en = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     octave = (midi_note // 12) - 1
-    note_name = notes[midi_note % 12]
-    return f"{note_name}{octave}"
+    idx = midi_note % 12
+    return f"{notes_fr[idx]}{octave}({notes_en[idx]}{octave})"
 
 def get_note_name(midi_note):
-    """Convertit un numéro de note MIDI en son nom."""
-    notes = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
-    return notes[midi_note % 12]
+    """Convertit un numéro de note MIDI en son nom (bilingue)."""
+    notes_fr = ["Do", "Do#", "Ré", "Ré#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"]
+    notes_en = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+    idx = midi_note % 12
+    return f"{notes_fr[idx]}({notes_en[idx]})"
+
+def get_chord_display_name(french_name):
+    """Convertit un nom d'accord français en format bilingue français(anglais)."""
+    if not french_name:
+        return ""
+
+    english_name = french_name
+
+    # Mapping des notes
+    note_map = {
+        "Do": "C",
+        "Ré": "D",
+        "Mi": "E",
+        "Fa": "F",
+        "Sol": "G",
+        "La": "A",
+        "Si": "B"
+    }
+
+    # Remplacer les altérations
+    english_name = english_name.replace(" dièse", "#").replace(" bémol", "b")
+
+    # Remplacer les noms de notes
+    for fr, en in note_map.items():
+        if english_name.startswith(fr):
+            english_name = en + english_name[len(fr):]
+            break
+
+    # Remplacer les types d'accords
+    english_name = english_name.replace(" Majeur 7ème", "maj7")
+    english_name = english_name.replace(" Mineur 7ème", "m7")
+    english_name = english_name.replace(" Majeur", "")
+    english_name = english_name.replace(" Mineur", "m")
+    english_name = english_name.replace(" Diminué", "dim")
+    english_name = english_name.replace(" 7ème", "7")
+    english_name = english_name.replace(" 4ème", "sus4")
+    english_name = english_name.replace(" 6ème", "6")
+
+    return f"{french_name}({english_name})"
 
 def recognize_chord(played_notes_set):
     """

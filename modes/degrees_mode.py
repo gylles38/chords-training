@@ -6,6 +6,7 @@ from rich.table import Table
 from .chord_mode_base import ChordModeBase
 from stats_manager import get_chord_errors
 from data.chords import gammes_majeures
+from music_theory import get_chord_display_name
 from screen_handler import int_to_roman, clear_screen
 
 class DegreesMode(ChordModeBase):
@@ -25,7 +26,7 @@ class DegreesMode(ChordModeBase):
 
         for i, chord_name in enumerate(gammes_filtrees, 1):
             roman_degree = int_to_roman(i)
-            table.add_row(roman_degree, chord_name)
+            table.add_row(roman_degree, get_chord_display_name(chord_name))
 
         self.console.print(table)
 
@@ -75,11 +76,11 @@ class DegreesMode(ChordModeBase):
 
             def pre_display():
                 self.console.print(
-                    f"Dans la tonalité de [bold yellow]{tonalite}[/bold yellow], jouez le degré actif [bold cyan]{degree_number}[/bold cyan] :"
+                    f"Dans la tonalité de [bold yellow]{get_chord_display_name(tonalite)}[/bold yellow], jouez le degré actif [bold cyan]{degree_number}[/bold cyan] :"
                 )
                 play_mode = getattr(self, "play_progression_before_start", "NONE")
                 if play_mode != 'PLAY_ONLY':
-                    self.console.print(f"[bold yellow]{chord_name}[/bold yellow]")
+                    self.console.print(f"[bold yellow]{get_chord_display_name(chord_name)}[/bold yellow]")
                     self.display_degrees_table(tonalite, gammes_filtrees)
 
             # --- Inner loop: Play and repeat the same progression ---

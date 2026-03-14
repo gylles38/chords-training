@@ -5,6 +5,7 @@ from rich.table import Table
 
 from .chord_mode_base import ChordModeBase
 from data.chords import gammes_majeures
+from music_theory import get_chord_display_name
 from screen_handler import int_to_roman, clear_screen
 from messages import AllDegreesMode as AllDegreesMessages, UI
 
@@ -24,7 +25,7 @@ class AllDegreesMode(ChordModeBase):
 
         for i, chord_name in enumerate(gammes_filtrees, 1):
             roman_degree = int_to_roman(i)
-            table.add_row(roman_degree, chord_name)
+            table.add_row(roman_degree, get_chord_display_name(chord_name))
 
         self.console.print(table)
 
@@ -45,11 +46,11 @@ class AllDegreesMode(ChordModeBase):
 
             def pre_display():
                 degree_progression = "I-ii-iii-IV-V-vi-vii°"
-                self.console.print(AllDegreesMessages.TONALITY_INFO.format(tonality=tonalite))
+                self.console.print(AllDegreesMessages.TONALITY_INFO.format(tonality=get_chord_display_name(tonalite)))
                 self.console.print(AllDegreesMessages.PLAY_DEGREES.format(
-                    tonality=tonalite,
+                    tonality=get_chord_display_name(tonalite),
                     degree_progression=degree_progression,
-                    chord_progression=" ".join(progression_accords)
+                    chord_progression=" ".join([get_chord_display_name(c) for c in progression_accords])
                 ))
                 play_mode = getattr(self, "play_progression_before_start", "NONE")
                 if play_mode != 'PLAY_ONLY':

@@ -69,11 +69,12 @@ def create_degrees_table(tonalite: str, chords_in_scale: list, chords_to_highlig
     """Crée et retourne une table Rich pour les degrés d'une tonalité, avec surlignage optionnel."""
     from rich.table import Table
     from screen_handler import int_to_roman
+    from music_theory import get_chord_display_name
 
     if chords_to_highlight is None:
         chords_to_highlight = []
 
-    table = Table(title=UI.TONALITY_TITLE.format(tonality=tonalite), border_style="blue")
+    table = Table(title=UI.TONALITY_TITLE.format(tonality=get_chord_display_name(tonalite)), border_style="blue")
     table.add_column(UI.DEGREE_COLUMN, justify="center", style="bold cyan")
     table.add_column(UI.CHORD_COLUMN, justify="center")
 
@@ -86,7 +87,7 @@ def create_degrees_table(tonalite: str, chords_in_scale: list, chords_to_highlig
         else:
             style = "yellow"
 
-        table.add_row(roman_degree, f"[{style}]{chord_name}[/]")
+        table.add_row(roman_degree, f"[{style}]{get_chord_display_name(chord_name)}[/]")
 
     return table
 

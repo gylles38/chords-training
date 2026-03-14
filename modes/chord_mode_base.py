@@ -14,7 +14,7 @@ from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_chord, play_progression_sequence
 from data.chords import all_chords
-from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent, get_chord_type_from_name, get_note_name
+from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent, get_chord_type_from_name, get_note_name, get_chord_display_name
 from messages import ChordModeBase as ChordModeBaseMessages
 
 class ChordModeBase:
@@ -82,7 +82,7 @@ class ChordModeBase:
         from music_theory import get_inversion_name, get_note_name_with_octave
         from rich.text import Text
 
-        display_name = chord_name.split(" #")[0]
+        display_name = get_chord_display_name(chord_name.split(" #")[0])
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
         # In voice leading mode, we always show the notes and inversion, unless in PLAY_ONLY mode.
@@ -390,11 +390,11 @@ class ChordModeBase:
 
     def _build_transition_summary_text(self, progression_accords, voicings, title: str):
         """Builds a single Text object for a transition summary line."""
-        from music_theory import get_note_name_with_octave # Local import
+        from music_theory import get_note_name_with_octave, get_chord_display_name # Local import
 
         transitions_text = Text(title, style="default")
         for i, name in enumerate(progression_accords):
-            display_name = name.split(" #")[0]
+            display_name = get_chord_display_name(name.split(" #")[0])
             current_notes = voicings[i]
             common_notes = current_notes.intersection(voicings[i-1]) if i > 0 else set()
 
@@ -464,14 +464,14 @@ class ChordModeBase:
 
             if play_mode == 'SHOW_AND_PLAY':
                 if key_name:
-                    self.console.print(f"Tonalité : [bold cyan]{key_name}[/bold cyan]")
+                    self.console.print(f"Tonalité : [bold cyan]{get_chord_display_name(key_name)}[/bold cyan]")
 
                 title = "Progression avec transitions : "
                 transitions_text = self._build_transition_summary_text(progression_accords, voicings, title)
                 self.console.print(transitions_text)
 
         elif play_mode == 'SHOW_AND_PLAY' and progression_accords:
-            display_names = [name.split(" #")[0] for name in progression_accords]
+            display_names = [get_chord_display_name(name.split(" #")[0]) for name in progression_accords]
             self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(display_names)}[/bold yellow]")
 
         if play_mode == 'PLAY_ONLY' and progression_accords:
@@ -563,7 +563,7 @@ class ChordModeBase:
                             if is_correct:
                                 self.played_voicings_in_progression.append(attempt_notes.copy())
                                 update_chord_success(chord_name.split(" #")[0])
-                                base_chord_name = chord_name.split(" #")[0]
+                                base_chord_name = get_chord_display_name(chord_name.split(" #")[0])
                                 success_msg = f"[bold green]Correct ! {base_chord_name} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)

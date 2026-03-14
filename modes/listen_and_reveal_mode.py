@@ -10,7 +10,7 @@ from .chord_mode_base import ChordModeBase
 from stats_manager import update_chord_error, update_chord_success
 from midi_handler import play_chord
 from screen_handler import clear_screen
-from music_theory import get_note_name, get_chord_type_from_name
+from music_theory import get_note_name, get_chord_type_from_name, get_chord_display_name
 from keyboard_handler import enable_raw_mode, disable_raw_mode
 
 class ListenAndRevealMode(ChordModeBase):
@@ -76,7 +76,7 @@ class ListenAndRevealMode(ChordModeBase):
                     if is_correct:
                         if first_attempt: self.session_correct_count += 1
                         update_chord_success(self.current_chord_name)
-                        success_feedback_text = f"Correct ! C'était bien {self.current_chord_name} ({recognized_inversion})."
+                        success_feedback_text = f"Correct ! C'était bien {get_chord_display_name(self.current_chord_name)} ({recognized_inversion})."
                         success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]")
                         live.update(Panel(success_feedback, title="Résultat", border_style="green"), refresh=True)
                         time.sleep(1.5)
@@ -90,7 +90,7 @@ class ListenAndRevealMode(ChordModeBase):
                         feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}")
 
                         if incorrect_attempts >= 7:
-                            feedback_text.append(Text.from_markup(f"\n[bold magenta]La réponse était : {self.current_chord_name}[/bold magenta]"))
+                            feedback_text.append(Text.from_markup(f"\n[bold magenta]La réponse était : {get_chord_display_name(self.current_chord_name)}[/bold magenta]"))
                             live.update(Panel(feedback_text, title="Réponse", border_style="magenta"), refresh=True)
                             time.sleep(2.5)
                             break

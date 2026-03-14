@@ -3,6 +3,7 @@ import random
 from .chord_mode_base import ChordModeBase
 from stats_manager import get_chord_errors
 from data.chords import gammes_majeures, tonal_progressions, DEGREE_MAP
+from music_theory import get_chord_display_name
 
 class TonalProgressionMode(ChordModeBase):
     def __init__(self, inport, outport, use_timer, timer_duration, progression_selection_mode, play_progression_before_start, chord_set):
@@ -15,7 +16,7 @@ class TonalProgressionMode(ChordModeBase):
 
     def display_tonal_info(self):
         """Affiche les informations tonales spécifiques."""
-        self.console.print(f"Tonalité : [bold yellow]{self.current_tonalite}[/bold yellow]")
+        self.console.print(f"Tonalité : [bold yellow]{get_chord_display_name(self.current_tonalite)}[/bold yellow]")
         self.console.print(f"Progression : [bold cyan]{self.current_progression_name}[/bold cyan]")
         if self.current_progression_description:
             self.console.print(f"[italic]{self.current_progression_description}[/italic]")
