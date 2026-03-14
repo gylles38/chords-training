@@ -80,8 +80,9 @@ def safe_format_chord_info(chord_name, inversion):
 
 def display_degrees_table(tonalite, gammes_filtrees):
     """Affiche un tableau des accords de la gamme pour une tonalité donnée en utilisant Rich."""
+    from music_theory import get_chord_display_name
     table = Table(
-        title=f"Tonalité de [bold yellow]{tonalite}[/bold yellow]",
+        title=f"Tonalité de [bold yellow]{get_chord_display_name(tonalite)}[/bold yellow]",
         style="cyan",
         title_style="bold bright_cyan",
         header_style="bold bright_cyan",
@@ -96,7 +97,7 @@ def display_degrees_table(tonalite, gammes_filtrees):
 
     for i, accord_name in enumerate(accords_de_la_gamme):
         if accord_name in gammes_filtrees:
-            table.add_row(degrees_romans[i], accord_name)
+            table.add_row(degrees_romans[i], get_chord_display_name(accord_name))
 
     console.print(table)
 

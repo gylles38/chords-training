@@ -34,6 +34,7 @@ def get_colored_notes_string(console, played_notes, correct_notes):
 
 def display_stats(console, correct_count, total_count, elapsed_time=None):
     """Affiche les statistiques de performance."""
+    from music_theory import get_chord_display_name
     console.print(UI.SESSION_SUMMARY)
     if total_count > 0:
         pourcentage = (correct_count / total_count) * 100

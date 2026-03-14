@@ -20,6 +20,9 @@ def get_chord_display_name(french_name):
     if not french_name:
         return ""
 
+    if "(" in french_name and ")" in french_name:
+        return french_name
+
     english_name = french_name
 
     # Mapping des notes

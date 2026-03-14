@@ -154,9 +154,11 @@ def update_timer_remaining_record(mode_key: str, remaining_seconds: float, attem
 
 
 def get_chord_errors() -> Dict[str, int]:
-    """Charge les statistiques d'erreurs par accord."""
+    """Charge les statistiques d'erreurs par accord (formaté pour l'affichage bilingue)."""
+    from music_theory import get_chord_display_name
     stats = load_stats()
-    return stats.get("chord_errors", {})
+    errors = stats.get("chord_errors", {})
+    return {get_chord_display_name(k): v for k, v in errors.items()}
 
 
 def update_chord_error(chord_name: str) -> None:
@@ -181,7 +183,7 @@ def update_chord_success(chord_name: str) -> None:
 
 
 def get_note_errors() -> Dict[str, int]:
-    """Charge les statistiques d'erreurs par note."""
+    """Charge les statistiques d'erreurs par note (déjà bilingue via get_note_name)."""
     stats = load_stats()
     return stats.get("note_errors", {})
 
@@ -207,9 +209,11 @@ def update_note_success(note_name: str) -> None:
 
 
 def get_scale_errors() -> Dict[str, int]:
-    """Charge les statistiques d'erreurs par gamme."""
+    """Charge les statistiques d'erreurs par gamme (formaté pour l'affichage bilingue)."""
+    from music_theory import get_chord_display_name
     stats = load_stats()
-    return stats.get("scale_errors", {})
+    errors = stats.get("scale_errors", {})
+    return {get_chord_display_name(k): v for k, v in errors.items()}
 
 
 def update_scale_error(scale_name: str) -> None:
