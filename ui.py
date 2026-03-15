@@ -3,32 +3,40 @@ from music_theory import get_note_name
 from rich.console import Console
 from messages import UI
 
-def get_colored_notes_string(console, played_notes, correct_notes):
+def get_colored_notes_string(console, played_notes, correct_notes, chord_name=None):
     """
     Retourne une chaîne de caractères avec les notes jouées, colorées en fonction de leur justesse.
-    
-    Correction de bug : cette fonction est maintenant plus intelligente.
-    - Vert : La note jouée est exactement la bonne (même note, même octave).
-    - Jaune : La note jouée est la bonne, mais dans une octave différente.
-    - Rouge : La note jouée est incorrecte.
+    Inclut le degré de l'intervalle (1, 3, 5...) si chord_name est fourni.
     """
+    from music_theory import get_interval_degree
     output_parts = []
     
     # Créer un ensemble des classes de hauteur correctes (indépendant de l'octave)
     correct_pitch_classes = {note % 12 for note in correct_notes}
     
-    for note in sorted(played_notes):
+    # Pour les renversements, l'ordre des notes jouées est important.
+    # On trie par défaut sauf si c'est déjà une liste ordonnée pertinente.
+    notes_to_process = sorted(list(played_notes)) if isinstance(played_notes, set) else played_notes
+
+    for note in notes_to_process:
         note_name = get_note_name(note)
+        interval_degree = ""
+        if chord_name:
+            degree = get_interval_degree(note, chord_name)
+            if degree:
+                interval_degree = f"[dim]{degree}[/dim]"
+
+        display_note = f"{note_name}{interval_degree}"
         
         if note in correct_notes:
             # Correspondance parfaite (note et octave)
-            output_parts.append(f"[bold green]{note_name}[/bold green]")
+            output_parts.append(f"[bold green]{display_note}[/bold green]")
         elif (note % 12) in correct_pitch_classes:
             # Bonne note, mais mauvaise octave
-            output_parts.append(f"[bold yellow]{note_name}[/bold yellow]")
+            output_parts.append(f"[bold yellow]{display_note}[/bold yellow]")
         else:
             # Mauvaise note
-            output_parts.append(f"[bold red]{note_name}[/bold red]")
+            output_parts.append(f"[bold red]{display_note}[/bold red]")
             
     return ", ".join(output_parts)
 

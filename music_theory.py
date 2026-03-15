@@ -148,6 +148,48 @@ def are_chord_names_enharmonically_equivalent(name1, name2):
     
     return {n % 12 for n in all_chords[name1]} == {n % 12 for n in all_chords[name2]}
 
+def get_interval_degree(note_midi, chord_name):
+    """
+    Calcule le degré de l'intervalle (1, 3, 5, 7, etc.) d'une note MIDI par rapport à un accord.
+    """
+    from data.chords import all_chords
+    if not chord_name or chord_name not in all_chords:
+        return ""
+
+    ref_notes = all_chords[chord_name]
+    root_pc = min(ref_notes) % 12
+    note_pc = note_midi % 12
+
+    # Calcul de l'intervalle en demi-tons
+    semitones = (note_pc - root_pc) % 12
+
+    # Mapping simple des demi-tons aux degrés usuels
+    # On privilégie les degrés de la structure de l'accord
+    interval_map = {
+        0: "1",   # Fondamentale
+        1: "b2",
+        2: "2",
+        3: "b3",  # Par défaut on affiche b3/b7
+        4: "3",
+        5: "4",
+        6: "b5",
+        7: "5",
+        8: "#5",
+        9: "6",
+        10: "b7",
+        11: "7"
+    }
+
+    # Ajustements spécifiques selon le type d'accord pour plus de précision (ex: afficher '3' pour un accord mineur)
+    if semitones == 3:
+        if "Mineur" in chord_name or "Diminué" in chord_name: return "3"
+        return "b3"
+    elif semitones == 10:
+        if "7ème" in chord_name and "Majeur 7ème" not in chord_name: return "7"
+        return "b7"
+
+    return interval_map.get(semitones, "")
+
 def get_chord_type_from_name(chord_name):
     """Extrait le type d'accord (Majeur, Mineur, 7ème, etc.) du nom de l'accord."""
     chord_types = ["Majeur", "Mineur", "7ème", "Diminué", "4ème", "6ème"]

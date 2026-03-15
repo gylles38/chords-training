@@ -77,8 +77,10 @@ class ListenAndRevealMode(ChordModeBase):
                         if first_attempt: self.session_correct_count += 1
                         update_chord_success(self.current_chord_name)
                         simplified_text = " (simplifié)" if is_simplified else ""
+                        from ui import get_colored_notes_string
+                        colored_notes = get_colored_notes_string(self.console, attempt_notes, self.current_chord_notes, chord_name=recognized_name)
                         success_feedback_text = f"Correct ! C'était bien {get_chord_display_name(self.current_chord_name)}{simplified_text} ({recognized_inversion})."
-                        success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]")
+                        success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]\nNotes jouées : [{colored_notes}]")
                         live.update(Panel(success_feedback, title="Résultat", border_style="green"), refresh=True)
                         time.sleep(1.5)
                         break
@@ -87,9 +89,11 @@ class ListenAndRevealMode(ChordModeBase):
                         update_chord_error(self.current_chord_name)
                         incorrect_attempts += 1
 
+                        from ui import get_colored_notes_string
+                        colored_notes = get_colored_notes_string(self.console, attempt_notes, self.current_chord_notes, chord_name=recognized_name)
                         simplified_text = " (simplifié)" if is_simplified else ""
                         played_chord_info = f"{recognized_name}{simplified_text} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
-                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}")
+                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{colored_notes}]")
 
                         if incorrect_attempts >= 7:
                             feedback_text.append(Text.from_markup(f"\n[bold magenta]La réponse était : {get_chord_display_name(self.current_chord_name)}[/bold magenta]"))

@@ -573,7 +573,9 @@ class ChordModeBase:
                                 update_chord_success(chord_name.split(" #")[0])
                                 base_chord_name = get_chord_display_name(chord_name.split(" #")[0])
                                 simplified_text = " (simplifié)" if is_simplified else ""
-                                success_msg = f"[bold green]Correct ! {base_chord_name}{simplified_text} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes)}]"
+                                # Utiliser l'accord reconnu pour calculer les intervalles
+                                display_name_for_intervals = recognized_name if recognized_name else chord_name.split(" #")[0]
+                                success_msg = f"[bold green]Correct ! {base_chord_name}{simplified_text} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes, chord_name=display_name_for_intervals)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)
                                 enable_raw_mode()
@@ -587,7 +589,7 @@ class ChordModeBase:
                                 update_chord_error(chord_name.split(" #")[0])
                                 simplified_text = " (simplifié)" if is_simplified else ""
                                 played_chord_info = f"{recognized_name}{simplified_text} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
-                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes)}]"
+                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes, chord_name=recognized_name)}]"
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)
                                 time.sleep(2)
@@ -661,7 +663,8 @@ class ChordModeBase:
         return choice
 
     def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, is_simplified=False, specific = False):
-        colored_notes = get_colored_notes_string(self.console, attempt_notes, chord_notes)
+        # Utiliser l'accord reconnu pour calculer les intervalles
+        colored_notes = get_colored_notes_string(self.console, attempt_notes, chord_notes, chord_name=recognized_name)
         self.console.print(f"Notes jouées : [{colored_notes}]")
 
         if is_correct:

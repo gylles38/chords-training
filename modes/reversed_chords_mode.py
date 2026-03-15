@@ -113,7 +113,7 @@ class ReversedChordsMode(ChordModeBase):
                     )
 
                     # Display feedback
-                    colored_notes = get_colored_notes_string(self.console, attempt_notes, target_notes)
+                    colored_notes = get_colored_notes_string(self.console, attempt_notes, target_notes, chord_name=rec_name)
                     self.console.print(f"Notes jouées : [{colored_notes}]")
 
                     if is_correct:
