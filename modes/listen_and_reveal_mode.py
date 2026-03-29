@@ -10,7 +10,7 @@ from .chord_mode_base import ChordModeBase
 from stats_manager import update_chord_error, update_chord_success
 from midi_handler import play_chord
 from screen_handler import clear_screen
-from music_theory import get_note_name, get_chord_type_from_name
+from music_theory import get_note_name, get_chord_type_from_name, get_chord_display_name
 from keyboard_handler import enable_raw_mode, disable_raw_mode
 
 class ListenAndRevealMode(ChordModeBase):
@@ -69,15 +69,18 @@ class ListenAndRevealMode(ChordModeBase):
                         else: continue
 
                     self.session_total_attempts += 1
-                    is_correct, recognized_name, recognized_inversion = self.check_chord(
+                    is_correct, recognized_name, recognized_inversion, is_simplified = self.check_chord(
                         attempt_notes, self.current_chord_name, self.current_chord_notes
                     )
 
                     if is_correct:
                         if first_attempt: self.session_correct_count += 1
                         update_chord_success(self.current_chord_name)
-                        success_feedback_text = f"Correct ! C'était bien {self.current_chord_name} ({recognized_inversion})."
-                        success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]")
+                        simplified_text = " (simplifié)" if is_simplified else ""
+                        from ui import get_colored_notes_string
+                        colored_notes = get_colored_notes_string(self.console, attempt_notes, self.current_chord_notes, chord_name=recognized_name)
+                        success_feedback_text = f"Correct ! C'était bien {get_chord_display_name(self.current_chord_name)}{simplified_text} ({recognized_inversion})."
+                        success_feedback = Text.from_markup(f"[bold green]{success_feedback_text}[/bold green]\nNotes jouées : [{colored_notes}]")
                         live.update(Panel(success_feedback, title="Résultat", border_style="green"), refresh=True)
                         time.sleep(1.5)
                         break
@@ -86,11 +89,14 @@ class ListenAndRevealMode(ChordModeBase):
                         update_chord_error(self.current_chord_name)
                         incorrect_attempts += 1
 
-                        played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
-                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}")
+                        from ui import get_colored_notes_string
+                        colored_notes = get_colored_notes_string(self.console, attempt_notes, self.current_chord_notes, chord_name=recognized_name)
+                        simplified_text = " (simplifié)" if is_simplified else ""
+                        played_chord_info = f"{recognized_name}{simplified_text} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
+                        feedback_text = Text.from_markup(f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{colored_notes}]")
 
                         if incorrect_attempts >= 7:
-                            feedback_text.append(Text.from_markup(f"\n[bold magenta]La réponse était : {self.current_chord_name}[/bold magenta]"))
+                            feedback_text.append(Text.from_markup(f"\n[bold magenta]La réponse était : {get_chord_display_name(self.current_chord_name)}[/bold magenta]"))
                             live.update(Panel(feedback_text, title="Réponse", border_style="magenta"), refresh=True)
                             time.sleep(2.5)
                             break

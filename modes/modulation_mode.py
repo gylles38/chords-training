@@ -5,6 +5,7 @@ from rich.columns import Columns
 from .chord_mode_base import ChordModeBase
 from data.modulations import modulations
 from data.chords import all_scales, DEGREE_MAP
+from music_theory import get_chord_display_name
 from ui import create_degrees_table
 
 # Map degree names to their index in the all_scales list
@@ -152,9 +153,9 @@ class ModulationMode(ChordModeBase):
         pivot_chord_name = self._get_chord_from_degree(pivot_chord_degree, start_key, target_key) if pivot_chord_degree else ""
 
         explanation = modulation_info["explanation_template"].format(
-            start_key=start_key,
-            target_key=target_key,
-            pivot_chord_name=pivot_chord_name
+            start_key=get_chord_display_name(start_key),
+            target_key=get_chord_display_name(target_key),
+            pivot_chord_name=get_chord_display_name(pivot_chord_name)
         )
 
         return progression_chords, explanation, modulation_info['name'], modulation_info['description'], start_key, target_key

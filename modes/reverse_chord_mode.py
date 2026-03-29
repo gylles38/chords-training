@@ -4,7 +4,7 @@ from rich.panel import Panel
 from rich.live import Live
 
 from .chord_mode_base import ChordModeBase
-from music_theory import recognize_chord, get_note_name
+from music_theory import recognize_chord, get_note_name, get_chord_display_name
 from keyboard_handler import enable_raw_mode, disable_raw_mode
 from data.chords import enharmonic_map
 from music_theory import recognize_chord
@@ -43,16 +43,18 @@ class ReverseChordMode(ChordModeBase):
                         break
 
                     # Met à jour l'affichage avec le résultat
-                    recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+                    recognized_name, recognized_inversion, is_simplified = recognize_chord(attempt_notes)
 
                     # Logique d'affichage locale pour ce mode
                     from ui import get_colored_notes_string
-                    notes_str = get_colored_notes_string(self.console, attempt_notes, attempt_notes)
+                    notes_str = get_colored_notes_string(self.console, attempt_notes, attempt_notes, chord_name=recognized_name)
                     self.console.print(f"Notes jouées : [{notes_str}]")
 
                     if recognized_name:
                         inversion_text = f" ({recognized_inversion})" if recognized_inversion and recognized_inversion != "position fondamentale" else ""
-                        self.console.print(f"[bold green]Accord reconnu : {recognized_name}{inversion_text}.[/bold green]")
+                        simplified_text = " (simplifié)" if is_simplified else ""
+                        display_name = get_chord_display_name(recognized_name)
+                        self.console.print(f"[bold green]Accord reconnu : {display_name}{simplified_text}{inversion_text}.[/bold green]")
                     else:
                         self.console.print("[bold red]Accord non reconnu ![/bold red]")
 

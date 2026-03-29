@@ -14,7 +14,7 @@ from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key, wait_for_input,enable_raw_mode, disable_raw_mode
 from midi_handler import play_chord, play_progression_sequence
 from data.chords import all_chords
-from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent, get_chord_type_from_name, get_note_name
+from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent, get_chord_type_from_name, get_note_name, get_chord_display_name
 from messages import ChordModeBase as ChordModeBaseMessages
 
 class ChordModeBase:
@@ -82,7 +82,7 @@ class ChordModeBase:
         from music_theory import get_inversion_name, get_note_name_with_octave
         from rich.text import Text
 
-        display_name = chord_name.split(" #")[0]
+        display_name = get_chord_display_name(chord_name.split(" #")[0])
         play_mode = getattr(self, "play_progression_before_start", "NONE")
 
         # In voice leading mode, we always show the notes and inversion, unless in PLAY_ONLY mode.
@@ -207,27 +207,35 @@ class ChordModeBase:
 
     def check_chord(self, attempt_notes, chord_name, chord_notes):
         if not attempt_notes:
-            return False, None, None
+            return False, None, None, False
 
         # If voice leading is used, we need an exact note match.
         if getattr(self, 'use_voice_leading', False):
             is_correct = (attempt_notes == chord_notes)
             # We can still use recognize_chord to provide helpful feedback
-            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
-            return is_correct, recognized_name, recognized_inversion
+            recognized_name, recognized_inversion, is_simplified = recognize_chord(attempt_notes)
+            return is_correct, recognized_name, recognized_inversion, is_simplified
 
         # Original behavior: name-based recognition
         try:
-            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+            recognized_name, recognized_inversion, is_simplified = recognize_chord(attempt_notes)
             # Strip the " #n" suffix added by voice leading for comparison
             base_chord_name = chord_name.split(" #")[0]
+
+            # Un accord est correct s'il est enharmoniquement équivalent
+            # et (soit c'est une correspondance exacte de notes, soit c'est un accord simplifié accepté par recognize_chord)
             is_correct = (recognized_name and
-                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name) and
-                          len(attempt_notes) == len(chord_notes))
-            return is_correct, recognized_name, recognized_inversion
+                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name))
+
+            # Si on demande un accord spécifique, on vérifie qu'on a bien joué le bon nombre de notes
+            # SAUF si recognize_chord a validé une version simplifiée
+            if not is_simplified and len(attempt_notes) != len(chord_notes):
+                is_correct = False
+
+            return is_correct, recognized_name, recognized_inversion, is_simplified
         except Exception as e:
             self.console.print(ChordModeBaseMessages.RECOGNITION_ERROR.format(e=e))
-            return False, None, None
+            return False, None, None, False
         
     def show_overall_stats_and_wait(self, extra_stats_callback: Optional[Callable] = None):
         """Affiche les stats globales de la session et attend une touche."""
@@ -390,11 +398,11 @@ class ChordModeBase:
 
     def _build_transition_summary_text(self, progression_accords, voicings, title: str):
         """Builds a single Text object for a transition summary line."""
-        from music_theory import get_note_name_with_octave # Local import
+        from music_theory import get_note_name_with_octave, get_chord_display_name # Local import
 
         transitions_text = Text(title, style="default")
         for i, name in enumerate(progression_accords):
-            display_name = name.split(" #")[0]
+            display_name = get_chord_display_name(name.split(" #")[0])
             current_notes = voicings[i]
             common_notes = current_notes.intersection(voicings[i-1]) if i > 0 else set()
 
@@ -464,14 +472,14 @@ class ChordModeBase:
 
             if play_mode == 'SHOW_AND_PLAY':
                 if key_name:
-                    self.console.print(f"Tonalité : [bold cyan]{key_name}[/bold cyan]")
+                    self.console.print(f"Tonalité : [bold cyan]{get_chord_display_name(key_name)}[/bold cyan]")
 
                 title = "Progression avec transitions : "
                 transitions_text = self._build_transition_summary_text(progression_accords, voicings, title)
                 self.console.print(transitions_text)
 
         elif play_mode == 'SHOW_AND_PLAY' and progression_accords:
-            display_names = [name.split(" #")[0] for name in progression_accords]
+            display_names = [get_chord_display_name(name.split(" #")[0]) for name in progression_accords]
             self.console.print(f"\nProgression à jouer : [bold yellow]{' -> '.join(display_names)}[/bold yellow]")
 
         if play_mode == 'PLAY_ONLY' and progression_accords:
@@ -559,12 +567,15 @@ class ChordModeBase:
                             if not is_progression_started:
                                 is_progression_started = True
                                 start_time = time.time()
-                            is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, chord_name, target_notes)
+                            is_correct, recognized_name, recognized_inversion, is_simplified = self.check_chord(attempt_notes, chord_name, target_notes)
                             if is_correct:
                                 self.played_voicings_in_progression.append(attempt_notes.copy())
                                 update_chord_success(chord_name.split(" #")[0])
-                                base_chord_name = chord_name.split(" #")[0]
-                                success_msg = f"[bold green]Correct ! {base_chord_name} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes)}]"
+                                base_chord_name = get_chord_display_name(chord_name.split(" #")[0])
+                                simplified_text = " (simplifié)" if is_simplified else ""
+                                # Utiliser l'accord reconnu pour calculer les intervalles
+                                display_name_for_intervals = recognized_name if recognized_name else chord_name.split(" #")[0]
+                                success_msg = f"[bold green]Correct ! {base_chord_name}{simplified_text} ({recognized_inversion})[/bold green]\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes, chord_name=display_name_for_intervals)}]"
                                 disable_raw_mode()
                                 live.update(success_msg, refresh=True)
                                 enable_raw_mode()
@@ -576,8 +587,9 @@ class ChordModeBase:
                                 break
                             else:
                                 update_chord_error(chord_name.split(" #")[0])
-                                played_chord_info = f"{recognized_name} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
-                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes)}]"
+                                simplified_text = " (simplifié)" if is_simplified else ""
+                                played_chord_info = f"{recognized_name}{simplified_text} ({recognized_inversion})" if recognized_name else "Accord non reconnu"
+                                error_msg = f"[bold red]Incorrect.[/bold red] Vous avez joué : {played_chord_info}\nNotes jouées : [{get_colored_notes_string(self.console, attempt_notes, target_notes, chord_name=recognized_name)}]"
                                 disable_raw_mode()
                                 live.update(error_msg, refresh=True)
                                 time.sleep(2)
@@ -650,13 +662,15 @@ class ChordModeBase:
 
         return choice
 
-    def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, specific = False):
-        colored_notes = get_colored_notes_string(self.console, attempt_notes, chord_notes)
+    def display_feedback(self, is_correct, attempt_notes, chord_notes, recognized_name, recognized_inversion, is_simplified=False, specific = False):
+        # Utiliser l'accord reconnu pour calculer les intervalles
+        colored_notes = get_colored_notes_string(self.console, attempt_notes, chord_notes, chord_name=recognized_name)
         self.console.print(f"Notes jouées : [{colored_notes}]")
 
         if is_correct:
             if recognized_name:
-                self.console.print(f"[bold green]{recognized_name}.[/bold green]")
+                simplified_text = " (simplifié)" if is_simplified else ""
+                self.console.print(f"[bold green]{recognized_name}{simplified_text}.[/bold green]")
             else:
                 if not specific:
                     self.console.print("[bold green]Correct ![/bold green]")
@@ -667,7 +681,8 @@ class ChordModeBase:
                 try:
                     clean_name = str(recognized_name).replace('%', 'pct').replace('{', '(').replace('}', ')')
                     clean_inversion = str(recognized_inversion).replace('%', 'pct').replace('{', '(').replace('}', ')') if recognized_inversion else "position inconnue"
-                    self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name} ({clean_inversion})")
+                    simplified_text = " (simplifié)" if is_simplified else ""
+                    self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {clean_name}{simplified_text} ({clean_inversion})")
                 except Exception:
                     self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué : {recognized_name}")
             else:

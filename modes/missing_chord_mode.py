@@ -21,7 +21,7 @@ from stats_manager import get_chord_errors, update_chord_success, update_chord_e
 from midi_handler import play_chord
 from screen_handler import clear_screen
 from keyboard_handler import wait_for_input, enable_raw_mode, disable_raw_mode
-from music_theory import get_note_name, get_note_name_with_octave
+from music_theory import get_note_name, get_note_name_with_octave, get_chord_display_name
 
 
 class MissingChordMode(ChordModeBase):
@@ -52,21 +52,23 @@ class MissingChordMode(ChordModeBase):
         from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent
         try:
             if not attempt_notes:
-                return False, None, None
+                return False, None, None, False
 
-            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+            recognized_name, recognized_inversion, is_simplified = recognize_chord(attempt_notes)
 
             # Strip the " #n" suffix added by voice leading for comparison
             base_chord_name = chord_name.split(" #")[0]
 
             is_correct = (recognized_name and
-                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name) and
-                          len(attempt_notes) == len(chord_notes))
+                          are_chord_names_enharmonically_equivalent(recognized_name, base_chord_name))
 
-            return is_correct, recognized_name, recognized_inversion
+            if not is_simplified and len(attempt_notes) != len(chord_notes):
+                is_correct = False
+
+            return is_correct, recognized_name, recognized_inversion, is_simplified
         except Exception as e:
             self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
-            return False, None, None
+            return False, None, None, False
 
     # --- Progression Generation Methods ---
 
@@ -182,7 +184,7 @@ class MissingChordMode(ChordModeBase):
                 current_notes = voicings[i]
                 common_notes = current_notes.intersection(last_displayed_notes)
 
-                chord_name_part = chord_name.split(' #')[0]
+                chord_name_part = get_chord_display_name(chord_name.split(' #')[0])
 
                 if self.play_progression_before_start != 'PLAY_ONLY':
                     text.append(f"{chord_name_part} (", style="bold yellow")
@@ -228,7 +230,7 @@ class MissingChordMode(ChordModeBase):
             text.append(str(i + 1), style="blue")
             text.append(") ")
 
-            chord_name_part = name.split(' #')[0]
+            chord_name_part = get_chord_display_name(name.split(' #')[0])
             if i == missing_index:
                 text.append(chord_name_part, style="bold yellow")
             else:
@@ -358,7 +360,7 @@ class MissingChordMode(ChordModeBase):
 
                 if action == 'attempt':
                     self.session_total_attempts += 1
-                    is_correct, recognized_name, recognized_inversion = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
+                    is_correct, recognized_name, recognized_inversion, is_simplified = self.check_chord(attempt_notes, missing_chord_name, missing_chord_notes)
 
                     if is_correct:
                         puzzle_solved = True
@@ -366,8 +368,9 @@ class MissingChordMode(ChordModeBase):
                             self.session_correct_count += 1
                         update_chord_success(missing_chord_name.split(" #")[0])
 
-                        base_chord_name = missing_chord_name.split(' #')[0]
-                        display_name = f"{base_chord_name} ({recognized_inversion})"
+                        base_chord_name = get_chord_display_name(missing_chord_name.split(' #')[0])
+                        simplified_text = " (simplifié)" if is_simplified else ""
+                        display_name = f"{base_chord_name}{simplified_text} ({recognized_inversion})"
                         success_message = f"\n[bold green]Bravo ![/bold green] C'était bien [bold yellow]{display_name}[/bold yellow]."
                         self.console.print(success_message)
 
@@ -384,7 +387,8 @@ class MissingChordMode(ChordModeBase):
                             if recognized_name == last_incorrect_chord:
                                 self.console.print("[bold red]Vous avez joué le même accord incorrect. Réessayez ![/bold red]")
                             else:
-                                played_chord_info = f"{recognized_name} ({recognized_inversion})"
+                                simplified_text = " (simplifié)" if is_simplified else ""
+                                played_chord_info = f"{recognized_name}{simplified_text} ({recognized_inversion})"
                                 self.console.print(f"[bold red]Incorrect.[/bold red] Vous avez joué {played_chord_info}. Réessayez !")
                             last_incorrect_chord = recognized_name
                         else:

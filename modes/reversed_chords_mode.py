@@ -4,7 +4,7 @@ import time
 from .chord_mode_base import ChordModeBase
 from stats_manager import update_chord_error, update_chord_success
 from data.chords import three_note_chords, all_chords
-from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent
+from music_theory import recognize_chord, are_chord_names_enharmonically_equivalent, get_chord_display_name
 from ui import get_colored_notes_string
 from screen_handler import clear_screen
 from keyboard_handler import wait_for_any_key
@@ -21,10 +21,10 @@ class ReversedChordsMode(ChordModeBase):
         Checks if the played notes match the target chord AND its specific inversion.
         """
         if not attempt_notes:
-            return False, None, None
+            return False, None, None, False
 
         try:
-            recognized_name, recognized_inversion = recognize_chord(attempt_notes)
+            recognized_name, recognized_inversion, is_simplified = recognize_chord(attempt_notes)
 
             # Check if the chord name is correct (including enharmonic equivalents)
             is_chord_correct = (recognized_name and
@@ -34,11 +34,13 @@ class ReversedChordsMode(ChordModeBase):
             is_inversion_correct = (recognized_inversion == target_inversion)
 
             target_notes = self.chord_set.get(target_chord_name)
+            # En mode renversement, on n'autorise pas la version simplifiée pour valider l'exercice
+            # car le but est de travailler les positions complètes.
             is_note_count_correct = len(attempt_notes) == len(target_notes) if target_notes else False
 
             is_correct = is_chord_correct and is_inversion_correct and is_note_count_correct
 
-            return is_correct, recognized_name, recognized_inversion
+            return is_correct, recognized_name, recognized_inversion, is_simplified
         except Exception as e:
             self.console.print(f"[bold red]Une erreur s'est produite lors de la reconnaissance : {e}[/bold red]")
             return False, None, None
@@ -77,11 +79,11 @@ class ReversedChordsMode(ChordModeBase):
             elif num_notes == 4:
                 inversions_to_play = ["position fondamentale", "1er renversement", "2ème renversement", "3ème renversement"]
             else:
-                self.console.print(f"L'accord [bold yellow]{chord_name}[/bold yellow] a {num_notes} notes et ne sera pas utilisé dans ce mode. Passage au suivant.")
+                self.console.print(f"L'accord [bold yellow]{get_chord_display_name(chord_name)}[/bold yellow] a {num_notes} notes et ne sera pas utilisé dans ce mode. Passage au suivant.")
                 time.sleep(2)
                 continue
 
-            self.console.print(f"\nProchain accord : [bold yellow]{chord_name}[/bold yellow] ({num_notes} notes)")
+            self.console.print(f"\nProchain accord : [bold yellow]{get_chord_display_name(chord_name)}[/bold yellow] ({num_notes} notes)")
 
             # --- Inversions Loop ---
             skip_to_next_chord = False
@@ -106,18 +108,18 @@ class ReversedChordsMode(ChordModeBase):
                     inversion_attempts += 1
                     self.session_total_attempts += 1
 
-                    is_correct, rec_name, rec_inv = self.check_chord_with_inversion(
+                    is_correct, rec_name, rec_inv, is_simp = self.check_chord_with_inversion(
                         attempt_notes, chord_name, expected_inversion
                     )
 
                     # Display feedback
-                    colored_notes = get_colored_notes_string(self.console, attempt_notes, target_notes)
+                    colored_notes = get_colored_notes_string(self.console, attempt_notes, target_notes, chord_name=rec_name)
                     self.console.print(f"Notes jouées : [{colored_notes}]")
 
                     if is_correct:
                         update_chord_success(chord_name)
                         # Affiche le nom de l'accord demandé, pas le nom reconnu (pour les enharmoniques)
-                        self.console.print(f"[bold green]Correct ! ({chord_name} - {rec_inv})[/bold green]\n")
+                        self.console.print(f"[bold green]Correct ! ({get_chord_display_name(chord_name)} - {rec_inv})[/bold green]\n")
                         if inversion_attempts == 1:
                             self.session_correct_count += 1
                         time.sleep(1.5)
@@ -143,7 +145,7 @@ class ReversedChordsMode(ChordModeBase):
                 continue
 
             if not self.exit_flag:
-                self.console.print(f"\n[bold green]Série de renversements pour [bold yellow]{chord_name}[/bold yellow] terminée ![/bold green]")
+                self.console.print(f"\n[bold green]Série de renversements pour [bold yellow]{get_chord_display_name(chord_name)}[/bold yellow] terminée ![/bold green]")
                 choice = self.wait_for_end_choice()
                 if choice == 'quit':
                     self.exit_flag = True

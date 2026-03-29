@@ -13,6 +13,7 @@ class SingleChordMode(ChordModeBase):
         self.suppress_progression_summary = True
 
     def run(self):
+        from music_theory import get_chord_display_name
         last_chord_name = None
         while not self.exit_flag:
             # Choisir un nouvel accord différent du précédent si possible
@@ -23,7 +24,8 @@ class SingleChordMode(ChordModeBase):
             last_chord_name = chord_name
 
             def pre_display():
-                self.console.print(f"\nJouez : [bold bright_yellow]{chord_name}[/bold bright_yellow]")
+                display_name = get_chord_display_name(chord_name)
+                self.console.print(f"\nJouez : [bold bright_yellow]{display_name}[/bold bright_yellow]")
 
             result = self.run_progression(
                 progression_accords=[chord_name],

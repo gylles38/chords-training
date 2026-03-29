@@ -59,6 +59,7 @@ class ProgressionScaleMode(ChordModeBase):
         return selected_scale
 
     def _display_top_scale_errors(self):
+        from music_theory import get_chord_display_name
         scale_errors = get_scale_errors()
         if not scale_errors:
             return
@@ -67,7 +68,10 @@ class ProgressionScaleMode(ChordModeBase):
 
         self.console.print("\n[bold]Gammes à travailler :[/bold]")
         for scale_name, count in sorted_errors[:5]: # Show top 5
-            self.console.print(f"- [bold cyan]{scale_name}[/bold cyan]: {count} erreur{'s' if count > 1 else ''}")
+            # Scale names are like "Do Majeur", "La# Mineur Harmonique"
+            # get_chord_display_name handles "Do Majeur" and "La# Mineur"
+            display_name = get_chord_display_name(scale_name)
+            self.console.print(f"- [bold cyan]{display_name}[/bold cyan]: {count} erreur{'s' if count > 1 else ''}")
 
     def _wait_for_end_choice(self):
         """Waits for the user to press 'n', 'r', or 'q' after a scale is played."""

@@ -5,7 +5,7 @@ from rich.prompt import Prompt
 
 from .chord_mode_base import ChordModeBase
 from data.chords import all_chords, chord_aliases
-from music_theory import get_note_name
+from music_theory import get_note_name, get_chord_display_name
 from midi_handler import play_chord
 from messages import ChordExplorerMode as ChordExplorerMessages
 
@@ -56,7 +56,7 @@ class ChordExplorerMode(ChordModeBase):
                     notes_str = ", ".join(note_names)
 
                     last_message = ChordExplorerMessages.PLAYING_CHORD.format(
-                        chord_name=full_chord_name,
+                        chord_name=get_chord_display_name(full_chord_name),
                         notes=notes_str
                     )
                     last_chord_notes = chord_notes_midi

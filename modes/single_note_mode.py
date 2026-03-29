@@ -36,6 +36,7 @@ class SingleNoteMode(ChordModeBase):
 
     def _display_top_note_errors(self):
         """Affiche les 3 notes avec le plus d'erreurs."""
+        from music_theory import get_chord_display_name
         note_errors = get_note_errors()
         if not note_errors:
             return
@@ -44,6 +45,7 @@ class SingleNoteMode(ChordModeBase):
 
         self.console.print("\n[bold]Notes à travailler :[/bold]")
         for note, count in sorted_errors[:3]:
+            # note is already bilingual from get_note_name, but let's be safe if it's stored differently
             self.console.print(f"- [bold cyan]{note}[/bold cyan]: {count} erreur{'s' if count > 1 else ''}")
 
     def run(self):
